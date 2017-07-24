@@ -73,5 +73,15 @@ namespace PlumMediaCenter.Business.Managers
             var count = result.ToList().First();
             return count > 0;
         }
+
+
+        public async Task<List<Data.Movie>> GetAll()
+        {
+            var movies = await this.Connection.QueryAsync<Data.Movie>(@"
+                select * from movies
+            ");
+            return movies.ToList();
+        }
+
     }
 }
