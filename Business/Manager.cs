@@ -12,6 +12,15 @@ namespace PlumMediaCenter.Business
 
         public IDbConnection Connection;
 
+        private Utility _Utility;
+        public Utility Utility
+        {
+            get
+            {
+                return this._Utility = this._Utility != null ? this._Utility : new Utility();
+            }
+        }
+
         private AppSettings _AppSettings;
         public AppSettings AppSettings
         {

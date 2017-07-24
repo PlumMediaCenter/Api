@@ -16,6 +16,11 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         private Manager Manager;
 
         /// <summary>
+        /// The id for this video. This is only set during Process(), so don't depend on it unless you are calling a function from Process()
+        /// </summary>
+        private decimal? Id;
+
+        /// <summary>
         /// A full path to the movie folder (including trailing slash)
         /// </summary>
         private string FolderPath
@@ -44,28 +49,30 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             if (Directory.Exists(this.FolderPath) == false)
             {
                 await this.Delete();
+                return;
             }
             //movie needs updated
             else if (await this.Manager.Movies.Exists(this.FolderPath))
             {
-                await this.Update();
+                this.Id = await this.Update();
             }
             //new movie
             else
             {
-                await this.Create();
+                this.Id = await this.Create();
             }
+            await this.CopyPosters();
         }
 
-        public Task Update()
+        public Task<decimal?> Update()
         {
-            return Task.CompletedTask;
+            return Task.FromResult<decimal?>(-1);
         }
 
-        public async Task Create()
+        public async Task<decimal?> Create()
         {
             var movieDotJson = await this.GetMovieDotJson();
-            await this.Manager.Movies.Insert(this.FolderPath, movieDotJson);
+            return await this.Manager.Movies.Insert(this.FolderPath, movieDotJson);
         }
 
         private async Task<MovieDotJson> GetMovieDotJson()
@@ -107,6 +114,27 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             //delete from the database
             await this.Manager.Movies.Delete(this.FolderPath);
             //delete images from cache
+        }
+
+        private async Task CopyPosters()
+        {
+            var sourcePosterPath = $"{this.FolderPath}poster.jpg";
+            var destinationPosterPath = $"{this.Manager.AppSettings.PosterFolderPath}{this.Id}.jpg";
+            //if the video has a poster, copy it
+            if (File.Exists(sourcePosterPath) == true)
+            {
+                await Task.Run(() =>
+                {
+                    File.Copy(sourcePosterPath, destinationPosterPath, true);
+                });
+            }
+            else
+            {
+                var movieDotJson = await this.GetMovieDotJson();
+                var title = movieDotJson.Title;
+                //the video doesn't have a poster. Create a text-based poster
+                this.Manager.Utility.CreateTextPoster(title, 100, 100, destinationPosterPath);
+            }
         }
     }
 }
