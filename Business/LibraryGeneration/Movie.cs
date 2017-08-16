@@ -23,7 +23,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// <summary>
         /// A full path to the movie folder (including trailing slash)
         /// </summary>
-        private string FolderPath
+        public string FolderPath
         {
             get
             {
@@ -39,6 +39,80 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
         }
         private string _FolderPath;
+
+        /// <summary>
+        /// An MD5 hash of the first chunk of the video file. This helps us detect moved videos
+        /// </summary>
+        /// <returns></returns>
+        public string Md5
+        {
+            get
+            {
+                if (_Md5 == null)
+                {
+                    // //read in the first chunk of the file
+                    // var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                }
+                return _Md5;
+            }
+        }
+        private string _Md5;
+
+        public string Title
+        {
+            get
+            {
+                if (_Title == null)
+                {
+                    if (this.MovieDotJson != null && string.IsNullOrEmpty(this.MovieDotJson.Title) == false)
+                    {
+                        _Title = this.MovieDotJson.Title;
+                    }
+                    else
+                    {
+                        //use the directory name
+                        _Title = new DirectoryInfo(this.FolderPath).Name;
+                    }
+                }
+                return _Title;
+            }
+        }
+        private string _Title;
+
+        public string Summary
+        {
+            get
+            {
+                return this.MovieDotJson?.Summary;
+            }
+        }
+
+        public string Description
+        {
+            get
+            {
+                return this.MovieDotJson?.Description;
+            }
+        }
+
+        public string VideoPath
+        {
+            get
+            {
+                if (_VideoPath == null)
+                {
+                    //find the path to the movie file
+                    DirectoryInfo d = new DirectoryInfo(this.FolderPath);
+                    foreach (var file in d.GetFiles("*.mp4"))
+                    {
+                        //keep the first one
+                        _VideoPath = $"{this.FolderPath}{file.Name}";
+                    }
+                }
+                return _VideoPath;
+            }
+        }
+        private string _VideoPath;
 
         /// <summary>
         /// 
@@ -71,31 +145,28 @@ namespace PlumMediaCenter.Business.LibraryGeneration
 
         public async Task<decimal?> Create()
         {
-            var movieDotJson = await this.GetMovieDotJson();
-            return await this.Manager.Movies.Insert(this.FolderPath, movieDotJson);
+            return await this.Manager.Movies.Insert(this);
         }
 
-        private async Task<MovieDotJson> GetMovieDotJson()
+        public MovieDotJson MovieDotJson
         {
-            MovieDotJson result;
-            var movieDotJsonPath = $"{this.FolderPath}movie.json";
-            if (File.Exists(movieDotJsonPath))
+            get
             {
-                var contents = await File.ReadAllTextAsync(movieDotJsonPath);
-                result = Newtonsoft.Json.JsonConvert.DeserializeObject<MovieDotJson>(contents);
+                if (_MovieDotJsonWasRetrieved == false)
+                {
+                    _MovieDotJsonWasRetrieved = true;
+                    var movieDotJsonPath = $"{this.FolderPath}movie.json";
+                    if (File.Exists(movieDotJsonPath))
+                    {
+                        var contents = File.ReadAllText(movieDotJsonPath);
+                        _MovieDotJson = Newtonsoft.Json.JsonConvert.DeserializeObject<MovieDotJson>(contents);
+                    }
+                }
+                return _MovieDotJson;
             }
-            else
-            {
-                result = new MovieDotJson();
-            }
-
-            //set the title to the folder name if no name was found in the movie.json file
-            if (result.Title == null)
-            {
-                result.Title = new DirectoryInfo(this.FolderPath).Name;
-            }
-            return result;
         }
+        private MovieDotJson _MovieDotJson;
+        private bool _MovieDotJsonWasRetrieved = false;
 
         /// <summary>
         /// Get a list of video paths for this video
@@ -130,10 +201,8 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
             else
             {
-                var movieDotJson = await this.GetMovieDotJson();
-                var title = movieDotJson.Title;
                 //the video doesn't have a poster. Create a text-based poster
-                this.Manager.Utility.CreateTextPoster(title, 100, 100, destinationPosterPath);
+                this.Manager.Utility.CreateTextPoster(this.Title, 100, 100, destinationPosterPath);
             }
         }
     }

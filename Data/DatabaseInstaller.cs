@@ -21,10 +21,11 @@ namespace PlumMediaCenter.Data
             var connection = ConnectionManager.GetConnection();
             VersionRun("0.1.0", connection, () =>
             {
-                connection.Execute(@"
+                connection.ExecuteAsync(@"
                     create table movies(
                         id integer AUTO_INCREMENT primary key,
                         folderPath varchar(4000) not null,
+                        videoPath varchar(4000) not null,
                         title varchar(200) not null,
                         summary varchar(100),
                         description varchar(4000)

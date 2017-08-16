@@ -15,6 +15,27 @@ namespace PlumMediaCenter.Controllers
         [HttpGet]
         public async Task<List<Movie>> GetAll()
         {
+            try
+            {
+                await ConnectionManager.GetConnection("root", "romantic", false).ExecuteAsync(@"drop database pmc");
+            }
+            catch (Exception)
+            {
+
+            }
+            try
+            {
+                var dbCtrl = new DatabaseController();
+                dbCtrl.Install("root", "romantic");
+            }
+            catch (Exception)
+            {
+
+            }
+
+            var libCtrl = new LibraryController();
+            await libCtrl.Generate();
+
             var m = new Business.Manager();
             return await m.Movies.GetAll();
         }

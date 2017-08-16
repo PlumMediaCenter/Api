@@ -12,7 +12,7 @@ namespace PlumMediaCenter.Controllers
     {
         [Route("generate")]
         [HttpGet]
-        public async Task Install()
+        public async Task Generate()
         {
             var generator = new LibraryGenerator();
             //temporarily delete all movies

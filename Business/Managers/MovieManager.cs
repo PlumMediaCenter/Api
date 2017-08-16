@@ -42,17 +42,18 @@ namespace PlumMediaCenter.Business.Managers
         /// Get a list of every movie directory
         /// </summary>
         /// <returns></returns>
-        public async Task<decimal?> Insert(string folderPath, MovieDotJson movieDotJson)
+        public async Task<decimal?> Insert(LibraryGeneration.Movie movie)
         {
             await this.Connection.ExecuteAsync(@"
-                insert into movies(folderPath, title, summary, description)
-                values(@folderPath, @title, @summary, @description)
+                insert into movies(folderPath, videoPath, title, summary, description)
+                values(@folderPath, @videoPath, @title, @summary, @description)
             ", new
             {
-                folderPath = folderPath,
-                title = movieDotJson.Title,
-                summary = movieDotJson.Summary,
-                description = movieDotJson.Description
+                folderPath = movie.FolderPath,
+                videoPath = movie.VideoPath,
+                title = movie.Title,
+                summary = movie.Summary,
+                description = movie.Description
             });
             return await this.Connection.GetLastInsertIdAsync();
         }

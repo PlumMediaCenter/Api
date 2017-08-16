@@ -6,5 +6,7 @@ namespace PlumMediaCenter.Data
         public string Title;
         public string Summary;
         public string Description;
+        public string VideoPath;
+        public string FolderPath;
     }
 }
