@@ -38,6 +38,8 @@ namespace PlumMediaCenter
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
+            //serve the wwwroot folder (from the root web url)
+            app.UseStaticFiles();
             //register middleware to save the current request to thread storage
             app.UseRequestMiddleware();
             app.UseDeveloperExceptionPage();

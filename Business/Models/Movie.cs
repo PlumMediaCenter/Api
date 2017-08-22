@@ -1,5 +1,5 @@
 using System.IO;
-
+using PlumMediaCenter.Business;
 namespace PlumMediaCenter.Models
 {
     public class Movie
@@ -8,8 +8,20 @@ namespace PlumMediaCenter.Models
         public string Title;
         public ulong SourceId;
         public string Description;
-        public string PosterUrl;
-        public string BackdropUrl;
+        public string PosterUrl
+        {
+            get
+            {
+                return $"{Utility.BaseUrl}posters/{this.Id}.jpg";
+            }
+        }
+        public string BackdropUrl
+        {
+            get
+            {
+                return $"{Utility.BaseUrl}backdrops/{this.Id}.jpg";
+            }
+        }
         public string VideoUrl
         {
             get
