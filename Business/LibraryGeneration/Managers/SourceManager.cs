@@ -33,8 +33,10 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
 
         public async Task<List<Source>> GetAll()
         {
-            var task = Task.FromResult(new List<Source>());
-            return await task;
+            var result = await this.Connection.QueryAsync<Source>(@"
+                select * from sources
+            ");
+            return result.ToList();
         }
     }
 }

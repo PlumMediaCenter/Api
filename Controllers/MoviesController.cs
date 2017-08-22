@@ -7,13 +7,16 @@ using Dapper;
 using PlumMediaCenter.Data;
 using TMDbLib.Client;
 using TMDbLib.Objects.Movies;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.Http;
 
 namespace PlumMediaCenter.Controllers
 {
     [Route("api/[controller]")]
     public class MoviesController : Controller
     {
-        
+
         [HttpGet]
         public async Task<List<Models.Movie>> GetAll()
         {
@@ -21,7 +24,7 @@ namespace PlumMediaCenter.Controllers
             {
                 await ConnectionManager.GetConnection("root", "romantic", false).ExecuteAsync(@"drop database pmc");
             }
-            catch (Exception)
+            catch (Exception e)
             {
 
             }
@@ -30,7 +33,7 @@ namespace PlumMediaCenter.Controllers
                 var dbCtrl = new DatabaseController();
                 dbCtrl.Install("root", "romantic");
             }
-            catch (Exception)
+            catch (Exception e)
             {
 
             }

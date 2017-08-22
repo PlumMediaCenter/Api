@@ -12,6 +12,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         {
             this.Manager = manager != null ? manager : new Manager();
             this.FolderPath = moviePath;
+            this.SourceId = sourceId;
         }
         private Manager Manager;
 

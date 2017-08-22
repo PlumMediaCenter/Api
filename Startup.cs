@@ -12,6 +12,8 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PlumMediaCenter;
+using PlumMediaCenter.Controllers;
+using PlumMediaCenter.Data;
 using PlumMediaCenter.Middleware;
 
 namespace PlumMediaCenter
@@ -29,6 +31,7 @@ namespace PlumMediaCenter
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddSingleton<MiddlewareInjectorOptions>();
             services.AddMvc();
         }
 
@@ -38,28 +41,38 @@ namespace PlumMediaCenter
             //register middleware to save the current request to thread storage
             app.UseRequestMiddleware();
             app.UseDeveloperExceptionPage();
-            app.UseMvc();
 
-            this.RegisterSources(app);
+            var injectorOptions = app.ApplicationServices.GetService<MiddlewareInjectorOptions>();
+            app.UseMiddlewareInjector(injectorOptions);
+
+            app.UseMvc();
         }
 
-        private void RegisterSources(IApplicationBuilder app)
+        /// <summary>
+        /// Registers all sources as file server endpoints. 
+        /// </summary>
+        /// <param name="builder"></param>
+        public static void RegisterSources(IApplicationBuilder builder)
         {
-            var manager = new PlumMediaCenter.Business.Manager();
-            var sources = manager.LibraryGeneration.Sources.GetAll().Result;
-            var locations = new Dictionary<string, string>{
-                {@"C:\Videos", "/videos"},
-            };
-            foreach (var source in sources)
+            try
             {
-                app.UseFileServer(new FileServerOptions()
+                var manager = new PlumMediaCenter.Business.Manager();
+                var sources = manager.LibraryGeneration.Sources.GetAll().Result;
+                foreach (var source in sources)
                 {
-                    FileProvider = new PhysicalFileProvider(
-                        source.FolderPath
-                    ),
-                    RequestPath = new PathString(source.Id.ToString()),
-                    EnableDirectoryBrowsing = true
-                });
+                    builder.UseFileServer(new FileServerOptions()
+                    {
+                        FileProvider = new PhysicalFileProvider(
+                            source.FolderPath
+                        ),
+                        RequestPath = new PathString($"/source{source.Id}"),
+                        EnableDirectoryBrowsing = true
+                    });
+                }
+            }
+            catch (Exception e)
+            {
+                //the database is probably not installed.
             }
         }
     }

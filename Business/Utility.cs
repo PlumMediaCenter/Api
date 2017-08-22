@@ -104,14 +104,16 @@ namespace PlumMediaCenter.Business
         {
             get
             {
-                return ThreadStorage.Resolve("baseUrl", () =>
+                var store = Middleware.RequestMiddleware.CurrentHttpContext.Items;
+                var request = Middleware.RequestMiddleware.CurrentHttpContext.Request;
+                if (store.ContainsKey("baseUrl") == false)
                 {
-                    var request = Middleware.RequestMiddleware.CurrentHttpContext.Request;
                     var url = $"{request.Scheme}://{request.Host}{request.Path}";
                     //remove anything after and including /api/
                     var baseUrl = url.Substring(0, url.ToLowerInvariant().IndexOf("/api/") + 1);
-                    return baseUrl;
-                });
+                    store["baseUrl"] = baseUrl;
+                }
+                return (string)store["baseUrl"];
             }
         }
     }

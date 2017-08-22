@@ -4,8 +4,9 @@ namespace PlumMediaCenter.Models
 {
     public class Movie
     {
-        public long Id;
+        public ulong Id;
         public string Title;
+        public ulong SourceId;
         public string Description;
         public string PosterUrl;
         public string BackdropUrl;
@@ -14,10 +15,10 @@ namespace PlumMediaCenter.Models
             get
             {
                 //get just the filename from the videopath
-                var filename = Path.GetFileName(_VideoPath);
-                
-                
-                return $"{Business.Utility.BaseUrl}{filename}";
+                var filename = Path.GetFileName(VideoPath);
+
+
+                return $"{Business.Utility.BaseUrl}source{this.SourceId}/{this.FolderName}/{filename}";
             }
         }
         public int Duration;
@@ -28,6 +29,32 @@ namespace PlumMediaCenter.Models
             set
             {
                 this._VideoPath = value;
+            }
+            private get
+            {
+                return this._VideoPath;
+            }
+        }
+
+        private string _FolderPath;
+        public string FolderPath
+        {
+            set
+            {
+                this._FolderPath = value;
+            }
+            private get
+            {
+                return this._FolderPath;
+            }
+        }
+
+        private string FolderName
+        {
+            get
+            {
+                var info = new DirectoryInfo(this.VideoPath);
+                return info.Parent.Name;
             }
         }
 

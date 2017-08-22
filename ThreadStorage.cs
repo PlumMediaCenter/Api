@@ -14,10 +14,11 @@ namespace PlumMediaCenter
             if (Slots.ContainsKey(key) == false)
             {
                 Slots[key] = Thread.AllocateNamedDataSlot(key);
-                var value = factory();
-                Thread.SetData(Slots[key], value);
+                var factoryVal = factory();
+                Thread.SetData(Slots[key], factoryVal);
             }
-            return (T)Thread.GetData(Slots[key]);
+            var value = Thread.GetData(Slots[key]);
+            return (T)value;
 
         }
         private static Dictionary<string, LocalDataStoreSlot> Slots = new Dictionary<string, LocalDataStoreSlot>();

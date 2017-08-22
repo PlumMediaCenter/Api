@@ -22,18 +22,23 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         public async Task<Dictionary<ulong, List<string>>> GetDirectories()
         {
             var sources = await this.Manager.LibraryGeneration.Sources.GetAll();
-            var rows = await this.Connection.QueryAsync<Tuple<string, ulong>>(@"
+            var rows = await this.Connection.QueryAsync<DbDirResult>(@"
                 select folderPath, sourceId 
                 from movies
            ");
 
             var results = rows
-                .GroupBy(x => x.Item2)
+                .GroupBy(x => x.SourceId)
                 .ToDictionary(
                     x => x.Key,
-                    x => x.Select(y => y.Item1).ToList()
+                    x => x.Select(y => y.FolderPath).ToList()
                 );
             return results;
+        }
+        private class DbDirResult
+        {
+            public string FolderPath;
+            public ulong SourceId;
         }
 
         /// <summary>
@@ -54,15 +59,16 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         public async Task<ulong?> Insert(LibraryGeneration.Movie movie)
         {
             await this.Connection.ExecuteAsync(@"
-                insert into movies(folderPath, videoPath, title, summary, description)
-                values(@folderPath, @videoPath, @title, @summary, @description)
+                insert into movies(folderPath, videoPath, title, summary, description, sourceId)
+                values(@folderPath, @videoPath, @title, @summary, @description, @sourceId)
             ", new
             {
                 folderPath = movie.FolderPath,
                 videoPath = movie.VideoPath,
                 title = movie.Title,
                 summary = movie.Summary,
-                description = movie.Description
+                description = movie.Description,
+                sourceId = movie.SourceId
             });
             return await this.Connection.GetLastInsertIdAsync();
         }

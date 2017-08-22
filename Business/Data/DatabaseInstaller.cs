@@ -21,7 +21,16 @@ namespace PlumMediaCenter.Data
             var connection = ConnectionManager.GetConnection();
             VersionRun("0.1.0", connection, () =>
             {
-                connection.ExecuteAsync(@"
+                connection.Execute(@"
+                    create table sources(
+                        id integer AUTO_INCREMENT primary key comment 'id of source',
+                        folderPath varchar(4000) not null comment 'full path to source folder',
+
+                        sourceType tinyint not null comment 'the type of media such as movies, shows, etc...'
+                    );
+                ");
+
+                connection.Execute(@"
                     create table movies(
                         id integer AUTO_INCREMENT primary key comment 'id of movie',
                         folderPath varchar(4000) not null comment 'full path to folder for movie',
@@ -30,18 +39,10 @@ namespace PlumMediaCenter.Data
                         summary varchar(100) comment 'short explanation of movie plot',
                         description varchar(4000) comment 'long explanation of movie plot',
                         sourceId integer not null comment 'fk for sources table',
-                        foreign key sourceId references sources(id)
+                        foreign key (sourceId) references sources(id)
                     );
                 ");
 
-                connection.Execute(@"
-                    create table sources(
-                        id integer AUTO_INCREMENT primary key comment 'id of source',
-                        folderPath varchar(4000) not null comment 'full path to source folder',
-
-                        sourceType tinyint not null comment 'the type of media (i.e. movies, shows, etc...)
-                    );
-                ");
                 //temporarily insert some hardcoded video sources
                 connection.Execute(@"
                     insert into sources(folderPath, sourceType)
