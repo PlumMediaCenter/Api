@@ -1,5 +1,4 @@
 using System.Data;
-using PlumMediaCenter.Business.Managers;
 
 namespace PlumMediaCenter.Business
 {
@@ -8,9 +7,11 @@ namespace PlumMediaCenter.Business
         public Manager()
         {
             this.Connection = Data.ConnectionManager.GetConnection();
+            this.LibraryGeneration = new LibraryGenerationManager(this);
         }
-
         public IDbConnection Connection;
+
+        public LibraryGenerationManager LibraryGeneration;
 
         private Utility _Utility;
         public Utility Utility
@@ -30,30 +31,49 @@ namespace PlumMediaCenter.Business
             }
         }
 
-        private SourceManager _Sources;
-        public SourceManager Sources
+        private Managers.MovieManager _Movies;
+        public Managers.MovieManager Movies
         {
             get
             {
-                return this._Sources = this._Sources != null ? this._Sources : new SourceManager();
+                return this._Movies = this._Movies != null ? this._Movies : new Managers.MovieManager(this);
             }
         }
 
-        private MovieManager _Movies;
-        public MovieManager Movies
+    }
+
+    public class LibraryGenerationManager : BaseManager
+    {
+
+        public LibraryGenerationManager(Manager manager) : base(manager)
+        {
+
+        }
+
+        private LibraryGeneration.Managers.SourceManager _Sources;
+        public LibraryGeneration.Managers.SourceManager Sources
         {
             get
             {
-                return this._Movies = this._Movies != null ? this._Movies : new MovieManager();
+                return this._Sources = this._Sources != null ? this._Sources : new LibraryGeneration.Managers.SourceManager(this.Manager);
             }
         }
 
-        private ShowManager _Shows;
-        public ShowManager Shows
+        private LibraryGeneration.Managers.MovieManager _Movies;
+        public LibraryGeneration.Managers.MovieManager Movies
         {
             get
             {
-                return this._Shows = this._Shows != null ? this._Shows : new ShowManager();
+                return this._Movies = this._Movies != null ? this._Movies : new LibraryGeneration.Managers.MovieManager(this.Manager);
+            }
+        }
+
+        private LibraryGeneration.Managers.ShowManager _Shows;
+        public LibraryGeneration.Managers.ShowManager Shows
+        {
+            get
+            {
+                return this._Shows = this._Shows != null ? this._Shows : new LibraryGeneration.Managers.ShowManager(this.Manager);
             }
         }
     }

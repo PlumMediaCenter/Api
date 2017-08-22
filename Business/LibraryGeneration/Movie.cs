@@ -8,7 +8,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
 {
     public class Movie
     {
-        public Movie(Manager manager, string moviePath)
+        public Movie(Manager manager, string moviePath, ulong sourceId)
         {
             this.Manager = manager != null ? manager : new Manager();
             this.FolderPath = moviePath;
@@ -18,7 +18,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// <summary>
         /// The id for this video. This is only set during Process(), so don't depend on it unless you are calling a function from Process()
         /// </summary>
-        private decimal? Id;
+        private ulong? Id;
+
+        /// <summary>
+        /// The id for the video source
+        /// </summary>
+        public ulong SourceId;
 
         /// <summary>
         /// A full path to the movie folder (including trailing slash)
@@ -126,7 +131,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 return;
             }
             //movie needs updated
-            else if (await this.Manager.Movies.Exists(this.FolderPath))
+            else if (await this.Manager.LibraryGeneration.Movies.Exists(this.FolderPath))
             {
                 this.Id = await this.Update();
             }
@@ -138,14 +143,14 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             await this.CopyPosters();
         }
 
-        public Task<decimal?> Update()
+        public Task<ulong?> Update()
         {
-            return Task.FromResult<decimal?>(-1);
+            return Task.FromResult<ulong?>(0UL);
         }
 
-        public async Task<decimal?> Create()
+    public async Task<ulong?> Create()
         {
-            return await this.Manager.Movies.Insert(this);
+            return await this.Manager.LibraryGeneration.Movies.Insert(this);
         }
 
         public MovieDotJson MovieDotJson
@@ -183,7 +188,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         private async Task Delete()
         {
             //delete from the database
-            await this.Manager.Movies.Delete(this.FolderPath);
+            await this.Manager.LibraryGeneration.Movies.Delete(this.FolderPath);
             //delete images from cache
         }
 

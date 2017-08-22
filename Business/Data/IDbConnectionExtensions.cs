@@ -13,9 +13,9 @@ namespace PlumMediaCenter.Data
         /// </summary>
         /// <param name="connection"></param>
         /// <returns></returns>
-        public static async Task<decimal?> GetLastInsertIdAsync(this IDbConnection connection)
+        public static async Task<ulong?> GetLastInsertIdAsync(this IDbConnection connection)
         {
-            var id = await connection.QueryAsync<decimal?>("select last_insert_id();");
+            var id = await connection.QueryAsync<ulong?>("select last_insert_id();");
             return id.FirstOrDefault();
         }
     }

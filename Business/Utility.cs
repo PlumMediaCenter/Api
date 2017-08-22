@@ -95,5 +95,24 @@ namespace PlumMediaCenter.Business
             }
             return sb.ToString().TrimStart().TrimEnd().Split("\n").ToList();
         }
+
+        /// <summary>
+        /// Get the full base url pointing to the root of this api
+        /// </summary>
+        /// <returns></returns>
+        public static string BaseUrl
+        {
+            get
+            {
+                return ThreadStorage.Resolve("baseUrl", () =>
+                {
+                    var request = Middleware.RequestMiddleware.CurrentHttpContext.Request;
+                    var url = $"{request.Scheme}://{request.Host}{request.Path}";
+                    //remove anything after and including /api/
+                    var baseUrl = url.Substring(0, url.ToLowerInvariant().IndexOf("/api/") + 1);
+                    return baseUrl;
+                });
+            }
+        }
     }
 }

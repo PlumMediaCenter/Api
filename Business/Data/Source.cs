@@ -2,7 +2,7 @@ namespace PlumMediaCenter.Data
 {
     public class Source
     {
-        public decimal? Id;
+        public ulong? Id;
         public string FolderPath;
         /// <summary>
         /// The type of media this source contains (movies, series)

@@ -16,5 +16,12 @@ namespace PlumMediaCenter
                 return $"{Directory.GetCurrentDirectory()}{slash}wwwroot{slash}posters{slash}";
             }
         }
+        public string TmdbApiString
+        {
+            get
+            {
+                return "90dbc17887e30eae3095d213fa803190";
+            }
+        }
     }
 }

@@ -4,11 +4,11 @@ using PlumMediaCenter.Data;
 using Dapper;
 using System.Linq;
 
-namespace PlumMediaCenter.Business.Managers
+namespace PlumMediaCenter.Business.LibraryGeneration.Managers
 {
     public class SourceManager : BaseManager
     {
-        public SourceManager(Manager manager = null) : base(manager)
+        public SourceManager(Manager manager) : base(manager)
         {
 
         }

@@ -2,11 +2,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using PlumMediaCenter.Data;
 
-namespace PlumMediaCenter.Business.Managers
+namespace PlumMediaCenter.Business.LibraryGeneration.Managers
 {
     public class ShowManager : BaseManager
     {
-        public ShowManager(Manager manager = null) : base(manager)
+        public ShowManager(Manager manager) : base(manager)
         {
 
         }

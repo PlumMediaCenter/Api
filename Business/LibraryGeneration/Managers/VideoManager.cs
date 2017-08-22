@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 using Dapper;
 using PlumMediaCenter.Data;
 
-namespace PlumMediaCenter.Business.Managers
+namespace PlumMediaCenter.Business.LibraryGeneration.Managers
 {
     public class VideoManager : BaseManager
     {
-        public VideoManager(Manager manager = null) : base(manager)
+        public VideoManager(Manager manager) : base(manager)
         {
         }
 
