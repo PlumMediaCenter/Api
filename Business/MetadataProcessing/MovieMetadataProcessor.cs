@@ -36,8 +36,8 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 result.Add(new MovieSearchResult
                 {
                     Title = searchResult.Title,
-                    PosterPath = Client.GetImageUrl("original", searchResult.PosterPath).ToString(),
-                    Id = searchResult.Id,
+                    PosterUrl = Client.GetImageUrl("original", searchResult.PosterPath).ToString(),
+                    TmdbId = searchResult.Id,
                     Overview = searchResult.Overview,
                     ReleaseDate = searchResult.ReleaseDate,
                 });
@@ -68,14 +68,14 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 MovieMethods.Videos
             );
             var metadata = new MovieMetadata();
-            metadata.AddCast(movie.Credits.Cast);
-            metadata.AddCrew(movie.Credits.Crew);
+            metadata.AddCast(movie.Credits?.Cast);
+            metadata.AddCrew(movie.Credits?.Crew);
             metadata.Collection = movie.BelongsToCollection?.Name;
             metadata.Description = movie.Overview;
             metadata.Genres = movie.Genres?.Select(x => x.Name).ToList();
             metadata.Keywords = movie.Keywords?.Keywords?.Select(x => x.Name).ToList();
             var release = movie.Releases?.Countries?
-                .Where(x => x.Iso_3166_1 == "US")?
+                .Where(x => x.Iso_3166_1.ToLower() == "us")?
                 .OrderBy(x => x.ReleaseDate)?
                 .First();
             //get the oldest US rating
@@ -84,13 +84,28 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             metadata.Runtime = movie.Runtime;
             metadata.Summary = movie.Overview;
             metadata.Title = movie.Title;
-            
+
             metadata.Titles.Add(movie.Title);
             metadata.Titles.AddRange(
-                movie.AlternativeTitles?.Titles?.Where(x => x.Iso_3166_1 == "US").Select(x => x.Title).ToList()
+                movie.AlternativeTitles?.Titles?.Where(x => x.Iso_3166_1.ToLower() == "us").Select(x => x.Title).ToList() ?? new List<string>()
             );
-            
+
             metadata.TmdbId = movie.Id;
+
+            metadata.PosterUrls.AddRange(
+                movie.Images?.Posters?
+                .Where(x => x.Iso_639_1?.ToLower() == "en")?
+                .Select(x => Client.GetImageUrl("original", x.FilePath).ToString())?
+                .ToList() ?? new List<string>()
+            );
+
+            metadata.BackdropUrls.Add(Client.GetImageUrl("original", movie.BackdropPath).ToString());
+            metadata.BackdropUrls.AddRange(
+                movie.Images?.Backdrops?
+                .Where(x => x.Iso_639_1?.ToLower() == "en")?
+                .Select(x => Client.GetImageUrl("original", x.FilePath).ToString())?
+                .ToList() ?? new List<string>()
+            );
 
             return metadata;
         }
@@ -103,18 +118,26 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             //throw new Exception(Newtonsoft.Json.JsonConvert.SerializeObject(movie.MovieDotJson));
             var metadata = new MovieMetadata(movie.MovieDotJson);
 
-            var posters = Directory.GetFiles($"{movie.FolderPath}/posters");
-            foreach (var poster in posters)
+            var posterFolderPath = $"{movie.FolderPath}/posters";
+            if (Directory.Exists(posterFolderPath))
             {
-                var name = Path.GetFileName(poster);
-                metadata.PosterUrls.Add($"{movieModel.FolderUrl}posters/{name}");
+                var posters = Directory.GetFiles(posterFolderPath);
+                foreach (var poster in posters)
+                {
+                    var name = Path.GetFileName(poster);
+                    metadata.PosterUrls.Add($"{movieModel.FolderUrl}posters/{name}");
+                }
             }
 
-            var backdrops = Directory.GetFiles($"{movie.FolderPath}/backdrops");
-            foreach (var backdrop in backdrops)
+            var backdropFolderPath = $"{movie.FolderPath}/backdrops";
+            if (Directory.Exists(backdropFolderPath))
             {
-                var name = Path.GetFileName(backdrop);
-                metadata.BackdropUrls.Add($"{movieModel.FolderUrl}backdrops/{name}");
+                var backdrops = Directory.GetFiles(backdropFolderPath);
+                foreach (var backdrop in backdrops)
+                {
+                    var name = Path.GetFileName(backdrop);
+                    metadata.BackdropUrls.Add($"{movieModel.FolderUrl}backdrops/{name}");
+                }
             }
             return metadata;
         }
@@ -133,6 +156,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         }
         public MovieMetadata(MovieDotJson metadata)
         {
+            if (metadata == null)
+            {
+                return;
+            }
             var t = metadata.GetType();
             var myType = this.GetType();
             var properties = t.GetProperties();
@@ -147,6 +174,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         public List<string> BackdropUrls = new List<string>();
         public void AddCast(List<Cast> cast)
         {
+            if (cast == null)
+            {
+                return;
+            }
             foreach (var member in cast)
             {
                 this.Cast.Add(new CastMember
@@ -157,9 +188,13 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 });
             }
         }
-        public void AddCrew(List<Crew> cast)
+        public void AddCrew(List<Crew> crew)
         {
-            foreach (var member in cast)
+            if (crew == null)
+            {
+                return;
+            }
+            foreach (var member in crew)
             {
                 this.Crew.Add(new CrewMember
                 {
@@ -170,11 +205,12 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             }
         }
     }
+
     public class MovieSearchResult
     {
         public string Title;
-        public string PosterPath;
-        public int Id;
+        public string PosterUrl;
+        public int TmdbId;
         public string Overview;
         public DateTime? ReleaseDate;
     }
