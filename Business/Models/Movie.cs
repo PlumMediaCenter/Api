@@ -31,9 +31,22 @@ namespace PlumMediaCenter.Models
                 var filename = Path.GetFileName(VideoPath);
 
 
-                return $"{Business.Utility.BaseUrl}source{this.SourceId}/{this.FolderName}/{filename}";
+                return $"{FolderUrl}{filename}";
             }
         }
+
+        /// <summary>
+        /// URL pointing to the folder for this movie
+        /// </summary>
+        /// <returns></returns>
+        public string FolderUrl
+        {
+            get
+            {
+                return $"{Business.Utility.BaseUrl}source{this.SourceId}/{this.FolderName}/";
+            }
+        }
+        
         public int Duration;
 
         private string _VideoPath;
@@ -60,6 +73,10 @@ namespace PlumMediaCenter.Models
             {
                 return this._FolderPath;
             }
+        }
+        public string GetFolderPath()
+        {
+            return this._FolderPath;
         }
 
         private string FolderName

@@ -31,7 +31,7 @@ namespace PlumMediaCenter.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<Models.Movie> GetById(ulong id)
+        public async Task<Models.Movie> GetById(int id)
         {
             return await this.Manager.Movies.GetById(id);
         }
@@ -74,7 +74,7 @@ namespace PlumMediaCenter.Controllers
         {
 
             TMDbClient client = new TMDbClient(new AppSettings().TmdbApiString);
-            var movie = await client.GetMovieAsync(47964,
+            var movie = await client.GetMovieAsync(27576,
                 MovieMethods.AlternativeTitles
                 | MovieMethods.Credits
                 | MovieMethods.Images

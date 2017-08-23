@@ -7,64 +7,64 @@ namespace PlumMediaCenter.Business.LibraryGeneration.DotJson
         /// <summary>
         /// The title of the movie
         /// </summary>
-        public string Title;
+        public string Title { get; set; }
         /// <summary>
         /// A collection of all possible titles for the movie. This will also include the Title property
         /// </summary>
-        public List<string> Titles;
+        public List<string> Titles { get; set; } = new List<string>();
         /// <summary>
         /// A short summary of the movie
         /// </summary>
-        public string Summary;
+        public string Summary { get; set; }
         /// <summary>
         /// A lengthier description of the movie
         /// </summary>
-        public string Description;
+        public string Description { get; set; }
 
         /// <summary>
         /// The name of the collection that this video belongs to (i.e. 'Star Trek', 'Die Hard').
         /// If the movie is not in a collection, this will be null
         /// </summary>
-        public string Collection;
+        public string Collection { get; set; }
         /// <summary>
         /// The number in the collection, if it is in one. (i.e. Star Trek: The Wrath of Kahn would be 2, since it's the second star trek movie)
         /// </summary>
-        public int? CollectionOrder;
+        public int? CollectionOrder { get; set; }
         /// <summary>
         /// A list of all actors in the film
         /// </summary>
-        public List<CastMember> Cast = new List<CastMember>();
+        public List<CastMember> Cast { get; set; } = new List<CastMember>();
         /// <summary>
         /// A list of crew members who worked on the film (directors, writers)
         /// </summary>
         /// <returns></returns>
-        public List<CrewMember> Crew = new List<CrewMember>();
+        public List<CrewMember> Crew { get; set; } = new List<CrewMember>();
         /// <summary>
         /// A list of high-level genres for the movie. These would be things like "Action", "Thriller"
         /// </summary>
-        public List<string> Genres;
+        public List<string> Genres { get; set; } = new List<string>();
         /// <summary>
         /// A fine-grained list of things related to the movie. Kind of like sub-genres
         /// </summary>
-        public List<string> Keywords = new List<string>();
+        public List<string> Keywords { get; set; } = new List<string>();
         /// <summary>
         /// The MPAA rating (G, PG, R, etc...)
         /// </summary>
-        public string Rating;
+        public string Rating { get; set; }
 
         /// <summary>
         /// The date this movie was released
         /// </summary>
-        public System.DateTime ReleaseDate;
-        
+        public System.DateTime? ReleaseDate { get; set; }
+
         /// <summary>
         /// The runtime of the movie in minutes
         /// </summary>
-        public int? Runtime;
+        public int? Runtime { get; set; }
         /// <summary>
         /// The TMDB ID for this movie. Null if movie is not on TMDB
         /// </summary>
-        public int? TmdbId;
+        public int? TmdbId { get; set; }
     }
 
     public class CastMember
