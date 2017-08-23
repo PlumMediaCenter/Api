@@ -63,10 +63,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             moviePaths = distinctList;
 
             //process each movie. movie.Process will handle adding, updating, and deleting
-            Parallel.ForEach(moviePaths, async (moviePath) =>
+            //temporarily run these in series so we can have consistent ids
+            //            Parallel.ForEach(moviePaths, async (moviePath) =>
+            moviePaths.ForEach((moviePath) =>
             {
                 var movie = new Movie(new Manager(), moviePath.Path, moviePath.Source.Id.Value);
-                await movie.Process();
+                movie.Process().Wait();
             });
         }
 

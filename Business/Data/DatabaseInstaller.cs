@@ -38,6 +38,10 @@ namespace PlumMediaCenter.Data
                         title varchar(200) not null comment 'title of movie',
                         summary varchar(100) comment 'short explanation of movie plot',
                         description varchar(4000) comment 'long explanation of movie plot',
+                        rating varchar(10) comment 'MPAA rating for movie',
+                        releaseDate date comment 'Date the movie was first released',
+                        runtime integer not null comment 'Runtime of movie in minutes',
+                        tmdbId integer comment 'The tmdb id for this movie, if one exists',
                         sourceId integer not null comment 'fk for sources table',
                         foreign key (sourceId) references sources(id)
                     );

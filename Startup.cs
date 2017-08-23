@@ -31,6 +31,15 @@ namespace PlumMediaCenter
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddCors(options =>
+            {
+                options.AddPolicy("CorsPolicy",
+                    builder => builder.AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials());
+            });
+
             services.AddSingleton<MiddlewareInjectorOptions>();
             services.AddMvc();
         }
@@ -38,6 +47,7 @@ namespace PlumMediaCenter
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
+            app.UseCors("CorsPolicy");
             //serve the wwwroot folder (from the root web url)
             app.UseStaticFiles();
             //register middleware to save the current request to thread storage

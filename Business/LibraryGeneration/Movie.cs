@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -98,6 +99,67 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             get
             {
                 return this.MovieDotJson?.Description;
+            }
+        }
+
+        public string Rating
+        {
+            get
+            {
+                return this.MovieDotJson?.Rating;
+            }
+        }
+
+        public DateTime? ReleaseDate
+        {
+            get
+            {
+                return this.MovieDotJson?.ReleaseDate;
+            }
+        }
+
+        public int? Runtime
+        {
+            get
+            {
+                if (_Runtime == null)
+                {
+                    var runtimeFromJson = this.MovieDotJson?.Runtime;
+                    if (runtimeFromJson != null)
+                    {
+                        _Runtime = runtimeFromJson;
+                    }
+                    else
+                    {
+                        try
+                        {
+                            //get runtime from video file 
+                            var file = TagLib.File.Create(this.VideoPath);
+                            _Runtime = (int?)Math.Ceiling(file.Properties.Duration.TotalMinutes);
+                        }
+                        catch (Exception e)
+                        {
+                            _Runtime = -1;
+                        }
+                    }
+                }
+                if (_Runtime == -1)
+                {
+                    return null;
+                }
+                else
+                {
+                    return _Runtime;
+                }
+            }
+        }
+        private int? _Runtime;
+
+        public int? TmdbId
+        {
+            get
+            {
+                return this.MovieDotJson?.TmdbId;
             }
         }
 

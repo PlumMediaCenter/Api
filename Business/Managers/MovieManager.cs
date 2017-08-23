@@ -20,13 +20,29 @@ namespace PlumMediaCenter.Business.Managers
             return models.ToList();
         }
 
-        public async Task<List<Models.Movie>> GetByIds(List<long> ids)
+        /// <summary>
+        /// Get a list of movies by id
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <returns></returns>
+        public async Task<List<Models.Movie>> GetByIds(List<ulong> ids)
         {
             var models = await this.Connection.QueryAsync<Models.Movie>(@"
                 select * from movies
-                where id in :ids
+                where id in @ids
             ", new { ids = ids });
             return models.ToList();
+        }
+
+        /// <summary>
+        /// Get a movie by id
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<Models.Movie> GetById(ulong id)
+        {
+            var movies = await this.GetByIds(new List<ulong> { id });
+            return movies.FirstOrDefault();
         }
     }
 }

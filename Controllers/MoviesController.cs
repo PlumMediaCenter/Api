@@ -10,13 +10,36 @@ using TMDbLib.Objects.Movies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Http;
+using PlumMediaCenter.Business;
 
 namespace PlumMediaCenter.Controllers
 {
     [Route("api/[controller]")]
     public class MoviesController : Controller
     {
+        private Manager _Manager;
+        public Manager Manager
+        {
+            get
+            {
+                if (_Manager == null)
+                {
+                    _Manager = new Manager();
+                }
+                return _Manager;
+            }
+        }
 
+        [HttpGet("{id}")]
+        public async Task<Models.Movie> GetById(ulong id)
+        {
+            return await this.Manager.Movies.GetById(id);
+        }
+
+        /// <summary>
+        /// Get a list of all movies
+        /// </summary>
+        /// <returns></returns>
         [HttpGet]
         public async Task<List<Models.Movie>> GetAll()
         {

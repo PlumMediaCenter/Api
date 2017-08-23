@@ -59,15 +59,42 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         public async Task<ulong?> Insert(LibraryGeneration.Movie movie)
         {
             await this.Connection.ExecuteAsync(@"
-                insert into movies(folderPath, videoPath, title, summary, description, sourceId)
-                values(@folderPath, @videoPath, @title, @summary, @description, @sourceId)
+                insert into movies(
+                    folderPath, 
+                    videoPath, 
+                    title, 
+                    summary, 
+                    description, 
+                    rating,
+                    releaseDate,
+                    runtime,
+                    tmdbId,
+                    sourceId
+                )
+                values(
+                    @folderPath,
+                    @videoPath, 
+                    @title, 
+                    @summary,
+                    @description, 
+                    @rating,
+                    @releaseDate,
+                    @runtime,
+                    @tmdbId,
+                    @sourceId
+                )
             ", new
+
             {
                 folderPath = movie.FolderPath,
                 videoPath = movie.VideoPath,
                 title = movie.Title,
                 summary = movie.Summary,
                 description = movie.Description,
+                rating = movie.Rating,
+                releaseDate = movie.ReleaseDate,
+                runtime = movie.Runtime,
+                tmdbId = movie.TmdbId,
                 sourceId = movie.SourceId
             });
             return await this.Connection.GetLastInsertIdAsync();

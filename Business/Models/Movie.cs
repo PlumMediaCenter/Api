@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using PlumMediaCenter.Business;
 namespace PlumMediaCenter.Models
@@ -69,6 +70,23 @@ namespace PlumMediaCenter.Models
                 return info.Parent.Name;
             }
         }
+
+        /// <summary>
+        /// The MPAA rating of the movie
+        /// </summary>
+        public string Rating;
+        /// <summary>
+        /// The date that the movie was first released
+        /// </summary>
+        public DateTime? ReleaseDate;
+        /// <summary>
+        /// The runtime of the movie in minutes
+        /// </summary>
+        public int Runtime;
+        /// <summary>
+        /// The TMDB if of the movie.
+        /// </summary>
+        public ulong? TmdbId;
 
     }
 }
