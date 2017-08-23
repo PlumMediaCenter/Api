@@ -16,6 +16,15 @@ namespace PlumMediaCenter
                 return $"{Directory.GetCurrentDirectory()}{slash}wwwroot{slash}posters{slash}";
             }
         }
+        
+        public string BackdropFolderPath
+        {
+            get
+            {
+                var slash = Path.DirectorySeparatorChar;
+                return $"{Directory.GetCurrentDirectory()}{slash}wwwroot{slash}backdrops{slash}";
+            }
+        }
         public string TmdbApiString
         {
             get

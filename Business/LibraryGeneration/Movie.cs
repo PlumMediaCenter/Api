@@ -149,7 +149,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             return Task.FromResult<ulong?>(0UL);
         }
 
-    public async Task<ulong?> Create()
+        public async Task<ulong?> Create()
         {
             return await this.Manager.LibraryGeneration.Movies.Insert(this);
         }
@@ -195,6 +195,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
 
         private async Task CopyPosters()
         {
+            //poster
             var sourcePosterPath = $"{this.FolderPath}poster.jpg";
             var destinationPosterPath = $"{this.Manager.AppSettings.PosterFolderPath}{this.Id}.jpg";
             //if the video has a poster, copy it
@@ -208,7 +209,23 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             else
             {
                 //the video doesn't have a poster. Create a text-based poster
-                this.Manager.Utility.CreateTextPoster(this.Title, 100, 100, destinationPosterPath);
+                this.Manager.Utility.CreateTextPoster(this.Title, destinationPosterPath);
+            }
+            //backdrop
+            var sourceBackdropPath = $"{this.FolderPath}backdrop.jpg";
+            var destinationBackdropPath = $"{this.Manager.AppSettings.BackdropFolderPath}{this.Id}.jpg";
+            //if the video has a poster, copy it
+            if (File.Exists(sourceBackdropPath) == true)
+            {
+                await Task.Run(() =>
+                {
+                    File.Copy(sourceBackdropPath, destinationBackdropPath, true);
+                });
+            }
+            else
+            {
+                //the video doesn't have a backdrop. Create a text-based poster
+                this.Manager.Utility.CreateTextBackdrop(this.Title, destinationBackdropPath);
             }
         }
     }
