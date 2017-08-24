@@ -65,6 +65,28 @@ namespace PlumMediaCenter.Business.LibraryGeneration.DotJson
         /// The TMDB ID for this movie. Null if movie is not on TMDB
         /// </summary>
         public int? TmdbId { get; set; }
+
+        /// <summary>
+        /// A collection of posters. Each item is relative to the root folder, and should use linux slashes
+        /// </summary>
+        /// <returns></returns>
+        public List<Image> Posters { get; set; }
+        /// <summary>
+        /// A collection of posters. Each item is relative to the root folder, and should use linux slashes
+        /// </summary>
+        /// <returns></returns>
+        public List<Image> Backdrops { get; set; }
+    }
+
+    public class Image{
+        /// <summary>
+        /// The relative path to the image, relative to the root movie folder
+        /// </summary>
+        public string Path;
+        /// <summary>
+        /// The URL used to originally download the image. 
+        /// </summary>
+        public string SourceUrl;
     }
 
     public class CastMember

@@ -51,8 +51,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             var tcurrent = GetCurrentMetadata(movieId);
             var tTmdb = GetTmdbMetadata(tmdbId);
 
+            //convert current posters into tmdb poster urls
+
             result.Current = await tcurrent;
-            result.Tmdb = await tTmdb;
+            result.Incoming = await tTmdb;
             return result;
         }
 
@@ -118,34 +120,55 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             //throw new Exception(Newtonsoft.Json.JsonConvert.SerializeObject(movie.MovieDotJson));
             var metadata = new MovieMetadata(movie.MovieDotJson);
 
-            var posterFolderPath = $"{movie.FolderPath}/posters";
-            if (Directory.Exists(posterFolderPath))
+            var posters = movie.MovieDotJson.Posters ?? new List<Image>();
+            foreach (var poster in posters)
             {
-                var posters = Directory.GetFiles(posterFolderPath);
-                foreach (var poster in posters)
+                //add the source url as is
+                if (poster.SourceUrl != null)
                 {
-                    var name = Path.GetFileName(poster);
-                    metadata.PosterUrls.Add($"{movieModel.FolderUrl}posters/{name}");
+                    metadata.PosterUrls.Add(poster.SourceUrl);
                 }
+                else
+                {
+                    //the poster doesn't have a source url...so assume it's a locally added image. add the local url
+                    var path = $"{movie.FolderPath}/{poster.Path}";
+                    if (File.Exists(path))
+                    {
+                        var name = Path.GetFileName(path);
+                        metadata.PosterUrls.Add($"{movieModel.FolderUrl}{poster.Path}");
+                    }
+                }
+
             }
 
-            var backdropFolderPath = $"{movie.FolderPath}/backdrops";
-            if (Directory.Exists(backdropFolderPath))
-            {
-                var backdrops = Directory.GetFiles(backdropFolderPath);
-                foreach (var backdrop in backdrops)
-                {
-                    var name = Path.GetFileName(backdrop);
-                    metadata.BackdropUrls.Add($"{movieModel.FolderUrl}backdrops/{name}");
-                }
-            }
+            // var posterFolderPath = $"{movie.FolderPath}/posters";
+            // if (Directory.Exists(posterFolderPath))
+            // {
+            //     var posters = Directory.GetFiles(posterFolderPath);
+            //     foreach (var poster in posters)
+            //     {
+            //         var name = Path.GetFileName(poster);
+            //         metadata.PosterUrls.Add($"{movieModel.FolderUrl}posters/{name}");
+            //     }
+            // }
+
+            // var backdropFolderPath = $"{movie.FolderPath}/backdrops";
+            // if (Directory.Exists(backdropFolderPath))
+            // {
+            //     var backdrops = Directory.GetFiles(backdropFolderPath);
+            //     foreach (var backdrop in backdrops)
+            //     {
+            //         var name = Path.GetFileName(backdrop);
+            //         metadata.BackdropUrls.Add($"{movieModel.FolderUrl}backdrops/{name}");
+            //     }
+            // }
             return metadata;
         }
     }
 
     public class MovieMetadataComparison
     {
-        public MovieMetadata Tmdb;
+        public MovieMetadata Incoming;
         public MovieMetadata Current;
     }
     public class MovieMetadata : MovieDotJson
