@@ -138,30 +138,27 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                         metadata.PosterUrls.Add($"{movieModel.FolderUrl}{poster.Path}");
                     }
                 }
-
             }
 
-            // var posterFolderPath = $"{movie.FolderPath}/posters";
-            // if (Directory.Exists(posterFolderPath))
-            // {
-            //     var posters = Directory.GetFiles(posterFolderPath);
-            //     foreach (var poster in posters)
-            //     {
-            //         var name = Path.GetFileName(poster);
-            //         metadata.PosterUrls.Add($"{movieModel.FolderUrl}posters/{name}");
-            //     }
-            // }
-
-            // var backdropFolderPath = $"{movie.FolderPath}/backdrops";
-            // if (Directory.Exists(backdropFolderPath))
-            // {
-            //     var backdrops = Directory.GetFiles(backdropFolderPath);
-            //     foreach (var backdrop in backdrops)
-            //     {
-            //         var name = Path.GetFileName(backdrop);
-            //         metadata.BackdropUrls.Add($"{movieModel.FolderUrl}backdrops/{name}");
-            //     }
-            // }
+            var backdrops = movie.MovieDotJson.Backdrops ?? new List<Image>();
+            foreach (var backdrop in backdrops)
+            {
+                //add the source url as is
+                if (backdrop.SourceUrl != null)
+                {
+                    metadata.BackdropUrls.Add(backdrop.SourceUrl);
+                }
+                else
+                {
+                    //the poster doesn't have a source url...so assume it's a locally added image. add the local url
+                    var path = $"{movie.FolderPath}/{backdrop.Path}";
+                    if (File.Exists(path))
+                    {
+                        var name = Path.GetFileName(path);
+                        metadata.BackdropUrls.Add($"{movieModel.FolderUrl}{backdrop.Path}");
+                    }
+                }
+            }
             return metadata;
         }
     }
