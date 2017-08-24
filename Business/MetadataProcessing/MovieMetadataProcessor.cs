@@ -91,23 +91,35 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             metadata.Titles.AddRange(
                 movie.AlternativeTitles?.Titles?.Where(x => x.Iso_3166_1.ToLower() == "us").Select(x => x.Title).ToList() ?? new List<string>()
             );
+            metadata.Titles = metadata.Titles.Distinct().ToList();
 
             metadata.TmdbId = movie.Id;
 
+
+            if (movie.PosterPath != null)
+            {
+                metadata.PosterUrls.Add(Client.GetImageUrl("original", movie.PosterPath).ToString());
+            }
             metadata.PosterUrls.AddRange(
                 movie.Images?.Posters?
                 .Where(x => x.Iso_639_1?.ToLower() == "en")?
                 .Select(x => Client.GetImageUrl("original", x.FilePath).ToString())?
                 .ToList() ?? new List<string>()
             );
+            metadata.PosterUrls = metadata.PosterUrls.Distinct().ToList();
 
-            metadata.BackdropUrls.Add(Client.GetImageUrl("original", movie.BackdropPath).ToString());
+
+            if (movie.BackdropPath != null)
+            {
+                metadata.BackdropUrls.Add(Client.GetImageUrl("original", movie.BackdropPath).ToString());
+            }
             metadata.BackdropUrls.AddRange(
                 movie.Images?.Backdrops?
                 .Where(x => x.Iso_639_1?.ToLower() == "en")?
                 .Select(x => Client.GetImageUrl("original", x.FilePath).ToString())?
                 .ToList() ?? new List<string>()
             );
+            metadata.BackdropUrls = metadata.BackdropUrls.Distinct().ToList();
 
             return metadata;
         }
@@ -120,7 +132,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             //throw new Exception(Newtonsoft.Json.JsonConvert.SerializeObject(movie.MovieDotJson));
             var metadata = new MovieMetadata(movie.MovieDotJson);
 
-            var posters = movie.MovieDotJson.Posters ?? new List<Image>();
+            var posters = movie.MovieDotJson?.Posters ?? new List<Image>();
             foreach (var poster in posters)
             {
                 //add the source url as is
@@ -140,7 +152,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 }
             }
 
-            var backdrops = movie.MovieDotJson.Backdrops ?? new List<Image>();
+            var backdrops = movie.MovieDotJson?.Backdrops ?? new List<Image>();
             foreach (var backdrop in backdrops)
             {
                 //add the source url as is
