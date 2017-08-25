@@ -4,23 +4,53 @@ using PlumMediaCenter.Data;
 using System.Linq;
 using System.Collections.Generic;
 using System;
+using System.Threading;
 
 namespace PlumMediaCenter.Business.LibraryGeneration
 {
+    /// <summary>
+    /// A singleton library generator 
+    /// </summary>
     public class LibraryGenerator
     {
-        public LibraryGenerator(Manager manager = null)
+        private LibraryGenerator()
         {
-            this.Manager = manager != null ? manager : new Manager();
+            this.Manager = new Manager();
         }
+
+        private static LibraryGenerator _Instance;
+        public static LibraryGenerator Instance
+        {
+            get
+            {
+                return _Instance = _Instance != null ? _Instance : new LibraryGenerator();
+            }
+        }
+
         public Manager Manager;
 
+        private Status Status;
+        public Status GetStatus()
+        {
+            return this.Status?.Clone();
+        }
+
+        private bool IsGenerating = false;
         public async Task Generate()
         {
-            var moviesTask = this.ProcessMovies();
-            var seriesTask = this.ProcessShows();
-            await Task.WhenAll(moviesTask, seriesTask);
-            return;
+            if (IsGenerating == true)
+            {
+                throw new Exception("Library generation is already in process");
+            }
+            IsGenerating = true;
+            this.Status = new Status();
+            this.Status.State = "processing movies";
+            await this.ProcessMovies();
+            this.Status.State = "processing tv shows";
+            await this.ProcessShows();
+            this.Status.State = "completed";
+            this.Status.LastGeneratedDate = DateTime.UtcNow;
+            IsGenerating = false;
         }
 
         private async Task ProcessMovies()
@@ -62,13 +92,21 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
             moviePaths = distinctList;
 
+            //update Status
+            this.Status.MovieCountTotal = moviePaths.Count;
+            var random = new Random();
             //process each movie. movie.Process will handle adding, updating, and deleting
-            //temporarily run these in series so we can have consistent ids
-            //            Parallel.ForEach(moviePaths, async (moviePath) =>
-            moviePaths.ForEach((moviePath) =>
+            Parallel.ForEach(moviePaths, (moviePath) =>
             {
+                var path = moviePath.Path;
+                //add this move to the list of currently processing movies
+                this.Status.ActiveFiles.Add(path);
                 var movie = new Movie(new Manager(), moviePath.Path, moviePath.Source.Id.Value);
                 movie.Process().Wait();
+                Thread.Sleep(random.Next(1000, 5000));
+                this.Status.MovieCountCurrent++;
+                //remove the movie from the list of currently processing movies
+                this.Status.ActiveFiles.Remove(path);
             });
         }
 
@@ -102,5 +140,37 @@ namespace PlumMediaCenter.Business.LibraryGeneration
     {
         public string Path;
         public Source Source;
+    }
+
+    public class Status
+    {
+        /// <summary>
+        /// The current state ("generating", "generated")
+        /// </summary>
+        public string State { get; set; }
+        /// <summary>
+        /// The end time of the last time the library was generated. This is not updated until a generation has completed.
+        /// </summary>
+        public DateTime LastGeneratedDate { get; set; }
+        /// <summary>
+        /// The total number of movie entries to process
+        /// </summary>
+        public int MovieCountTotal { get; set; }
+        /// <summary>
+        /// The current number of movie entries that have been processed
+        /// </summary>
+        public int MovieCountCurrent { get; set; }
+        /// <summary>
+        /// The list of movies currently being processed
+        /// </summary>
+        /// <returns></returns>
+        public List<string> ActiveFiles { get; set; } = new List<string>();
+
+        public Status Clone()
+        {
+            var clone = (Status)this.MemberwiseClone();
+            clone.ActiveFiles = clone.ActiveFiles.ToList();
+            return clone;
+        }
     }
 }
