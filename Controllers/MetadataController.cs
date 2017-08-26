@@ -73,9 +73,11 @@ namespace PlumMediaCenter.Controllers
             return await processor.GetComparison(tmdbId, movieId);
         }
 
-        public async Task SaveMetadata([FromBody] object body)
+        [HttpPost("movies/{movieId}")]
+        public async Task SaveMetadata(int movieId, [FromBody] MovieMetadata metadata)
         {
-
+            var processor = new MovieMetadataProcessor();
+            await processor.Save(movieId, metadata);
         }
     }
 }

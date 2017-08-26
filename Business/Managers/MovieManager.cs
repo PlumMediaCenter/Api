@@ -15,7 +15,8 @@ namespace PlumMediaCenter.Business.Managers
         {
 
             var models = await this.Connection.QueryAsync<Models.Movie>(@"
-                select * from movies;
+                select * from movies
+                order by title asc;
             ");
             return models.ToList();
         }

@@ -88,7 +88,7 @@ namespace PlumMediaCenter
                     });
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //the database is probably not installed.
             }

@@ -137,7 +137,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                             var file = TagLib.File.Create(this.VideoPath);
                             _Runtime = (int?)Math.Ceiling(file.Properties.Duration.TotalMinutes);
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             _Runtime = -1;
                         }
@@ -203,7 +203,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             {
                 this.Id = await this.Create();
             }
-            await this.CopyPosters();
+            await this.CopyImages();
         }
 
         public Task<ulong?> Update()
@@ -255,7 +255,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             //delete images from cache
         }
 
-        private async Task CopyPosters()
+        private async Task CopyImages()
         {
             //poster
             var sourcePosterPath = $"{this.FolderPath}poster.jpg";
@@ -276,7 +276,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             //backdrop
             var sourceBackdropPath = $"{this.FolderPath}backdrop.jpg";
             var destinationBackdropPath = $"{this.Manager.AppSettings.BackdropFolderPath}{this.Id}.jpg";
-            //if the video has a poster, copy it
+            //if the video has a backdrop, copy it
             if (File.Exists(sourceBackdropPath) == true)
             {
                 await Task.Run(() =>

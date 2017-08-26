@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using PlumMediaCenter.Business.LibraryGeneration.DotJson;
 using TMDbLib.Client;
 using TMDbLib.Objects.General;
@@ -76,10 +78,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             metadata.Description = movie.Overview;
             metadata.Genres = movie.Genres?.Select(x => x.Name).ToList();
             metadata.Keywords = movie.Keywords?.Keywords?.Select(x => x.Name).ToList();
-            var release = movie.Releases?.Countries?
-                .Where(x => x.Iso_3166_1.ToLower() == "us")?
-                .OrderBy(x => x.ReleaseDate)?
-                .First();
+            var release = movie.Releases?.Countries
+                ?.Where(x => x.Iso_3166_1.ToLower() == "us")
+                ?.OrderBy(x => x.ReleaseDate)
+                ?.First();
             //get the oldest US rating
             metadata.Rating = release?.Certification;
             metadata.ReleaseDate = release?.ReleaseDate;
@@ -101,10 +103,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 metadata.PosterUrls.Add(Client.GetImageUrl("original", movie.PosterPath).ToString());
             }
             metadata.PosterUrls.AddRange(
-                movie.Images?.Posters?
-                .Where(x => x.Iso_639_1?.ToLower() == "en")?
-                .Select(x => Client.GetImageUrl("original", x.FilePath).ToString())?
-                .ToList() ?? new List<string>()
+                movie.Images?.Posters
+                ?.Where(x => x.Iso_639_1?.ToLower() == "en")
+                ?.Select(x => Client.GetImageUrl("original", x.FilePath).ToString())
+                ?.ToList() ?? new List<string>()
             );
             metadata.PosterUrls = metadata.PosterUrls.Distinct().ToList();
 
@@ -114,10 +116,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 metadata.BackdropUrls.Add(Client.GetImageUrl("original", movie.BackdropPath).ToString());
             }
             metadata.BackdropUrls.AddRange(
-                movie.Images?.Backdrops?
-                .Where(x => x.Iso_639_1?.ToLower() == "en")?
-                .Select(x => Client.GetImageUrl("original", x.FilePath).ToString())?
-                .ToList() ?? new List<string>()
+                movie.Images?.Backdrops
+                ?.Where(x => x.Iso_639_1?.ToLower() == "en")
+                ?.Select(x => Client.GetImageUrl("original", x.FilePath).ToString())
+                ?.ToList() ?? new List<string>()
             );
             metadata.BackdropUrls = metadata.BackdropUrls.Distinct().ToList();
 
@@ -132,24 +134,12 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             //throw new Exception(Newtonsoft.Json.JsonConvert.SerializeObject(movie.MovieDotJson));
             var metadata = new MovieMetadata(movie.MovieDotJson);
 
-            var posters = movie.MovieDotJson?.Posters ?? new List<Image>();
-            foreach (var poster in posters)
+            //if the movie has a poster, add its local url
+            var posterPath = $"{movie.FolderPath}/poster.jpg";
+            if (File.Exists(posterPath))
             {
-                //add the source url as is
-                if (poster.SourceUrl != null)
-                {
-                    metadata.PosterUrls.Add(poster.SourceUrl);
-                }
-                else
-                {
-                    //the poster doesn't have a source url...so assume it's a locally added image. add the local url
-                    var path = $"{movie.FolderPath}/{poster.Path}";
-                    if (File.Exists(path))
-                    {
-                        var name = Path.GetFileName(path);
-                        metadata.PosterUrls.Add($"{movieModel.FolderUrl}{poster.Path}");
-                    }
-                }
+                var name = Path.GetFileName(posterPath);
+                metadata.PosterUrls.Add($"{movieModel.FolderUrl}{name}");
             }
 
             var backdrops = movie.MovieDotJson?.Backdrops ?? new List<Image>();
@@ -172,6 +162,82 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 }
             }
             return metadata;
+        }
+
+        public async Task Save(int movieId, MovieMetadata metadata)
+        {
+            //overwrite the MovieDotJson for this movie
+            var manager = new Manager();
+            var movie = await manager.Movies.GetById(movieId);
+
+            //process the poster
+            {
+                //delete any existing poster
+                var posterPath = $"{movie.GetFolderPath()}/poster.jpg";
+                if (File.Exists(posterPath))
+                {
+                    File.Delete(posterPath);
+                }
+                if (metadata.PosterUrls.Count > 0)
+                {
+                    //only keep the first poster, since we only store a single poster
+                    new WebClient().DownloadFile(metadata.PosterUrls.First(), posterPath);
+                }
+            }
+
+            //copy the backdrops
+            CopyImages(metadata.BackdropUrls, $"{movie.GetFolderPath()}/backdrops/");
+
+            var movieDotJsonPath = $"{movie.GetFolderPath()}movie.json";
+            var movieDotJson = (MovieDotJson)metadata;
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(movieDotJson, Formatting.Indented);
+            await File.WriteAllTextAsync(movieDotJsonPath, json);
+
+        }
+
+        /// <summary>
+        /// Copy/download a set of images to the destination path, removing any images from destination that are not in the list.
+        /// Returns a list of image paths for the newly copied files
+        /// </summary>
+        /// <param name="imageUrls"></param>
+        /// <param name="destinationPath"></param>
+        /// <returns></returns>
+        public List<string> CopyImages(List<string> imageUrls, string destinationPath)
+        {
+
+            var tempPaths = new List<string>();
+            //copy all of the posters 
+            Parallel.ForEach(imageUrls, (imageUrl) =>
+            {
+                var ext = Path.GetExtension(imageUrl);
+                var filename = Guid.NewGuid().ToString();
+                var tempImagePath = $"{AppSettings.TempPath}/{filename}{ext}";
+                var client = new WebClient();
+                client.DownloadFile(imageUrl, tempImagePath);
+                tempPaths.Add(tempImagePath);
+            });
+            //make the backdrop folder in the movie folder (if it doesn't already exist)
+            if (imageUrls.Count > 0 && Directory.Exists(destinationPath) == false)
+            {
+                Directory.CreateDirectory(destinationPath);
+            }
+
+            //delete all  files from the backdrops folder
+            Utility.EmptyDirectory(destinationPath);
+
+            var imagePaths = new List<string>();
+            //copy all of the temp posters into the backdrops folder
+            Parallel.ForEach(tempPaths, (tempImagePath) =>
+            {
+                var filename = Path.GetFileName(tempImagePath);
+                var imagePath = $"{destinationPath}{filename}";
+                //copy the image to the destination
+                File.Copy(tempImagePath, imagePath);
+                //delete the temp image
+                File.Delete(tempImagePath);
+                imagePaths.Add(imagePath);
+            });
+            return imagePaths;
         }
     }
 

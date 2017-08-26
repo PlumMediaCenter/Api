@@ -74,6 +74,11 @@ namespace PlumMediaCenter.Models
                 return this._FolderPath;
             }
         }
+
+        /// <summary>
+        /// Get the folder path for the movie. Made as a method so it won't serialize to json.
+        /// </summary>
+        /// <returns></returns>
         public string GetFolderPath()
         {
             return this._FolderPath;

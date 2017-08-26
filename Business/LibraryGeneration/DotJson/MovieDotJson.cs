@@ -70,11 +70,6 @@ namespace PlumMediaCenter.Business.LibraryGeneration.DotJson
         /// A collection of posters. Each item is relative to the root folder, and should use linux slashes
         /// </summary>
         /// <returns></returns>
-        public List<Image> Posters { get; set; }
-        /// <summary>
-        /// A collection of posters. Each item is relative to the root folder, and should use linux slashes
-        /// </summary>
-        /// <returns></returns>
         public List<Image> Backdrops { get; set; }
     }
 

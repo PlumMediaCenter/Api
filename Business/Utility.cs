@@ -150,5 +150,20 @@ namespace PlumMediaCenter.Business
                 return (string)store["baseUrl"];
             }
         }
+
+        /// <summary>
+        /// Deletes all files from a directory
+        /// </summary>
+        /// <param name="path"></param>
+        public static void EmptyDirectory(string path)
+        {
+            var directory = new DirectoryInfo(path);
+            var files = directory.GetFiles();
+            foreach (System.IO.FileInfo file in files)
+            {
+                file.Delete();
+            }
+
+        }
     }
 }
