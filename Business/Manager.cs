@@ -1,8 +1,9 @@
+using System;
 using System.Data;
 
 namespace PlumMediaCenter.Business
 {
-    public class Manager
+    public class Manager : IDisposable
     {
         public Manager()
         {
@@ -40,6 +41,18 @@ namespace PlumMediaCenter.Business
             }
         }
 
+        void IDisposable.Dispose()
+        {
+            try
+            {
+                this.Connection.Close();
+                this.Connection.Dispose();
+            }
+            catch (Exception)
+            {
+
+            }
+        }
     }
 
     public class LibraryGenerationManager : BaseManager

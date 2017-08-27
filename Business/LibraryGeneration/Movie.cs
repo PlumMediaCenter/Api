@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using PlumMediaCenter.Business.LibraryGeneration.DotJson;
 using PlumMediaCenter.Data;
@@ -163,6 +164,14 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
         }
 
+        private string BackdropFolderPath
+        {
+            get
+            {
+                return $"{this.FolderPath}backdrops/";
+            }
+        }
+
         public string VideoPath
         {
             get
@@ -253,6 +262,22 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             //delete from the database
             await this.Manager.LibraryGeneration.Movies.Delete(this.FolderPath);
             //delete images from cache
+
+        }
+
+        private List<string> GetGuidsFromFilesystem()
+        {
+            if (Directory.Exists(this.BackdropFolderPath))
+            {
+                var files = Directory.GetFiles(this.BackdropFolderPath);
+                return files.ToList()
+                    .Select(x => Path.GetFileNameWithoutExtension(x))
+                    .ToList();
+            }
+            else
+            {
+                return new List<string>();
+            }
         }
 
         private async Task CopyImages()
@@ -261,34 +286,64 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             var sourcePosterPath = $"{this.FolderPath}poster.jpg";
             var destinationPosterPath = $"{this.Manager.AppSettings.PosterFolderPath}{this.Id}.jpg";
             //if the video has a poster, copy it
-            if (File.Exists(sourcePosterPath) == true)
-            {
-                await Task.Run(() =>
-                {
-                    File.Copy(sourcePosterPath, destinationPosterPath, true);
-                });
-            }
-            else
+            if (File.Exists(sourcePosterPath) == false)
             {
                 //the video doesn't have a poster. Create a text-based poster
-                this.Manager.Utility.CreateTextPoster(this.Title, destinationPosterPath);
+                this.Manager.Utility.CreateTextPoster(this.Title, sourcePosterPath);
             }
+
+            //copy the poster
+            await Task.Run(() =>
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(destinationPosterPath));
+                File.Copy(sourcePosterPath, destinationPosterPath, true);
+            });
+
             //backdrop
             var sourceBackdropPath = $"{this.FolderPath}backdrop.jpg";
-            var destinationBackdropPath = $"{this.Manager.AppSettings.BackdropFolderPath}{this.Id}.jpg";
-            //if the video has a backdrop, copy it
-            if (File.Exists(sourceBackdropPath) == true)
+            var guidsFromDb = await this.Manager.LibraryGeneration.Movies.GetBackdropGuids(this.Id.Value);
+            var guidsFromFilesystem = this.GetGuidsFromFilesystem();
+
+
+            //delete any backdrops that are no longer present in the movie folder
+            foreach (var guid in guidsFromDb)
             {
-                await Task.Run(() =>
+                if (guidsFromFilesystem.Contains(guid) == false)
                 {
-                    File.Copy(sourceBackdropPath, destinationBackdropPath, true);
-                });
+                    File.Delete($"{this.BackdropFolderPath}{guid}");
+                }
             }
-            else
+
+
+            var backdropPaths = new List<string>();
+            foreach (var guid in guidsFromFilesystem)
             {
-                //the video doesn't have a backdrop. Create a text-based poster
-                this.Manager.Utility.CreateTextBackdrop(this.Title, destinationBackdropPath);
+                //throw out any backdrops that are already in the cache
+                var backdropPath = $"{this.BackdropFolderPath}{guid}.jpg";
+                var destinationPath = $"{this.Manager.AppSettings.BackdropFolderPath}{guid}.jpg";
+                if (File.Exists(destinationPath) == false)
+                {
+                    backdropPaths.Add(backdropPath);
+                }
             }
+
+            //if the movie already has at least one backdrop, we don't need to generate the text-based image
+            if (guidsFromFilesystem.Count == 0)
+            {
+                var backdropPath = $"{this.BackdropFolderPath}{Guid.NewGuid()}.jpg";
+                //the video doesn't have a backdrop. Create a text-based image
+                this.Manager.Utility.CreateTextBackdrop(this.Title, backdropPath);
+                backdropPaths.Add(backdropPath);
+            }
+            //copy all of the not-yet-cached backdrops to the cached backdrops folder
+            foreach (var path in backdropPaths)
+            {
+                var filename = Path.GetFileName(path);
+                var destinationPath = $"{this.Manager.AppSettings.BackdropFolderPath}{filename}";
+                Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
+                File.Copy(path, destinationPath);
+            }
+            await this.Manager.LibraryGeneration.Movies.SetBackdropGuids(this.Id.Value, guidsFromFilesystem);
         }
     }
 }

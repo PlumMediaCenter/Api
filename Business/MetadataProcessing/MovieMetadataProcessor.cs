@@ -186,7 +186,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             }
 
             //copy the backdrops
-            CopyImages(metadata.BackdropUrls, $"{movie.GetFolderPath()}/backdrops/");
+            CopyBackdrops(metadata, $"{movie.GetFolderPath()}/backdrops/");
 
             var movieDotJsonPath = $"{movie.GetFolderPath()}movie.json";
             var movieDotJson = (MovieDotJson)metadata;
@@ -202,25 +202,25 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         /// <param name="imageUrls"></param>
         /// <param name="destinationPath"></param>
         /// <returns></returns>
-        public List<string> CopyImages(List<string> imageUrls, string destinationPath)
+        public List<string> CopyBackdrops(MovieMetadata metadata, string destinationPath)
         {
 
             var tempPaths = new List<string>();
+            Directory.CreateDirectory(AppSettings.TempPath);
+
             //copy all of the posters 
-            Parallel.ForEach(imageUrls, (imageUrl) =>
+            Parallel.ForEach(metadata.BackdropUrls, (imageUrl) =>
             {
                 var ext = Path.GetExtension(imageUrl);
-                var filename = Guid.NewGuid().ToString();
-                var tempImagePath = $"{AppSettings.TempPath}/{filename}{ext}";
+                var filename = $"{Guid.NewGuid().ToString()}{ Path.GetExtension(imageUrl)}";
+                var tempImagePath = $"{AppSettings.TempPath}/{filename}";
                 var client = new WebClient();
                 client.DownloadFile(imageUrl, tempImagePath);
                 tempPaths.Add(tempImagePath);
+                metadata.Backdrops.Add(new Image { SourceUrl = imageUrl, Path = $"backdrops/{filename}" });
             });
-            //make the backdrop folder in the movie folder (if it doesn't already exist)
-            if (imageUrls.Count > 0 && Directory.Exists(destinationPath) == false)
-            {
-                Directory.CreateDirectory(destinationPath);
-            }
+            //make the backdrop folder in the movie folder
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
 
             //delete all  files from the backdrops folder
             Utility.EmptyDirectory(destinationPath);

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using PlumMediaCenter.Business;
 namespace PlumMediaCenter.Models
 {
@@ -16,13 +18,34 @@ namespace PlumMediaCenter.Models
                 return $"{Utility.BaseUrl}posters/{this.Id}.jpg";
             }
         }
-        public string BackdropUrl
+
+        public string _BackdropGuids
+        {
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    BackdropUrlList = new List<string>();
+                }
+                else
+                {
+
+                    BackdropUrlList = value.Split(",").Select(backdropGuid =>
+                    {
+                        return $"{Utility.BaseUrl}backdrops/{backdropGuid}.jpg";
+                    }).ToList();
+                }
+            }
+        }
+        private List<string> BackdropUrlList;
+        public List<string> BackdropUrls
         {
             get
             {
-                return $"{Utility.BaseUrl}backdrops/{this.Id}.jpg";
+                return BackdropUrlList;
             }
         }
+
         public string VideoUrl
         {
             get
@@ -46,7 +69,7 @@ namespace PlumMediaCenter.Models
                 return $"{Business.Utility.BaseUrl}source{this.SourceId}/{this.FolderName}/";
             }
         }
-        
+
         public int Duration;
 
         private string _VideoPath;

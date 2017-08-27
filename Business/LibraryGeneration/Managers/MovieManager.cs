@@ -126,5 +126,47 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             return movies.ToList();
         }
 
+
+        /// <summary>
+        /// Get a list of guids for all of the backdrops for a movie
+        /// </summary>
+        /// <param name="movieId"></param>
+        /// <returns></returns>
+        public async Task<List<string>> GetBackdropGuids(ulong movieId)
+        {
+
+            var rows = await this.Connection.QueryAsync<string>(@"
+                select backdropGuids from movies
+                where id = @movieId
+            ", new { movieId = movieId });
+
+            var queryResult = rows.FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(queryResult) == false)
+            {
+                return queryResult.Split(',').ToList();
+            }
+            else
+            {
+                return new List<string>();
+            }
+        }
+
+        /// <summary>
+        /// Set the list of backdrop guids for a movie 
+        /// </summary>
+        /// <param name="movieId"></param>
+        /// <param name="backdropGuids"></param>
+        /// <returns></returns>
+        public async Task SetBackdropGuids(ulong movieId, List<string> backdropGuids)
+        {
+            var value = string.Join(",", backdropGuids);
+            await this.Connection.ExecuteAsync(@"
+                update movies
+                set backdropGuids = @value
+                where id = @movieId
+            ", new { movieId = movieId, value = value });
+        }
+
+
     }
 }

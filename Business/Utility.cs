@@ -55,6 +55,7 @@ namespace PlumMediaCenter.Business
                 startingCenterY += 110;
             }
 
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
             using (Stream fileStream = File.Create(destinationPath))
             {
                 image.SaveAsJpeg(fileStream);
@@ -90,7 +91,7 @@ namespace PlumMediaCenter.Business
                 image.DrawText(row, font, Rgba32.White, point);
                 startingCenterY += 110;
             }
-
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
             using (Stream fileStream = File.Create(destinationPath))
             {
                 image.SaveAsJpeg(fileStream);

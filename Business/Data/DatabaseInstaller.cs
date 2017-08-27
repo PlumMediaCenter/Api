@@ -25,7 +25,6 @@ namespace PlumMediaCenter.Data
                     create table sources(
                         id integer AUTO_INCREMENT primary key comment 'id of source',
                         folderPath varchar(4000) not null comment 'full path to source folder',
-
                         sourceType tinyint not null comment 'the type of media such as movies, shows, etc...'
                     );
                 ");
@@ -43,6 +42,7 @@ namespace PlumMediaCenter.Data
                         runtime integer comment 'Runtime of movie in minutes',
                         tmdbId integer comment 'The tmdb id for this movie, if one exists',
                         sourceId integer not null comment 'fk for sources table',
+                        backdropGuids varchar(4000) not null comment 'comma separated list of backdrop guids',
                         foreign key (sourceId) references sources(id)
                     );
                 ");

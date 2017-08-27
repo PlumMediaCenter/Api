@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,7 +16,7 @@ namespace PlumMediaCenter.Business.Managers
         {
 
             var models = await this.Connection.QueryAsync<Models.Movie>(@"
-                select * from movies
+                select *, backdropGuids as _backdropGuids from movies
                 order by title asc;
             ");
             return models.ToList();
@@ -29,7 +30,7 @@ namespace PlumMediaCenter.Business.Managers
         public async Task<List<Models.Movie>> GetByIds(List<int> ids)
         {
             var models = await this.Connection.QueryAsync<Models.Movie>(@"
-                select * from movies
+                select *, backdropGuids as _backdropGuids from movies
                 where id in @ids
             ", new { ids = ids });
             return models.ToList();

@@ -38,18 +38,31 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         private bool IsGenerating = false;
         public async Task Generate()
         {
-            if (IsGenerating == true)
+            try
             {
-                throw new Exception("Library generation is already in process");
+                if (IsGenerating == true)
+                {
+                    throw new Exception("Library generation is already in process");
+                }
+                IsGenerating = true;
+                this.Status = new Status();
+                this.Status.State = "processing movies";
+                await this.ProcessMovies();
+                this.Status.State = "processing tv shows";
+                await this.ProcessShows();
+                this.Status.State = "completed";
+                this.Status.LastGeneratedDate = DateTime.UtcNow;
             }
-            IsGenerating = true;
-            this.Status = new Status();
-            this.Status.State = "processing movies";
-            await this.ProcessMovies();
-            this.Status.State = "processing tv shows";
-            await this.ProcessShows();
-            this.Status.State = "completed";
-            this.Status.LastGeneratedDate = DateTime.UtcNow;
+            catch (Exception e)
+            {
+                //find the deepest exception and only keep that
+                while (e.InnerException != null)
+                {
+                    e = e.InnerException;
+                }
+                this.Status.State = "failed";
+                this.Status.Error = e;
+            }
             IsGenerating = false;
         }
 
@@ -96,14 +109,14 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             this.Status.MovieCountTotal = moviePaths.Count;
             var random = new Random();
             //process each movie. movie.Process will handle adding, updating, and deleting
-            Parallel.ForEach(moviePaths, (moviePath) =>
+            moviePaths.ForEach((moviePath) =>
+            //Parallel.ForEach(moviePaths, (moviePath) =>
             {
                 var path = moviePath.Path;
                 //add this move to the list of currently processing movies
                 this.Status.ActiveFiles.Add(path);
                 var movie = new Movie(new Manager(), moviePath.Path, moviePath.Source.Id.Value);
                 movie.Process().Wait();
-                Thread.Sleep(random.Next(1000, 5000));
                 this.Status.MovieCountCurrent++;
                 //remove the movie from the list of currently processing movies
                 this.Status.ActiveFiles.Remove(path);
@@ -148,6 +161,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// The current state ("generating", "generated")
         /// </summary>
         public string State { get; set; }
+        public Exception Error { get; set; }
         /// <summary>
         /// The end time of the last time the library was generated. This is not updated until a generation has completed.
         /// </summary>
