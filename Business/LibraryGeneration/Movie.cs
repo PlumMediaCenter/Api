@@ -164,7 +164,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
         }
 
-        private string BackdropFolderPath
+        public string BackdropFolderPath
         {
             get
             {
