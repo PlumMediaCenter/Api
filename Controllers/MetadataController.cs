@@ -12,9 +12,11 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Http;
 using PlumMediaCenter.Business;
 using PlumMediaCenter.Business.MetadataProcessing;
+using PlumMediaCenter.Attributues;
 
 namespace PlumMediaCenter.Controllers
 {
+    [ExceptionHandlerFilter]
     [Route("api/[controller]")]
     public class MetadataController : Controller
     {

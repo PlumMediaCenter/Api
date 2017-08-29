@@ -164,7 +164,22 @@ namespace PlumMediaCenter.Business
             {
                 file.Delete();
             }
+        }
 
+        /// <summary>
+        /// Use linux slashes, make sure ends in slash
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public static string NormalizePath(string path, bool isFile)
+        {
+            path = path.Replace('\\', Path.DirectorySeparatorChar);
+            path = path.Replace('/', Path.DirectorySeparatorChar);
+            if (isFile == false && path.EndsWith(Path.DirectorySeparatorChar) == false)
+            {
+                path = path + Path.DirectorySeparatorChar;
+            }
+            return path;
         }
     }
 }

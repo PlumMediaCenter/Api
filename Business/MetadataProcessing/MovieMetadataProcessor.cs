@@ -157,7 +157,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             var backdrops = movie.MovieDotJson?.Backdrops ?? new List<Image>();
 
             //get all backdrops from filesystem, and include only those not already listed in the movie.json
-            var backdropsFromFs = Directory.GetFiles(movie.BackdropFolderPath);
+            var backdropsFromFs = Directory.Exists(movie.BackdropFolderPath) ? Directory.GetFiles(movie.BackdropFolderPath) : new string[0];
             foreach (var backdrop in backdropsFromFs)
             {
                 var backdropAlreadyListed = backdrops.Where(x =>
@@ -201,13 +201,16 @@ namespace PlumMediaCenter.Business.MetadataProcessing
 
             //process the poster
             {
-                //delete any existing poster
-                var posterPath = $"{movie.GetFolderPath()}/poster.jpg";
-                if (File.Exists(posterPath))
+                var posterPath = $"{movie.GetFolderPath()}poster.jpg";
+
+                if (metadata.PosterUrls.Count == 0)
                 {
-                    File.Delete(posterPath);
+                    if (File.Exists(posterPath))
+                    {
+                        File.Delete(posterPath);
+                    }
                 }
-                if (metadata.PosterUrls.Count > 0)
+                else
                 {
                     //only keep the first poster, since we only store a single poster
                     new WebClient().DownloadFile(metadata.PosterUrls.First(), posterPath);
@@ -215,7 +218,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             }
 
             //copy the backdrops
-            CopyBackdrops(metadata, $"{movie.GetFolderPath()}/backdrops/");
+            CopyBackdrops(metadata, movie, movie.GetFolderPath());
 
             var movieDotJsonPath = $"{movie.GetFolderPath()}movie.json";
             var movieDotJson = (MovieDotJson)metadata;
@@ -223,10 +226,12 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             var camelCaseFormatter = new JsonSerializerSettings();
             camelCaseFormatter.ContractResolver = new CamelCasePropertyNamesContractResolver();
             camelCaseFormatter.Formatting = Formatting.Indented;
-            
+
             var json = Newtonsoft.Json.JsonConvert.SerializeObject(movieDotJson, camelCaseFormatter);
             await File.WriteAllTextAsync(movieDotJsonPath, json);
 
+            //reprocess this movie so the library is updated with its info
+            await this.Manager.LibraryGeneration.Movies.Process(movie.GetFolderPath());
         }
 
         /// <summary>
@@ -236,53 +241,75 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         /// <param name="imageUrls"></param>
         /// <param name="destinationPath"></param>
         /// <returns></returns>
-        public List<string> CopyBackdrops(MovieMetadata metadata, string destinationPath)
+        public List<string> CopyBackdrops(MovieMetadata metadata, Models.Movie movie, string moviePath)
         {
-
+            var destinationPath = Utility.NormalizePath($"{moviePath}backdrops/", false);
             var tempPaths = new List<string>();
             Directory.CreateDirectory(AppSettings.TempPath);
+            var backdropUrlsToProcess = new List<string>();
 
-            //get a copy of the base url before threading (because the BaseUrl is stored in thread storage)
-            var baseUrl = Business.Utility.BaseUrl;
-            //copy all of the posters 
-            Parallel.ForEach(metadata.BackdropUrls, (imageUrl) =>
+            var originalBackdrops = metadata.Backdrops;
+            metadata.Backdrops = new List<Image>();
+
+            //exclude any backdrops that we already have
+            foreach (var imageUrl in metadata.BackdropUrls)
+            {
+                var image = originalBackdrops.Where(x => x.SourceUrl == imageUrl).FirstOrDefault();
+                var imagePath = image?.Path == null ? null : Utility.NormalizePath($"{moviePath}{image.Path}", true);
+                //if this image originated from this url, store a basic image record in the json
+                if (imageUrl.ToLowerInvariant().Contains(Business.Utility.BaseUrl.ToLowerInvariant()))
+                {
+                    var len = imageUrl.Length - imageUrl.ToLowerInvariant().Replace(movie.FolderUrl.ToLowerInvariant(), "").Length;
+                    var relativePath = imageUrl.Substring(len);
+
+                    metadata.Backdrops.Add(new Image { Path = relativePath });
+                }
+                //if we don't have reference to this image in the json, or the image doesn't exist on disc, process it
+                else if (image == null || File.Exists(imagePath) == false)
+                {
+                    //store the backdrop in the list of backdrops (to maintain sort order). This record will be updated
+                    //with a filename later in the process
+                    metadata.Backdrops.Add(new Image { SourceUrl = imageUrl });
+                    backdropUrlsToProcess.Add(imageUrl);
+                }
+                else
+                {
+                    //keep the existing image
+                    metadata.Backdrops.Add(image);
+                }
+            }
+
+            //download the new posters
+            Parallel.ForEach(backdropUrlsToProcess, (imageUrl) =>
             {
                 var ext = Path.GetExtension(imageUrl);
                 var filename = $"{Guid.NewGuid().ToString()}{ Path.GetExtension(imageUrl)}";
                 var tempImagePath = $"{AppSettings.TempPath}/{filename}";
                 var client = new WebClient();
+                Directory.CreateDirectory(AppSettings.TempPath);
                 client.DownloadFile(imageUrl, tempImagePath);
                 tempPaths.Add(tempImagePath);
-                string sourceUrl;
-                //if the source url originates from this server, don't store the url in the metadata
-                if (imageUrl.ToLowerInvariant().Contains(baseUrl.ToLowerInvariant()))
-                {
-                    sourceUrl = null;
-                }
-                else
-                {
-                    sourceUrl = imageUrl;
-                }
-                metadata.Backdrops.Add(new Image { SourceUrl = sourceUrl, Path = $"backdrops/{filename}" });
+
+                //update metadata with backdrop filename
+                var imageFromJson = metadata.Backdrops.Where(x => x.SourceUrl == imageUrl).FirstOrDefault();
+                imageFromJson.Path = Utility.NormalizePath($"backdrops/{filename}", true);
+
             });
             //make the backdrop folder in the movie folder
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
 
-            //delete all  files from the backdrops folder
-            Utility.EmptyDirectory(destinationPath);
-
             var imagePaths = new List<string>();
             //copy all of the temp posters into the backdrops folder
             Parallel.ForEach(tempPaths, (tempImagePath) =>
-                {
-                    var filename = Path.GetFileName(tempImagePath);
-                    var imagePath = $"{destinationPath}{filename}";
-                    //copy the image to the destination
-                    File.Copy(tempImagePath, imagePath);
-                    //delete the temp image
-                    File.Delete(tempImagePath);
-                    imagePaths.Add(imagePath);
-                });
+            {
+                var filename = Path.GetFileName(tempImagePath);
+                var imagePath = $"{destinationPath}{filename}";
+                //copy the image to the destination
+                File.Copy(tempImagePath, imagePath);
+                //delete the temp image
+                File.Delete(tempImagePath);
+                imagePaths.Add(imagePath);
+            });
             return imagePaths;
         }
     }

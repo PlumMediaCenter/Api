@@ -5,6 +5,7 @@ using Dapper;
 using PlumMediaCenter.Business.LibraryGeneration.DotJson;
 using System.Linq;
 using System;
+using System.IO;
 
 namespace PlumMediaCenter.Business.LibraryGeneration.Managers
 {
@@ -56,7 +57,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// Get a list of every movie directory
         /// </summary>
         /// <returns></returns>
-        public async Task<ulong?> Insert(LibraryGeneration.Movie movie)
+        public async Task<ulong> Insert(LibraryGeneration.Movie movie)
         {
             await this.Connection.ExecuteAsync(@"
                 insert into movies(
@@ -97,7 +98,49 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                 tmdbId = movie.TmdbId,
                 sourceId = movie.SourceId
             });
-            return await this.Connection.GetLastInsertIdAsync();
+            var id = await this.Connection.GetLastInsertIdAsync();
+            return id.Value;
+        }
+
+        public async Task<ulong> Update(LibraryGeneration.Movie movie)
+        {
+            var movieId = await this.Connection.QueryFirstOrDefaultAsync<ulong?>(@"
+                select id from movies where folderPath = @folderPath
+            ", new { folderPath = movie.FolderPath });
+            if (movieId == null)
+            {
+                throw new Exception($"Movie not found in database with path {movie.FolderPath}");
+            }
+            await this.Connection.ExecuteAsync(@"
+                update movies
+                set
+                    folderPath = @folderPath,
+                    videoPath = @videoPath, 
+                    title = @title, 
+                    summary = @summary,
+                    description = @description, 
+                    rating = @rating,
+                    releaseDate = @releaseDate,
+                    runtime = @runtime,
+                    tmdbId = @tmdbId,
+                    sourceId = @sourceId
+                where id = @movieId
+            ", new
+
+            {
+                folderPath = movie.FolderPath,
+                videoPath = movie.VideoPath,
+                title = movie.Title,
+                summary = movie.Summary,
+                description = movie.Description,
+                rating = movie.Rating,
+                releaseDate = movie.ReleaseDate,
+                runtime = movie.Runtime,
+                tmdbId = movie.TmdbId,
+                sourceId = movie.SourceId,
+                movieId = movieId
+            });
+            return movieId.Value;
         }
 
 
@@ -165,6 +208,22 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                 set backdropGuids = @value
                 where id = @movieId
             ", new { movieId = movieId, value = value });
+        }
+
+        /// <summary>
+        /// Process the movie at the given path. 
+        /// </summary>
+        /// <param name="moviePath"></param>
+        /// <returns></returns>
+        public async Task Process(string moviePath)
+        {
+            moviePath = Utility.NormalizePath(moviePath, false);
+            var sources = await this.Manager.LibraryGeneration.Sources.GetAll();
+            //remove the movie folder name
+            var parentPath = Utility.NormalizePath(Path.GetDirectoryName(Path.GetDirectoryName(moviePath)).ToLowerInvariant(), false);
+            var source = sources.Where(x => Utility.NormalizePath(x.FolderPath.ToLowerInvariant(), false) == parentPath).FirstOrDefault();
+            var movie = new Movie(this.Manager, moviePath, source.Id.Value);
+            await movie.Process();
         }
 
 

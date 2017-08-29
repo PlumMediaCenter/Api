@@ -22,6 +22,10 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// The id for this video. This is only set during Process(), so don't depend on it unless you are calling a function from Process()
         /// </summary>
         private ulong? Id;
+        public ulong? GetId()
+        {
+            return this.Id;
+        }
 
         /// <summary>
         /// The id for the video source
@@ -168,7 +172,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         {
             get
             {
-                return $"{this.FolderPath}backdrops/";
+                return Utility.NormalizePath($"{this.FolderPath}backdrops/", false);
             }
         }
 
@@ -215,12 +219,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             await this.CopyImages();
         }
 
-        public Task<ulong?> Update()
+        public async Task<ulong> Update()
         {
-            return Task.FromResult<ulong?>(0UL);
+            return await this.Manager.LibraryGeneration.Movies.Update(this);
         }
 
-        public async Task<ulong?> Create()
+        public async Task<ulong> Create()
         {
             return await this.Manager.LibraryGeneration.Movies.Insert(this);
         }
@@ -303,17 +307,6 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             var sourceBackdropPath = $"{this.FolderPath}backdrop.jpg";
             var guidsFromDb = await this.Manager.LibraryGeneration.Movies.GetBackdropGuids(this.Id.Value);
             var guidsFromFilesystem = this.GetGuidsFromFilesystem();
-
-
-            //delete any backdrops that are no longer present in the movie folder
-            foreach (var guid in guidsFromDb)
-            {
-                if (guidsFromFilesystem.Contains(guid) == false)
-                {
-                    File.Delete($"{this.BackdropFolderPath}{guid}");
-                }
-            }
-
 
             var backdropPaths = new List<string>();
             foreach (var guid in guidsFromFilesystem)

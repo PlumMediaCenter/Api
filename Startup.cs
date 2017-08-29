@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -58,12 +61,14 @@ namespace PlumMediaCenter
             app.UseStaticFiles();
             //register middleware to save the current request to thread storage
             app.UseRequestMiddleware();
-            app.UseDeveloperExceptionPage();
+            //app.UseDeveloperExceptionPage();
 
             var injectorOptions = app.ApplicationServices.GetService<MiddlewareInjectorOptions>();
             app.UseMiddlewareInjector(injectorOptions);
 
             app.UseMvc();
+            //send a custom error message
+           
         }
 
         /// <summary>
