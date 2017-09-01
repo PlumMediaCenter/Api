@@ -14,12 +14,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.PlatformAbstractions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using PlumMediaCenter;
 using PlumMediaCenter.Controllers;
 using PlumMediaCenter.Data;
 using PlumMediaCenter.Middleware;
+using Swashbuckle.AspNetCore.Swagger;
 
 namespace PlumMediaCenter
 {
@@ -50,7 +52,12 @@ namespace PlumMediaCenter
             {
                 options.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
             });
-
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new Info { Title = "My API", Version = "v1" });
+                var filePath = Path.Combine(PlatformServices.Default.Application.ApplicationBasePath, "pmc.xml");
+                c.IncludeXmlComments(filePath);
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -67,8 +74,12 @@ namespace PlumMediaCenter
             app.UseMiddlewareInjector(injectorOptions);
 
             app.UseMvc();
-            //send a custom error message
-           
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+            });
+
         }
 
         /// <summary>

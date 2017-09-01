@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <UserSecretsId>aspnet-PlumMediaCenter-81897A70-A42B-42D9-B371-736517CAEDF8</UserSecretsId>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Folder Include="wwwroot\" />
@@ -13,6 +14,7 @@
     <PackageReference Include="Dapper" Version="1.50.2" />
     <PackageReference Include="ImageSharp" Version="1.0.0-alpha9-00173" />
     <PackageReference Include="ImageSharp.Drawing" Version="1.0.0-alpha9-00168" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="1.0.0" />
     <PackageReference Include="taglib" Version="2.1.0" />
     <PackageReference Include="TMDbLib" Version="1.0.0" />
   </ItemGroup>
@@ -20,4 +22,10 @@
     <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="2.0.0" />
     <DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="2.0.0" />
   </ItemGroup>
+  <Target Name="PrepublishScript" BeforeTargets="PrepareForPublish">
+    <ItemGroup>
+      <DocFile Include="bin\$(Configuration)\$(TargetFramework)\*.xml" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DocFile)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="false" />
+  </Target>
 </Project>

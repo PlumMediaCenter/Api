@@ -19,6 +19,10 @@ namespace PlumMediaCenter.Controllers
             this.MiddlewareInjectorOptions = middlewareInjectorOptions;
         }
 
+        /// <summary>
+        /// Get all of the sources containing all media items
+        /// </summary>
+        /// <returns></returns>
         [HttpGet()]
         public async Task<List<Data.Source>> GetAll()
         {
