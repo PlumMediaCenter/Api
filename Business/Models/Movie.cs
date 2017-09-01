@@ -15,7 +15,7 @@ namespace PlumMediaCenter.Models
         {
             get
             {
-                return $"{Utility.BaseUrl}posters/{this.Id}.jpg";
+                return $"{AppSettings.BaseUrlStatic}posters/{this.Id}.jpg";
             }
         }
 
@@ -32,7 +32,7 @@ namespace PlumMediaCenter.Models
 
                     BackdropUrlList = value.Split(",").Select(backdropGuid =>
                     {
-                        return $"{Utility.BaseUrl}backdrops/{backdropGuid}.jpg";
+                        return $"{AppSettings.BaseUrlStatic}backdrops/{backdropGuid}.jpg";
                     }).ToList();
                 }
             }
@@ -66,7 +66,7 @@ namespace PlumMediaCenter.Models
         {
             get
             {
-                return $"{Business.Utility.BaseUrl}source{this.SourceId}/{this.FolderName}/";
+                return $"{AppSettings.BaseUrlStatic}source{this.SourceId}/{this.FolderName}/";
             }
         }
 

@@ -31,6 +31,20 @@ namespace PlumMediaCenter
         {
             Configuration = configuration;
             Data.ConnectionManager.SetDbCredentials("pmc", "pmc");
+            var args = Environment.GetCommandLineArgs();
+            var virtualDirectoryArgument = args.Where(x => x.Contains("--virtualDirectoryName")).FirstOrDefault();
+            if (virtualDirectoryArgument != null)
+            {
+                try
+                {
+                    var virtualDirectoryName = virtualDirectoryArgument.Split("=")[1];
+                    AppSettings.SetVirtualDirectoryName(virtualDirectoryName);
+                }
+                catch (Exception)
+                {
+                    throw new Exception("Invalid virtual directory name");
+                }
+            }
         }
 
         public IConfiguration Configuration { get; }
@@ -55,8 +69,8 @@ namespace PlumMediaCenter
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new Info { Title = "My API", Version = "v1" });
-                var filePath = Path.Combine(PlatformServices.Default.Application.ApplicationBasePath, "pmc.xml");
-                c.IncludeXmlComments(filePath);
+                // var filePath = Path.Combine(PlatformServices.Default.Application.ApplicationBasePath, "pmc.xml");
+                // c.IncludeXmlComments(filePath);
             });
         }
 
@@ -64,6 +78,8 @@ namespace PlumMediaCenter
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
             app.UseCors("CorsPolicy");
+            //allow default files (index.html) to be served by default
+            app.UseDefaultFiles();
             //serve the wwwroot folder (from the root web url)
             app.UseStaticFiles();
             //register middleware to save the current request to thread storage

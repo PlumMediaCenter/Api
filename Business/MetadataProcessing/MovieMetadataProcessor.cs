@@ -273,7 +273,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 var image = originalBackdrops.Where(x => x.SourceUrl == imageUrl).FirstOrDefault();
                 var imagePath = image?.Path == null ? null : Utility.NormalizePath($"{moviePath}{image.Path}", true);
                 //if this image originated from this url, store a basic image record in the json
-                if (imageUrl.ToLowerInvariant().Contains(Business.Utility.BaseUrl.ToLowerInvariant()))
+                if (imageUrl.ToLowerInvariant().Contains(this.Manager.AppSettings.BaseUrl.ToLowerInvariant()))
                 {
                     var len = imageUrl.Length - imageUrl.ToLowerInvariant().Replace(movie.FolderUrl.ToLowerInvariant(), "").Length;
                     var relativePath = imageUrl.Substring(len);

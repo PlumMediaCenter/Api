@@ -4,6 +4,30 @@ namespace PlumMediaCenter
 {
     public class AppSettings
     {
+        /// <summary>
+        /// During startup, if the virtual directory name was provided, it will be passed in here
+        /// </summary>
+        /// <param name="virtualDirectoryName"></param>
+        public static void SetVirtualDirectoryName(string virtualDirectoryName)
+        {
+            _VirtualDirectoryName = virtualDirectoryName;
+        }
+
+        /// <summary>
+        /// When being hosted behind nginx, there will be a virtual directory name used to reference this app. It will be passed in 
+        /// through a cmd line arg. This will be set to a value if that is the case, and it must be used during the calculation of the 
+        /// base url
+        /// </summary>
+        /// <returns></returns>
+        public string VirtualDirectoryName
+        {
+            get
+            {
+                return _VirtualDirectoryName;
+            }
+        }
+        private static string _VirtualDirectoryName;
+
         public string TmdbCacheDirectoryPath
         {
             get
@@ -45,5 +69,52 @@ namespace PlumMediaCenter
                 return "90dbc17887e30eae3095d213fa803190";
             }
         }
+
+        /// <summary>
+        /// Get the full base url pointing to the root of this api
+        /// </summary>
+        /// <returns></returns>
+        public string BaseUrl
+        {
+            get
+            {
+                return AppSettings.BaseUrlStatic;
+            }
+        }
+
+        public string RequestUrl
+        {
+            get
+            {
+                var request = Middleware.RequestMiddleware.CurrentHttpContext.Request;
+                var url = $"{request.Scheme}://{request.Host}{request.Path}";
+                return url;
+            }
+        }
+
+        /// <summary>
+        /// A static accessor for the full base url pointing to the root of this api
+        /// </summary>
+        /// <returns></returns>
+        public static string BaseUrlStatic
+        {
+            get
+            {
+                var store = Middleware.RequestMiddleware.CurrentHttpContext.Items;
+                var request = Middleware.RequestMiddleware.CurrentHttpContext.Request;
+                if (store.ContainsKey("baseUrl") == false)
+                {
+                    //if a virtual directory was provided, include that in the url
+                    var virtualDirectoryName = _VirtualDirectoryName != null ? $"/{_VirtualDirectoryName}" : "";
+
+                    var url = $"{request.Scheme}://{request.Host}{virtualDirectoryName}{request.Path}";
+                    //remove anything after and including /api/
+                    var baseUrl = url.Substring(0, url.ToLowerInvariant().IndexOf("/api/") + 1);
+                    store["baseUrl"] = baseUrl;
+                }
+                return (string)store["baseUrl"];
+            }
+        }
+
     }
 }

@@ -142,8 +142,8 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             this.Status.MovieCountTotal = moviePaths.Count;
             var random = new Random();
             //process each movie. movie.Process will handle adding, updating, and deleting
-            moviePaths.ForEach((moviePath) =>
-            //arallel.ForEach(moviePaths, (moviePath) =>
+            //moviePaths.ForEach((moviePath) =>
+            Parallel.ForEach(moviePaths, (moviePath) =>
             {
                 var path = moviePath.Path;
                 //add this move to the list of currently processing movies
@@ -152,7 +152,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 var movie = new Movie(manager, moviePath.Path, moviePath.Source.Id.Value);
                 movie.Process().Wait();
                 this.Status.MovieCountCurrent++;
-                Thread.Sleep(100);
+                //Thread.Sleep(100);
                 //remove the movie from the list of currently processing movies
                 this.Status.ActiveFiles.Remove(path);
                 manager.Dispose();

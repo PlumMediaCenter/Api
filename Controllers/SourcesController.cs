@@ -40,5 +40,11 @@ namespace PlumMediaCenter.Controllers
                 Startup.RegisterSources(app);
             });
         }
+
+        [HttpGet("settings")]
+        public object AppSetings()
+        {
+            return this.Manager.AppSettings;
+        }
     }
 }
