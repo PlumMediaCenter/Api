@@ -13,13 +13,13 @@ namespace PlumMediaCenter.Controllers
     {
         [Route("install")]
         [HttpGet]
-        public void Install([FromQuery] string username, [FromQuery] string password)
+        public void Install([FromQuery] string rootUsername, [FromQuery] string rootPassword)
         {
-            if (username == null || password == null)
+            if (rootUsername == null || rootPassword == null)
             {
                 throw new Exception("root username and password required");
             }
-            var databaseInstaller = new Data.DatabaseInstaller(username, password);
+            var databaseInstaller = new Data.DatabaseInstaller(rootUsername, rootPassword);
             databaseInstaller.Install();
         }
     }

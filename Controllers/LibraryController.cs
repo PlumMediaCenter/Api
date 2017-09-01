@@ -23,7 +23,7 @@ namespace PlumMediaCenter.Controllers
             var generator = LibraryGenerator.Instance;
             var initialStatus = generator.GetStatus();
             //temporarily delete all movies
-            Data.ConnectionManager.GetConnection().Execute("truncate movies");
+            //Data.ConnectionManager.GetConnection().Execute("truncate movies");
             Task.Run(() =>
             {
                 var libGenTask = generator.Generate();

@@ -5,7 +5,12 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Folder Include="wwwroot\" />
+    <Content Include="misc\**" CopyToPublishDirectory="PreserveNewest"/>
+    <Folder Include="wwwroot\" /> 
+    <Folder Remove="temp\" /> 
+    <Content Remove="temp\**" />
+    <Content Remove="wwwroot\posters\**" />
+    <Content Remove="wwwroot\backdrops\**" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0" />

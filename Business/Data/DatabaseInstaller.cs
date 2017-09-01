@@ -46,17 +46,6 @@ namespace PlumMediaCenter.Data
                         foreign key (sourceId) references sources(id)
                     );
                 ");
-
-                //temporarily insert some hardcoded video sources
-                connection.Execute(@"
-                    insert into sources(folderPath, sourceType)
-                    values(@a,@b)
-                ", new { a = @"C:\videos\movies", b = "movie" });
-
-                connection.Execute(@"
-                    insert into sources(folderPath, sourceType)
-                    values(@a,@b)
-                ", new { a = @"C:\videos\shows", b = "tvserie" });
             });
 
             connection.Close();

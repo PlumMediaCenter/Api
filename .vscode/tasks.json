@@ -43,11 +43,14 @@
             },
             "type": "shell",
             "args": [
+                "publish",
+                "${workspaceRoot}/pmc.csproj",
                 "-r",
                 "linux-arm",
                 "-o",
                 "\\\\pi3.lan\\dotnet\\pmc"
-            ]
+            ],
+            "problemMatcher": []
         }
     ]
 }

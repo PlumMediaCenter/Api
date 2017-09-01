@@ -104,10 +104,13 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             //find all movie folders from each source
             foreach (var source in movieSources)
             {
-                var directories = Directory.GetDirectories(source.FolderPath).ToList();
-                foreach (var dir in directories)
+                if (Directory.Exists(source.FolderPath))
                 {
-                    moviePaths.Add(new MoviePath { Path = dir, Source = source });
+                    var directories = Directory.GetDirectories(source.FolderPath).ToList();
+                    foreach (var dir in directories)
+                    {
+                        moviePaths.Add(new MoviePath { Path = dir, Source = source });
+                    }
                 }
             }
 
