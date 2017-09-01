@@ -4,9 +4,9 @@ using PlumMediaCenter.Data;
 
 namespace PlumMediaCenter.Business.LibraryGeneration.Managers
 {
-    public class ShowManager : BaseManager
+    public class TvSerieManager : BaseManager
     {
-        public ShowManager(Manager manager) : base(manager)
+        public TvSerieManager(Manager manager) : base(manager)
         {
 
         }

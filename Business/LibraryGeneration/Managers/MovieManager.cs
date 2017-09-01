@@ -43,13 +43,36 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         }
 
         /// <summary>
-        /// Get a list of every movie directory
+        /// Get the id for the movie at the given path, or null if not found
+        /// </summary>
+        /// <param name="folderPath"></param>
+        /// <returns></returns>
+        public async Task<ulong?> GetId(string folderPath)
+        {
+            var rows = await this.Connection.QueryAsync<ulong?>(@"
+                select id 
+                from movies
+                where folderPath = @folderPath",
+            new
+            {
+                folderPath = folderPath
+            });
+            return rows.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Delete the movie at the specified path
         /// </summary>
         /// <returns></returns>
-        public async Task Delete(string movieFolderPath)
+        public async Task Delete(string folderPath)
         {
-            var task = Task.FromResult(new List<string>());
-            await task;
+            await this.Connection.ExecuteAsync(@"
+                delete from movies
+                where folderPath = @folderPath
+           ", new
+            {
+                folderPath = folderPath
+            });
         }
 
 
@@ -226,6 +249,23 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             await movie.Process();
         }
 
-
+        public async Task DeleteForSource(ulong sourceId)
+        {
+            var folderPaths = await this.Connection.QueryAsync<string>(@"
+                select folderPath
+                from movies
+                where sourceId = @sourceId
+            ", new
+            {
+                sourceId = sourceId
+            });
+            Parallel.ForEach(folderPaths, (folderPath) =>
+            {
+                var manager = new Manager();
+                var movie = new Movie(manager, folderPath, sourceId);
+                movie.Delete().Wait();
+                manager.Dispose();
+            });
+        }
     }
 }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System;
 using System.Threading;
+using Newtonsoft.Json;
 
 namespace PlumMediaCenter.Business.LibraryGeneration
 {
@@ -15,7 +16,20 @@ namespace PlumMediaCenter.Business.LibraryGeneration
     {
         private LibraryGenerator()
         {
-            this.Manager = new Manager();
+            try
+            {
+                //load any old status saved in cache
+                var statusJson = File.ReadAllText(LibraryGenerator.StatusFilePath);
+                this.Status = Newtonsoft.Json.JsonConvert.DeserializeObject<Status>(statusJson);
+            }
+            catch (Exception) { }
+        }
+        private static string StatusFilePath
+        {
+            get
+            {
+                return $"{AppSettings.TempPath}libraryStatus.json";
+            }
         }
 
         private static LibraryGenerator _Instance;
@@ -38,6 +52,8 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         private bool IsGenerating = false;
         public async Task Generate()
         {
+            this.Manager = new Manager();
+
             try
             {
                 if (IsGenerating == true)
@@ -45,11 +61,14 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                     throw new Exception("Library generation is already in process");
                 }
                 IsGenerating = true;
+                var oldStatus = this.Status;
                 this.Status = new Status();
+                this.Status.IsProcessing = true;
+                this.Status.LastGeneratedDate = oldStatus?.LastGeneratedDate;
                 this.Status.State = "processing movies";
                 await this.ProcessMovies();
                 this.Status.State = "processing tv shows";
-                await this.ProcessShows();
+                await this.ProcessSeries();
                 this.Status.State = "completed";
                 this.Status.LastGeneratedDate = DateTime.UtcNow;
             }
@@ -63,6 +82,17 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 this.Status.State = "failed";
                 this.Status.Error = e;
             }
+            finally
+            {
+                this.Status.IsProcessing = false;
+            }
+            try
+            {
+                var json = JsonConvert.SerializeObject(LibraryGenerator.StatusFilePath);
+                File.WriteAllText(AppSettings.TempPath, json);
+            }
+            catch (Exception) { }
+            this.Manager.Dispose();
             IsGenerating = false;
         }
 
@@ -70,7 +100,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         {
             var moviePaths = new List<MoviePath>();
 
-            var movieSources = await this.Manager.LibraryGeneration.Sources.GetByType(SourceType.Movie);
+            var movieSources = await this.Manager.LibraryGeneration.Sources.GetByType("movie");
             //find all movie folders from each source
             foreach (var source in movieSources)
             {
@@ -109,41 +139,45 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             this.Status.MovieCountTotal = moviePaths.Count;
             var random = new Random();
             //process each movie. movie.Process will handle adding, updating, and deleting
-            //moviePaths.ForEach((moviePath) =>
-            Parallel.ForEach(moviePaths, (moviePath) =>
+            moviePaths.ForEach((moviePath) =>
+            //arallel.ForEach(moviePaths, (moviePath) =>
             {
                 var path = moviePath.Path;
                 //add this move to the list of currently processing movies
                 this.Status.ActiveFiles.Add(path);
-                var movie = new Movie(new Manager(), moviePath.Path, moviePath.Source.Id.Value);
+                var manager = new Manager();
+                var movie = new Movie(manager, moviePath.Path, moviePath.Source.Id.Value);
                 movie.Process().Wait();
                 this.Status.MovieCountCurrent++;
+                Thread.Sleep(100);
                 //remove the movie from the list of currently processing movies
                 this.Status.ActiveFiles.Remove(path);
+                manager.Dispose();
             });
         }
 
-        private async Task ProcessShows()
+        private async Task ProcessSeries()
         {
-            var showPaths = new List<string>();
+            var seriePaths = new List<string>();
 
-            var showSources = await this.Manager.LibraryGeneration.Sources.GetByType(SourceType.Show);
+            var serieSources = await this.Manager.LibraryGeneration.Sources.GetByType("tvserie");
             //find all show folders from each source
-            foreach (var source in showSources)
+            foreach (var source in serieSources)
             {
-                showPaths.AddRange(Directory.GetDirectories(source.FolderPath).ToList());
+                seriePaths.AddRange(Directory.GetDirectories(source.FolderPath).ToList());
             }
 
             //find all shows from the db
-            showPaths.AddRange(await this.Manager.LibraryGeneration.Shows.GetDirectories());
+            seriePaths.AddRange(await this.Manager.LibraryGeneration.TvSeries.GetDirectories());
 
             //remove any duplicates
-            showPaths = showPaths.Distinct().ToList();
+            seriePaths = seriePaths.Distinct().ToList();
 
-            //process each movie. movie.Process will handle adding, updating, and deleting
-            Parallel.ForEach(showPaths, moviePath =>
+            //process each show. movie.Process will handle adding, updating, and deleting
+            Parallel.ForEach(seriePaths, moviePath =>
             {
-                var show = new Show(this.Manager, moviePath);
+                var sourceId = 0UL;
+                var show = new TvSerie(this.Manager, moviePath, sourceId);
                 show.Process();
             });
         }
@@ -161,11 +195,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// The current state ("generating", "generated")
         /// </summary>
         public string State { get; set; }
+        public bool IsProcessing { get; set; }
         public Exception Error { get; set; }
         /// <summary>
         /// The end time of the last time the library was generated. This is not updated until a generation has completed.
         /// </summary>
-        public DateTime LastGeneratedDate { get; set; }
+        public DateTime? LastGeneratedDate { get; set; }
         /// <summary>
         /// The total number of movie entries to process
         /// </summary>

@@ -9,7 +9,7 @@ namespace PlumMediaCenter.Controllers
 {
     [Route("api/[controller]")]
     [ExceptionHandlerFilter]
-    public class DatabaseController : Controller
+    public class DatabaseController : BaseController
     {
         [Route("install")]
         [HttpGet]

@@ -5,10 +5,13 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using PlumMediaCenter.Business.LibraryGeneration;
 using Dapper;
+using PlumMediaCenter.Attributues;
+
 namespace PlumMediaCenter.Controllers
 {
     [Route("api/[controller]")]
-    public class LibraryController : Controller
+    [ExceptionHandlerFilter]
+    public class LibraryController : BaseController
     {
         /// <summary>
         /// Start the library generation process. You must monitor /status to determine when the process has completed

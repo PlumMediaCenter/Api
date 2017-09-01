@@ -18,20 +18,8 @@ namespace PlumMediaCenter.Controllers
 {
     [ExceptionHandlerFilter]
     [Route("api/[controller]")]
-    public class MetadataController : Controller
+    public class MetadataController : BaseController
     {
-        private Manager _Manager;
-        public Manager Manager
-        {
-            get
-            {
-                if (_Manager == null)
-                {
-                    _Manager = new Manager();
-                }
-                return _Manager;
-            }
-        }
 
         [HttpGet("raw")]
         public async Task<object> GetRawTmdb([FromQuery]int tmdbId)

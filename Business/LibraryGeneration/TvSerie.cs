@@ -4,19 +4,25 @@ using PlumMediaCenter.Data;
 
 namespace PlumMediaCenter.Business.LibraryGeneration
 {
-    public class Show
+    public class TvSerie
     {
-        public Show(Manager manager, string moviePath)
+        public TvSerie(Manager manager, string folderPath, ulong sourceId)
         {
             this.Manager = manager != null ? manager : new Manager();
-            this.MoviePath = moviePath;
+            this.FolderPath = folderPath;
+            this.SourceId = sourceId;
         }
         private Manager Manager;
 
         /// <summary>
-        /// A full path to the folder containing this movie
+        /// A full path to the root folder of this tv serie
         /// </summary>
-        private string MoviePath;
+        private string FolderPath;
+
+         /// <summary>
+        /// The id for the video source
+        /// </summary>
+        public ulong SourceId;
 
         /// <summary>
         /// 

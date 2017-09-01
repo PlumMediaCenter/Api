@@ -41,7 +41,7 @@ namespace PlumMediaCenter.Business
             }
         }
 
-        void IDisposable.Dispose()
+        public void Dispose()
         {
             try
             {
@@ -52,6 +52,10 @@ namespace PlumMediaCenter.Business
             {
 
             }
+        }
+        void IDisposable.Dispose()
+        {
+            this.Dispose();
         }
     }
 
@@ -81,12 +85,12 @@ namespace PlumMediaCenter.Business
             }
         }
 
-        private LibraryGeneration.Managers.ShowManager _Shows;
-        public LibraryGeneration.Managers.ShowManager Shows
+        private LibraryGeneration.Managers.TvSerieManager _Shows;
+        public LibraryGeneration.Managers.TvSerieManager TvSeries
         {
             get
             {
-                return this._Shows = this._Shows != null ? this._Shows : new LibraryGeneration.Managers.ShowManager(this.Manager);
+                return this._Shows = this._Shows != null ? this._Shows : new LibraryGeneration.Managers.TvSerieManager(this.Manager);
             }
         }
     }

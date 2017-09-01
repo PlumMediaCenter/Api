@@ -261,15 +261,41 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
         }
 
-        private async Task Delete()
+        /// <summary>
+        /// Delete the movie and all of its related records
+        /// </summary>
+        /// <returns></returns>
+        public async Task Delete()
         {
+            this.Id = await this.Manager.LibraryGeneration.Movies.GetId(this.FolderPath);
             //delete from the database
             await this.Manager.LibraryGeneration.Movies.Delete(this.FolderPath);
-            //delete images from cache
 
+            var imagePaths = new List<string>();
+            //delete images from cache
+            {
+                //poster
+                imagePaths.Add($"{this.Manager.AppSettings.PosterFolderPath}{this.Id}.jpg");
+
+                //backdrops
+                var guids = this.GetBackdropGuidsFromFilesystem();
+                foreach (var guid in guids)
+                {
+                    imagePaths.Add($"{this.Manager.AppSettings.BackdropFolderPath}{guid}.jpg");
+                }
+                
+                //delete them
+                foreach (var imagePath in imagePaths)
+                {
+                    if (File.Exists(imagePath))
+                    {
+                        File.Delete(imagePath);
+                    }
+                }
+            }
         }
 
-        private List<string> GetGuidsFromFilesystem()
+        private List<string> GetBackdropGuidsFromFilesystem()
         {
             if (Directory.Exists(this.BackdropFolderPath))
             {
@@ -297,16 +323,13 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
 
             //copy the poster
-            await Task.Run(() =>
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(destinationPosterPath));
-                File.Copy(sourcePosterPath, destinationPosterPath, true);
-            });
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPosterPath));
+            File.Copy(sourcePosterPath, destinationPosterPath, true);
 
             //backdrop
             var sourceBackdropPath = $"{this.FolderPath}backdrop.jpg";
             var guidsFromDb = await this.Manager.LibraryGeneration.Movies.GetBackdropGuids(this.Id.Value);
-            var guidsFromFilesystem = this.GetGuidsFromFilesystem();
+            var guidsFromFilesystem = this.GetBackdropGuidsFromFilesystem();
 
             var backdropPaths = new List<string>();
             foreach (var guid in guidsFromFilesystem)

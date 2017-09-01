@@ -74,6 +74,21 @@ namespace PlumMediaCenter.Business.MetadataProcessing
 
         private async Task<MovieMetadata> GetTmdbMetadata(int tmdbId)
         {
+            Directory.CreateDirectory(this.Manager.AppSettings.TmdbCacheDirectoryPath);
+            var cacheFilePath = $"{this.Manager.AppSettings.TmdbCacheDirectoryPath}{tmdbId}.json";
+            //if a cache file exists, and it's was updated less than a month ago, use it.
+            if (File.Exists(cacheFilePath) && (DateTime.Now - File.GetLastWriteTime(cacheFilePath)).TotalDays < 30)
+            {
+                try
+                {
+                    var result = Newtonsoft.Json.JsonConvert.DeserializeObject<MovieMetadata>(File.ReadAllText(cacheFilePath));
+                    return result;
+                }
+                catch (Exception)
+                {
+
+                }
+            }
             var movie = await Client.GetMovieAsync(tmdbId,
                 MovieMethods.AlternativeTitles |
                 MovieMethods.Credits |
@@ -134,7 +149,8 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 ?.ToList() ?? new List<string>()
             );
             metadata.BackdropUrls = metadata.BackdropUrls.Distinct().ToList();
-
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(metadata);
+            await File.WriteAllTextAsync(cacheFilePath, json);
             return metadata;
         }
 

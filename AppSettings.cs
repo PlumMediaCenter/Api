@@ -4,6 +4,13 @@ namespace PlumMediaCenter
 {
     public class AppSettings
     {
+        public string TmdbCacheDirectoryPath
+        {
+            get
+            {
+                return $"{Directory.GetCurrentDirectory()}/temp/tmdb-cache/";
+            }
+        }
         /// <summary>
         /// The path to the path to the folder where the posters should live. Includes trailing slash
         /// </summary>
@@ -28,7 +35,7 @@ namespace PlumMediaCenter
         {
             get
             {
-                return $"{Directory.GetCurrentDirectory()}/temp";
+                return $"{Directory.GetCurrentDirectory()}/temp/";
             }
         }
         public string TmdbApiString

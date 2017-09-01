@@ -25,7 +25,7 @@ namespace PlumMediaCenter.Data
                     create table sources(
                         id integer AUTO_INCREMENT primary key comment 'id of source',
                         folderPath varchar(4000) not null comment 'full path to source folder',
-                        sourceType tinyint not null comment 'the type of media such as movies, shows, etc...'
+                        sourceType varchar(10) not null comment 'the type of media the source contains (i.e. movie, tvserie)'
                     );
                 ");
 
@@ -51,12 +51,12 @@ namespace PlumMediaCenter.Data
                 connection.Execute(@"
                     insert into sources(folderPath, sourceType)
                     values(@a,@b)
-                ", new { a = @"C:\videos\movies", b = 0 });
+                ", new { a = @"C:\videos\movies", b = "movie" });
 
                 connection.Execute(@"
                     insert into sources(folderPath, sourceType)
                     values(@a,@b)
-                ", new { a = @"C:\videos\shows", b = 1 });
+                ", new { a = @"C:\videos\shows", b = "tvserie" });
             });
 
             connection.Close();

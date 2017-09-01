@@ -1,29 +1,40 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.FileProviders;
+using PlumMediaCenter.Attributues;
+using PlumMediaCenter.Data;
 
 namespace PlumMediaCenter.Controllers
 {
     [Route("api/[controller]")]
-    public class SourcesController : Controller
+    [ExceptionHandlerFilter]
+    public class SourcesController : BaseController
     {
-
-        private readonly MiddlewareInjectorOptions middlewareInjectorOptions;
+        private readonly MiddlewareInjectorOptions MiddlewareInjectorOptions;
 
         public SourcesController(MiddlewareInjectorOptions middlewareInjectorOptions)
         {
-            this.middlewareInjectorOptions = middlewareInjectorOptions;
+            this.MiddlewareInjectorOptions = middlewareInjectorOptions;
         }
 
-        [HttpGet("reregister-sources")]
-        public ActionResult ReRegisterSources()
+        [HttpGet()]
+        public async Task<List<Data.Source>> GetAll()
         {
-            middlewareInjectorOptions.InjectMiddleware(app =>
+            return await this.Manager.LibraryGeneration.Sources.GetAll();
+        }
+
+        [HttpPost()]
+        public async Task SetAll([FromBody] List<Source> sources)
+        {
+            await this.Manager.LibraryGeneration.Sources.SetAll(sources);
+
+            //update the middleware to serve the new set of sources
+            MiddlewareInjectorOptions.InjectMiddleware(app =>
             {
                 Startup.RegisterSources(app);
             });
-            return Content("File server enabled");
         }
     }
 }

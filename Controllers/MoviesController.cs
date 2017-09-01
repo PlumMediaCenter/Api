@@ -11,25 +11,14 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Http;
 using PlumMediaCenter.Business;
+using PlumMediaCenter.Attributues;
 
 namespace PlumMediaCenter.Controllers
 {
     [Route("api/[controller]")]
-    public class MoviesController : Controller
+    [ExceptionHandlerFilter]
+    public class MoviesController : BaseController
     {
-        private Manager _Manager;
-        public Manager Manager
-        {
-            get
-            {
-                if (_Manager == null)
-                {
-                    _Manager = new Manager();
-                }
-                return _Manager;
-            }
-        }
-
         [HttpGet("{id}")]
         public async Task<Models.Movie> GetById(int id)
         {
@@ -43,50 +32,8 @@ namespace PlumMediaCenter.Controllers
         [HttpGet]
         public async Task<List<Models.Movie>> GetAll()
         {
-            // try
-            // {
-            //     await ConnectionManager.GetConnection("root", "romantic", false).ExecuteAsync(@"drop database pmc");
-            // }
-            // catch (Exception e)
-            // {
-
-            // }
-            // try
-            // {
-            //     var dbCtrl = new DatabaseController();
-            //     dbCtrl.Install("root", "romantic");
-            // }
-            // catch (Exception e)
-            // {
-
-            // }
-
-            // var libCtrl = new LibraryController();
-            // await libCtrl.Generate();
-            var mgr = new Business.Manager();
-            var movies = await mgr.Movies.GetAll();
+            var movies = await this.Manager.Movies.GetAll();
             return movies;
-        }
-
-        [HttpGet]
-        [Route("search")]
-        public async Task<object> SearchMetadata([FromQuery]string text)
-        {
-
-            TMDbClient client = new TMDbClient(new AppSettings().TmdbApiString);
-            var movie = await client.GetMovieAsync(27576,
-                MovieMethods.AlternativeTitles
-                | MovieMethods.Credits
-                | MovieMethods.Images
-                | MovieMethods.Keywords
-                // | MovieMethods.Lists
-                | MovieMethods.ReleaseDates
-                  // | MovieMethods.Reviews
-                  // | MovieMethods.Similar
-                  //  | MovieMethods.Translations
-                  | MovieMethods.Videos
-                );
-            return movie;
         }
     }
 }
