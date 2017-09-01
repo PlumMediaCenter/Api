@@ -22,19 +22,22 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<Dictionary<ulong, List<string>>> GetDirectories()
         {
-            var sources = await this.Manager.LibraryGeneration.Sources.GetAll();
-            var rows = await this.Connection.QueryAsync<DbDirResult>(@"
-                select folderPath, sourceId 
-                from movies
-           ");
+            using (var connection = NewConnection())
+            {
+                var sources = await this.Manager.LibraryGeneration.Sources.GetAll();
+                var rows = await connection.QueryAsync<DbDirResult>(@"
+                    select folderPath, sourceId 
+                    from movies
+                ");
 
-            var results = rows
-                .GroupBy(x => x.SourceId)
-                .ToDictionary(
-                    x => x.Key,
-                    x => x.Select(y => y.FolderPath).ToList()
-                );
-            return results;
+                var results = rows
+                    .GroupBy(x => x.SourceId)
+                    .ToDictionary(
+                        x => x.Key,
+                        x => x.Select(y => y.FolderPath).ToList()
+                    );
+                return results;
+            }
         }
         private class DbDirResult
         {
@@ -49,15 +52,18 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<ulong?> GetId(string folderPath)
         {
-            var rows = await this.Connection.QueryAsync<ulong?>(@"
-                select id 
-                from movies
-                where folderPath = @folderPath",
-            new
+            using (var connection = NewConnection())
             {
-                folderPath = folderPath
-            });
-            return rows.FirstOrDefault();
+                var rows = await connection.QueryAsync<ulong?>(@"
+                    select id 
+                    from movies
+                    where folderPath = @folderPath",
+                new
+                {
+                    folderPath = folderPath
+                });
+                return rows.FirstOrDefault();
+            }
         }
 
         /// <summary>
@@ -66,13 +72,16 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task Delete(string folderPath)
         {
-            await this.Connection.ExecuteAsync(@"
-                delete from movies
-                where folderPath = @folderPath
-           ", new
+            using (var connection = NewConnection())
             {
-                folderPath = folderPath
-            });
+                await connection.ExecuteAsync(@"
+                    delete from movies
+                    where folderPath = @folderPath
+                ", new
+                {
+                    folderPath = folderPath
+                });
+            }
         }
 
 
@@ -82,88 +91,94 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<ulong> Insert(LibraryGeneration.Movie movie)
         {
-            await this.Connection.ExecuteAsync(@"
-                insert into movies(
-                    folderPath, 
-                    videoPath, 
-                    title, 
-                    summary, 
-                    description, 
-                    rating,
-                    releaseDate,
-                    runtime,
-                    tmdbId,
-                    sourceId
-                )
-                values(
-                    @folderPath,
-                    @videoPath, 
-                    @title, 
-                    @summary,
-                    @description, 
-                    @rating,
-                    @releaseDate,
-                    @runtime,
-                    @tmdbId,
-                    @sourceId
-                )
-            ", new
-
+            using (var connection = NewConnection())
             {
-                folderPath = movie.FolderPath,
-                videoPath = movie.VideoPath,
-                title = movie.Title,
-                summary = movie.Summary,
-                description = movie.Description,
-                rating = movie.Rating,
-                releaseDate = movie.ReleaseDate,
-                runtime = movie.Runtime,
-                tmdbId = movie.TmdbId,
-                sourceId = movie.SourceId
-            });
-            var id = await this.Connection.GetLastInsertIdAsync();
-            return id.Value;
+                await connection.ExecuteAsync(@"
+                    insert into movies(
+                        folderPath, 
+                        videoPath, 
+                        title, 
+                        summary, 
+                        description, 
+                        rating,
+                        releaseDate,
+                        runtime,
+                        tmdbId,
+                        sourceId
+                    )
+                    values(
+                        @folderPath,
+                        @videoPath, 
+                        @title, 
+                        @summary,
+                        @description, 
+                        @rating,
+                        @releaseDate,
+                        @runtime,
+                        @tmdbId,
+                        @sourceId
+                    )
+                ", new
+
+                {
+                    folderPath = movie.FolderPath,
+                    videoPath = movie.VideoPath,
+                    title = movie.Title,
+                    summary = movie.Summary,
+                    description = movie.Description,
+                    rating = movie.Rating,
+                    releaseDate = movie.ReleaseDate,
+                    runtime = movie.Runtime,
+                    tmdbId = movie.TmdbId,
+                    sourceId = movie.SourceId
+                });
+                var id = await connection.GetLastInsertIdAsync();
+                return id.Value;
+            }
         }
 
         public async Task<ulong> Update(LibraryGeneration.Movie movie)
         {
-            var movieId = await this.Connection.QueryFirstOrDefaultAsync<ulong?>(@"
-                select id from movies where folderPath = @folderPath
-            ", new { folderPath = movie.FolderPath });
-            if (movieId == null)
+            using (var connection = NewConnection())
             {
-                throw new Exception($"Movie not found in database with path {movie.FolderPath}");
-            }
-            await this.Connection.ExecuteAsync(@"
-                update movies
-                set
-                    folderPath = @folderPath,
-                    videoPath = @videoPath, 
-                    title = @title, 
-                    summary = @summary,
-                    description = @description, 
-                    rating = @rating,
-                    releaseDate = @releaseDate,
-                    runtime = @runtime,
-                    tmdbId = @tmdbId,
-                    sourceId = @sourceId
-                where id = @movieId
-            ", new
+                var movieId = await connection.QueryFirstOrDefaultAsync<ulong?>(@"
+                    select id from movies where folderPath = @folderPath
+                ", new { folderPath = movie.FolderPath });
+                if (movieId == null)
+                {
+                    throw new Exception($"Movie not found in database with path {movie.FolderPath}");
+                }
+                await connection.ExecuteAsync(@"
+                    update movies
+                    set
+                        folderPath = @folderPath,
+                        videoPath = @videoPath, 
+                        title = @title, 
+                        summary = @summary,
+                        description = @description, 
+                        rating = @rating,
+                        releaseDate = @releaseDate,
+                        runtime = @runtime,
+                        tmdbId = @tmdbId,
+                        sourceId = @sourceId
+                    where id = @movieId
+                ", new
 
-            {
-                folderPath = movie.FolderPath,
-                videoPath = movie.VideoPath,
-                title = movie.Title,
-                summary = movie.Summary,
-                description = movie.Description,
-                rating = movie.Rating,
-                releaseDate = movie.ReleaseDate,
-                runtime = movie.Runtime,
-                tmdbId = movie.TmdbId,
-                sourceId = movie.SourceId,
-                movieId = movieId
-            });
-            return movieId.Value;
+                {
+                    folderPath = movie.FolderPath,
+                    videoPath = movie.VideoPath,
+                    title = movie.Title,
+                    summary = movie.Summary,
+                    description = movie.Description,
+                    rating = movie.Rating,
+                    releaseDate = movie.ReleaseDate,
+                    runtime = movie.Runtime,
+                    tmdbId = movie.TmdbId,
+                    sourceId = movie.SourceId,
+                    movieId = movieId
+                });
+                return movieId.Value;
+            }
         }
 
 
@@ -174,22 +189,28 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<bool> Exists(string folderPath)
         {
-            var result = await this.Connection.QueryAsync<int>(@"
-                select count(*) 
-                from movies
-                where folderPath = @folderPath
-            ", new { folderPath = folderPath });
-            var count = result.ToList().First();
-            return count > 0;
+            using (var connection = NewConnection())
+            {
+                var result = await connection.QueryAsync<int>(@"
+                    select count(*) 
+                    from movies
+                    where folderPath = @folderPath
+                ", new { folderPath = folderPath });
+                var count = result.ToList().First();
+                return count > 0;
+            }
         }
 
 
         public async Task<List<Data.Movie>> GetAll()
         {
-            var movies = await this.Connection.QueryAsync<Data.Movie>(@"
-                select * from movies
-            ");
-            return movies.ToList();
+            using (var connection = NewConnection())
+            {
+                var movies = await connection.QueryAsync<Data.Movie>(@"
+                    select * from movies
+                ");
+                return movies.ToList();
+            }
         }
 
 
@@ -200,20 +221,22 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<List<string>> GetBackdropGuids(ulong movieId)
         {
-
-            var rows = await this.Connection.QueryAsync<string>(@"
-                select backdropGuids from movies
-                where id = @movieId
-            ", new { movieId = movieId });
-
-            var queryResult = rows.FirstOrDefault();
-            if (string.IsNullOrWhiteSpace(queryResult) == false)
+            using (var connection = NewConnection())
             {
-                return queryResult.Split(',').ToList();
-            }
-            else
-            {
-                return new List<string>();
+                var rows = await connection.QueryAsync<string>(@"
+                    select backdropGuids from movies
+                    where id = @movieId
+                ", new { movieId = movieId });
+
+                var queryResult = rows.FirstOrDefault();
+                if (string.IsNullOrWhiteSpace(queryResult) == false)
+                {
+                    return queryResult.Split(',').ToList();
+                }
+                else
+                {
+                    return new List<string>();
+                }
             }
         }
 
@@ -225,12 +248,15 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task SetBackdropGuids(ulong movieId, List<string> backdropGuids)
         {
-            var value = string.Join(",", backdropGuids);
-            await this.Connection.ExecuteAsync(@"
-                update movies
-                set backdropGuids = @value
-                where id = @movieId
-            ", new { movieId = movieId, value = value });
+            using (var connection = NewConnection())
+            {
+                var value = string.Join(",", backdropGuids);
+                await connection.ExecuteAsync(@"
+                    update movies
+                    set backdropGuids = @value
+                    where id = @movieId
+                ", new { movieId = movieId, value = value });
+            }
         }
 
         /// <summary>
@@ -251,21 +277,23 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
 
         public async Task DeleteForSource(ulong sourceId)
         {
-            var folderPaths = await this.Connection.QueryAsync<string>(@"
-                select folderPath
-                from movies
-                where sourceId = @sourceId
-            ", new
+            using (var connection = NewConnection())
             {
-                sourceId = sourceId
-            });
-            Parallel.ForEach(folderPaths, (folderPath) =>
-            {
-                var manager = new Manager();
-                var movie = new Movie(manager, folderPath, sourceId);
-                movie.Delete().Wait();
-                manager.Dispose();
-            });
+                var folderPaths = await connection.QueryAsync<string>(@"
+                    select folderPath
+                    from movies
+                    where sourceId = @sourceId
+                ", new
+                {
+                    sourceId = sourceId
+                });
+                Parallel.ForEach(folderPaths, (folderPath) =>
+                {
+                    var manager = new Manager();
+                    var movie = new Movie(manager, folderPath, sourceId);
+                    movie.Delete().Wait();
+                });
+            }
         }
     }
 }

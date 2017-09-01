@@ -19,7 +19,7 @@ namespace PlumMediaCenter.Data
         /// <param name="username"></param>
         /// <param name="password"></param>
         /// <returns></returns>
-        public static IDbConnection GetConnection(string username = null, string password = null, bool includeDatabase = true)
+        public static IDbConnection GetNewConnection(string username = null, string password = null, bool includeDatabase = true)
         {
             username = username == null ? Username : username;
             password = password == null ? Password : password;
@@ -30,5 +30,5 @@ namespace PlumMediaCenter.Data
             return connection;
         }
     }
-    
+
 }

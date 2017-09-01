@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using PlumMediaCenter.Attributues;
+using PlumMediaCenter.Data;
 
 namespace PlumMediaCenter.Controllers
 {
@@ -11,16 +12,22 @@ namespace PlumMediaCenter.Controllers
     [ExceptionHandlerFilter]
     public class DatabaseController : BaseController
     {
-        [Route("install")]
-        [HttpGet]
-        public void Install([FromQuery] string rootUsername, [FromQuery] string rootPassword)
+
+        [HttpPost("install")]
+        public void Install([FromBody] Dictionary<string, string> body)
         {
-            if (rootUsername == null || rootPassword == null)
+            if (body.ContainsKey("rootUsername") == false || body.ContainsKey("rootPassword") == false)
             {
                 throw new Exception("root username and password required");
             }
-            var databaseInstaller = new Data.DatabaseInstaller(rootUsername, rootPassword);
+            var databaseInstaller = new DatabaseInstaller(body["rootUsername"], body["rootPassword"]);
             databaseInstaller.Install();
+        }
+
+        [HttpGet("isInstalled")]
+        public async Task<bool> IsInstalled()
+        {
+            return await DatabaseInstaller.IsInstalled();
         }
     }
 }

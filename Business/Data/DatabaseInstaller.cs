@@ -2,6 +2,7 @@ using Dapper;
 using System;
 using System.Linq;
 using System.Data;
+using System.Threading.Tasks;
 
 namespace PlumMediaCenter.Data
 {
@@ -18,7 +19,7 @@ namespace PlumMediaCenter.Data
         public void Install()
         {
             CreateDbIfNotExist();
-            var connection = ConnectionManager.GetConnection();
+            var connection = ConnectionManager.GetNewConnection();
             VersionRun("0.1.0", connection, () =>
             {
                 connection.Execute(@"
@@ -72,14 +73,16 @@ namespace PlumMediaCenter.Data
         {
             try
             {
-                var connection = ConnectionManager.GetConnection();
-                var versionString = connection.Query<string>(@"
+                using (var connection = ConnectionManager.GetNewConnection())
+                {
+                    var versionString = connection.Query<string>(@"
                     select version
                     from version
                 ").ToList().First();
-                var version = new Version(versionString);
-                connection.Close();
-                return version;
+                    var version = new Version(versionString);
+                    connection.Close();
+                    return version;
+                }
             }
             catch (Exception)
             {
@@ -94,20 +97,53 @@ namespace PlumMediaCenter.Data
                 return;
             }
             //the db has not yet been created. create it
-            var connection = ConnectionManager.GetConnection(this.RootUsername, this.RootPassword, false);
-            connection.Execute(@"
-                create database `pmc`;
-                GRANT ALL ON `pmc`.* TO 'pmc'@'localhost' identified by 'pmc';                
-                GRANT ALL ON `pmc`.* TO 'pmc'@'127.0.0.1' identified by 'pmc';                
-                GRANT ALL ON `pmc`.* TO 'pmc'@'%' identified by 'pmc';
-                FLUSH PRIVILEGES;
-            ");
-            connection.Close();
+            using (var connection = ConnectionManager.GetNewConnection(this.RootUsername, this.RootPassword, false))
+            {
+                connection.Execute(@"
+                    create database `pmc`;
+                    GRANT ALL ON `pmc`.* TO 'pmc'@'localhost' identified by 'pmc';                
+                    GRANT ALL ON `pmc`.* TO 'pmc'@'127.0.0.1' identified by 'pmc';                
+                    GRANT ALL ON `pmc`.* TO 'pmc'@'%' identified by 'pmc';
+                    FLUSH PRIVILEGES;
+                ");
+            }
+            using (var connection = ConnectionManager.GetNewConnection())
+            {
+                connection.Execute("create table version(version text)");
+                connection.Execute("insert into version(version) values('0.0.0')");
+                connection.Close();
+            }
+        }
 
-            connection = ConnectionManager.GetConnection();
-            connection.Execute("create table version(version text)");
-            connection.Execute("insert into version(version) values('0.0.0')");
-            connection.Close();
+        /// <summary>
+        /// Determine if the database is instaled. This does not check to see if the db is up to date. 
+        /// It only validates that there is a pmc db created
+        /// </summary>
+        /// <returns></returns>
+        public static async Task<bool> IsInstalled()
+        {
+            try
+            {
+                using (var connection = ConnectionManager.GetNewConnection())
+                {
+                    var rows = await connection.QueryAsync(@"
+                        select version
+                        from version
+                    ");
+                    if (rows.FirstOrDefault() != null)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 }

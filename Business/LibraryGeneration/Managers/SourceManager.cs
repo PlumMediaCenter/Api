@@ -20,68 +20,87 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<List<Source>> GetByType(string sourceType)
         {
-            var result = await this.Connection.QueryAsync<Source>(@"
-                select * 
-                from sources
-                where sourceType = @sourceType
-            ", new
+
+
+            using (var connection = NewConnection())
             {
-                sourceType = sourceType
-            });
-            return result.ToList();
+                var result = await connection.QueryAsync<Source>(@"
+                    select * 
+                    from sources
+                    where sourceType = @sourceType
+                ", new
+                {
+                    sourceType = sourceType
+                });
+                return result.ToList();
+            }
         }
 
         public async Task<List<Source>> GetAll()
         {
-            var result = await this.Connection.QueryAsync<Source>(@"
-                select * from sources
-            ");
-            return result.ToList();
+            using (var connection = NewConnection())
+            {
+                var result = await connection.QueryAsync<Source>(@"
+                    select * from sources
+                ");
+                return result.ToList();
+            }
         }
 
         public async Task<ulong?> Insert(Source source)
         {
-            await this.Connection.ExecuteAsync(@"
-                        insert into sources(folderPath, sourceType)
-                        values(@folderPath, @sourceType)
-                    ", new
+
+            using (var connection = NewConnection())
             {
-                folderPath = source.FolderPath,
-                sourceType = source.SourceType
-            });
-            return await this.Connection.GetLastInsertIdAsync();
+                await connection.ExecuteAsync(@"
+                    insert into sources(folderPath, sourceType)
+                    values(@folderPath, @sourceType)
+                ", new
+                {
+                    folderPath = source.FolderPath,
+                    sourceType = source.SourceType
+                });
+                return await connection.GetLastInsertIdAsync();
+            }
         }
 
 
         public async Task<ulong?> Update(Source source)
         {
-            await this.Connection.ExecuteAsync(@"
-                        update sources
-                        set 
-                            folderPath = @folderPath,
-                            sourceType = @sourceType
-                        where id = @id
-                    ", new
+            using (var connection = NewConnection())
             {
-                folderPath = source.FolderPath,
-                sourceType = source.SourceType,
-                id = source.Id
-            });
-            return source.Id;
+
+                await connection.ExecuteAsync(@"
+                    update sources
+                    set 
+                        folderPath = @folderPath,
+                        sourceType = @sourceType
+                    where id = @id
+                ", new
+                {
+                    folderPath = source.FolderPath,
+                    sourceType = source.SourceType,
+                    id = source.Id
+                });
+                return source.Id;
+            }
         }
 
         public async Task Delete(ulong id)
         {
-            //delete all of the movies associated with this source
-            await this.Manager.LibraryGeneration.Movies.DeleteForSource(id);
-
-            await this.Connection.ExecuteAsync(@"
-                delete from sources
-                where id = @id
-            ", new
+            using (var connection = NewConnection())
             {
-                id = id
-            });
+                //delete all of the movies associated with this source
+                await this.Manager.LibraryGeneration.Movies.DeleteForSource(id);
+
+                await connection.ExecuteAsync(@"
+                    delete from sources
+                    where id = @id
+                ", new
+                {
+                    id = id
+                });
+            }
         }
 
         public async Task<ulong?> Save(Source source)

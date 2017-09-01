@@ -1,4 +1,5 @@
 using System.Data;
+using PlumMediaCenter.Data;
 
 namespace PlumMediaCenter.Business
 {
@@ -8,13 +9,10 @@ namespace PlumMediaCenter.Business
         {
             this.Manager = manager;
         }
-        public Manager Manager;
-        public IDbConnection Connection
-        {
-            get
-            {
-                return this.Manager.Connection;
-            }
+
+        public IDbConnection NewConnection(){
+            return ConnectionManager.GetNewConnection();
         }
+        public Manager Manager;
     }
 }

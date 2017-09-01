@@ -22,17 +22,5 @@ namespace PlumMediaCenter.Controllers
             }
         }
         private Manager _Manager;
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                if (_Manager != null)
-                {
-                    _Manager.Dispose();
-                }
-            }
-            base.Dispose(disposing);
-        }
     }
 }

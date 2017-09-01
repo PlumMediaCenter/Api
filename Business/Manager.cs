@@ -3,14 +3,12 @@ using System.Data;
 
 namespace PlumMediaCenter.Business
 {
-    public class Manager : IDisposable
+    public class Manager
     {
         public Manager()
         {
-            this.Connection = Data.ConnectionManager.GetConnection();
             this.LibraryGeneration = new LibraryGenerationManager(this);
         }
-        public IDbConnection Connection;
 
         public LibraryGenerationManager LibraryGeneration;
 
@@ -39,23 +37,6 @@ namespace PlumMediaCenter.Business
             {
                 return this._Movies = this._Movies != null ? this._Movies : new Managers.MovieManager(this);
             }
-        }
-
-        public void Dispose()
-        {
-            try
-            {
-                this.Connection.Close();
-                this.Connection.Dispose();
-            }
-            catch (Exception)
-            {
-
-            }
-        }
-        void IDisposable.Dispose()
-        {
-            this.Dispose();
         }
     }
 

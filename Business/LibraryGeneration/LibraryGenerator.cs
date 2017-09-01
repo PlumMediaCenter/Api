@@ -41,7 +41,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
         }
 
-        public Manager Manager;
+        public Manager Manager = new Manager();
 
         private Status Status;
         public Status GetStatus()
@@ -52,8 +52,6 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         private bool IsGenerating = false;
         public async Task Generate()
         {
-            this.Manager = new Manager();
-
             try
             {
                 if (IsGenerating == true)
@@ -92,7 +90,6 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 File.WriteAllText(AppSettings.TempPath, json);
             }
             catch (Exception) { }
-            this.Manager.Dispose();
             IsGenerating = false;
         }
 
@@ -101,6 +98,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             var moviePaths = new List<MoviePath>();
 
             var movieSources = await this.Manager.LibraryGeneration.Sources.GetByType("movie");
+
             //find all movie folders from each source
             foreach (var source in movieSources)
             {
@@ -127,9 +125,10 @@ namespace PlumMediaCenter.Business.LibraryGeneration
 
             var pathLookup = new Dictionary<string, bool>();
             var distinctList = new List<MoviePath>();
-            //remove any duplicates
+            //remove any duplicates or bogus entries
             foreach (var item in moviePaths)
             {
+                //if (pathLookup.ContainsKey(item.Path) == false && item.Path != null)
                 if (pathLookup.ContainsKey(item.Path) == false)
                 {
                     pathLookup.Add(item.Path, true);
@@ -142,20 +141,27 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             this.Status.MovieCountTotal = moviePaths.Count;
             var random = new Random();
             //process each movie. movie.Process will handle adding, updating, and deleting
-            //moviePaths.ForEach((moviePath) =>
-            Parallel.ForEach(moviePaths, (moviePath) =>
+
+            moviePaths.ForEach((moviePath) =>
+            // Parallel.ForEach(moviePaths, (moviePath) =>
             {
                 var path = moviePath.Path;
                 //add this move to the list of currently processing movies
                 this.Status.ActiveFiles.Add(path);
                 var manager = new Manager();
                 var movie = new Movie(manager, moviePath.Path, moviePath.Source.Id.Value);
-                movie.Process().Wait();
+                try
+                {
+                    movie.Process().Wait();
+                }
+                catch (Exception)
+                {
+                    this.Status.FailedItems.Add(Newtonsoft.Json.JsonConvert.SerializeObject(movie));
+                }
                 this.Status.MovieCountCurrent++;
                 //Thread.Sleep(100);
                 //remove the movie from the list of currently processing movies
                 this.Status.ActiveFiles.Remove(path);
-                manager.Dispose();
             });
         }
 
@@ -212,6 +218,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// The current number of movie entries that have been processed
         /// </summary>
         public int MovieCountCurrent { get; set; }
+        public List<string> FailedItems { get; set; } = new List<string>();
         /// <summary>
         /// The list of movies currently being processed
         /// </summary>
