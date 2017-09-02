@@ -168,7 +168,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                         this.Status.FailedItems.Add(Newtonsoft.Json.JsonConvert.SerializeObject(movie));
                     }
                     Thread.Sleep(5000);
-                    this.Status.MovieCountCurrent++;
+                    this.Status.MovieCountCompleted++;
                     //remove the movie from the list of currently processing movies
                     lock (this.Status.ActiveFiles)
                     {
@@ -234,10 +234,10 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// <summary>
         /// The current number of movie entries that have been processed
         /// </summary>
-        public int MovieCountCurrent { get; set; }
+        public int MovieCountCompleted { get; set; }
 
         public int TvSerieCountTotal { get; set; }
-        public int TvSerieCountCurrent { get; set; }
+        public int TvSerieCountCompleted { get; set; }
 
         /// <summary>
         /// The total number of items that have already been processed
@@ -247,7 +247,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         {
             get
             {
-                return this.MovieCountCurrent + this.TvSerieCountCurrent;
+                return this.MovieCountCompleted + this.TvSerieCountCompleted;
             }
         }
 
