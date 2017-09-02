@@ -68,7 +68,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 return _Md5;
             }
         }
-        private string _Md5;
+        private string _Md5 { get; set; }
 
         public string Title
         {
@@ -283,7 +283,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 {
                     imagePaths.Add($"{this.Manager.AppSettings.BackdropFolderPath}{guid}.jpg");
                 }
-                
+
                 //delete them
                 foreach (var imagePath in imagePaths)
                 {

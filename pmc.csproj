@@ -5,9 +5,9 @@
     <!-- <GenerateDocumentationFile>true</GenerateDocumentationFile> -->
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="misc\**" CopyToPublishDirectory="PreserveNewest"/>
-    <Folder Include="wwwroot\" /> 
-    <Folder Remove="temp\" /> 
+    <Content Include="misc\**" CopyToPublishDirectory="PreserveNewest" />
+    <Folder Include="wwwroot\" />
+    <Folder Remove="temp\" />
     <Content Remove="temp\**" />
     <Content Remove="wwwroot\posters\**" />
     <Content Remove="wwwroot\backdrops\**" />
@@ -19,6 +19,7 @@
     <PackageReference Include="Dapper" Version="1.50.2" />
     <PackageReference Include="ImageSharp" Version="1.0.0-alpha9-00173" />
     <PackageReference Include="ImageSharp.Drawing" Version="1.0.0-alpha9-00168" />
+    <PackageReference Include="SmartThreadPool.dll" Version="2.2.4" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="1.0.0" />
     <PackageReference Include="taglib" Version="2.1.0" />
     <PackageReference Include="TMDbLib" Version="1.0.0" />

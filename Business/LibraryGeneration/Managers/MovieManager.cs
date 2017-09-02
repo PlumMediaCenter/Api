@@ -41,8 +41,8 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         }
         private class DbDirResult
         {
-            public string FolderPath;
-            public ulong SourceId;
+            public string FolderPath { get; set; }
+            public ulong SourceId { get; set; }
         }
 
         /// <summary>
