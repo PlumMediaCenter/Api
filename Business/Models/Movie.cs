@@ -18,7 +18,28 @@ namespace PlumMediaCenter.Models
                 return $"{AppSettings.BaseUrlStatic}posters/{this.Id}.jpg";
             }
         }
+        public static string GetFolderUrl(ulong sourceId, string folderName, string baseUrl)
+        {
+            return $"{baseUrl}source{sourceId}/{folderName}/";
+        }
 
+        /// <summary>
+        /// The base url for the application. This needs to be set per movie in some situations because of how movies are processed in other threads.
+        /// It falls back to the request-thread's copy of base url
+        /// </summary>
+        /// <returns></returns>
+        public string BaseUrl
+        {
+            private get
+            {
+                return _BaseUrl != null ? _BaseUrl : AppSettings.BaseUrlStatic;
+            }
+            set
+            {
+                this._BaseUrl = value;
+            }
+        }
+        private string _BaseUrl;
         public string _BackdropGuids
         {
             set
@@ -66,7 +87,7 @@ namespace PlumMediaCenter.Models
         {
             get
             {
-                return $"{AppSettings.BaseUrlStatic}source{this.SourceId}/{this.FolderName}/";
+                return GetFolderUrl(this.SourceId, this.FolderPath, this.BaseUrl);
             }
         }
 

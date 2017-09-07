@@ -46,8 +46,7 @@ namespace PlumMediaCenter.Controllers
         [HttpGet("movies/search")]
         public async Task<List<MovieSearchResult>> GetMovieSearchResults([FromQuery]string text, [FromQuery]int tmdbId)
         {
-            var fetcher = new MovieMetadataProcessor();
-            return await fetcher.GetSearchResults(text);
+            return await this.Manager.MovieMetadataProcessor.GetSearchResults(text);
         }
 
 
@@ -59,15 +58,13 @@ namespace PlumMediaCenter.Controllers
         [HttpGet("movies/compare")]
         public async Task<MovieMetadataComparison> CompareMetadata([FromQuery]int tmdbId, int movieId)
         {
-            var processor = new MovieMetadataProcessor();
-            return await processor.GetComparison(tmdbId, movieId);
+            return await this.Manager.MovieMetadataProcessor.GetComparison(tmdbId, movieId, AppSettings.BaseUrlStatic);
         }
 
         [HttpPost("movies/{movieId}")]
         public async Task SaveMetadata(int movieId, [FromBody] MovieMetadata metadata)
         {
-            var processor = new MovieMetadataProcessor();
-            await processor.Save(movieId, metadata);
+            await this.Manager.MovieMetadataProcessor.Save(movieId, metadata);
         }
     }
 }

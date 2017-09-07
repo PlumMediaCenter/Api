@@ -4,6 +4,25 @@ namespace PlumMediaCenter.Business.LibraryGeneration.DotJson
 {
     public class MovieDotJson
     {
+        public MovieDotJson()
+        {
+
+        }
+        /// <summary>
+        /// Create a new object based on an existing object. This is only a shallow clone, but only currently exists so that
+        /// we can write the file to disc without serializing additional properties from child objects
+        /// </summary>
+        /// <param name="movieDotJson"></param>
+        public MovieDotJson(MovieDotJson movieDotJson)
+        {
+            var t = this.GetType();
+            var properties = t.GetProperties();
+            foreach (var prop in properties)
+            {
+                var incomingValue = prop.GetValue(movieDotJson);
+                prop.SetValue(this, incomingValue);
+            }
+        }
         /// <summary>
         /// The title of the movie
         /// </summary>
@@ -73,7 +92,8 @@ namespace PlumMediaCenter.Business.LibraryGeneration.DotJson
         public List<Image> Backdrops { get; set; } = new List<Image>();
     }
 
-    public class Image{
+    public class Image
+    {
         /// <summary>
         /// The relative path to the image, relative to the root movie folder
         /// </summary>

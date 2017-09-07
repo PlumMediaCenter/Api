@@ -33,6 +33,10 @@ namespace PlumMediaCenter.Middleware
             {
                 return (HttpContext)Thread.GetData(RequestNamedDataSlot);
             }
+            set
+            {
+                Thread.SetData(RequestNamedDataSlot, value);
+            }
         }
     }
 

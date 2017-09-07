@@ -8,7 +8,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
     {
         public TvSerie(Manager manager, string folderPath, ulong sourceId)
         {
-            this.Manager = manager != null ? manager : new Manager();
+            this.Manager = manager;
             this.FolderPath = folderPath;
             this.SourceId = sourceId;
         }
@@ -19,7 +19,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// </summary>
         private string FolderPath;
 
-         /// <summary>
+        /// <summary>
         /// The id for the video source
         /// </summary>
         public ulong SourceId;

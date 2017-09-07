@@ -7,6 +7,7 @@ using System;
 using System.Threading;
 using Newtonsoft.Json;
 using Amib.Threading;
+using PlumMediaCenter.Middleware;
 
 namespace PlumMediaCenter.Business.LibraryGeneration
 {
@@ -42,8 +43,6 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
         }
 
-        public Manager Manager = new Manager();
-
         private Status Status;
         public Status GetStatus()
         {
@@ -51,7 +50,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         }
 
         private bool IsGenerating = false;
-        public async Task Generate()
+        public async Task Generate(string baseUrl)
         {
             try
             {
@@ -59,6 +58,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 {
                     throw new Exception("Library generation is already in process");
                 }
+                var manager = new Manager(baseUrl);
                 IsGenerating = true;
                 var oldStatus = this.Status;
                 this.Status = new Status();
@@ -66,9 +66,9 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 this.Status.IsProcessing = true;
                 this.Status.LastGeneratedDate = oldStatus?.LastGeneratedDate;
                 this.Status.State = "processing movies";
-                await this.ProcessMovies();
+                await this.ProcessMovies(manager);
                 this.Status.State = "processing tv shows";
-                await this.ProcessSeries();
+                await this.ProcessSeries(manager);
                 this.Status.State = "completed";
                 this.Status.LastGeneratedDate = DateTime.UtcNow;
             }
@@ -95,11 +95,11 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             IsGenerating = false;
         }
 
-        private async Task ProcessMovies()
+        private async Task ProcessMovies(Manager manager)
         {
             var moviePaths = new List<MoviePath>();
 
-            var movieSources = await this.Manager.LibraryGeneration.Sources.GetByType("movie");
+            var movieSources = await manager.LibraryGeneration.Sources.GetByType("movie");
 
             //find all movie folders from each source
             foreach (var source in movieSources)
@@ -109,19 +109,21 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                     var directories = Directory.GetDirectories(source.FolderPath).ToList();
                     foreach (var dir in directories)
                     {
-                        moviePaths.Add(new MoviePath { Path = dir, Source = source });
+                        var normalizedPath = Utility.NormalizePath(dir, false);
+                        moviePaths.Add(new MoviePath { Path = normalizedPath, Source = source });
                     }
                 }
             }
 
             //find all movies from the db
-            var dbMovies = await this.Manager.LibraryGeneration.Movies.GetDirectories();
+            var dbMovies = await manager.LibraryGeneration.Movies.GetDirectories();
             foreach (var kvp in dbMovies)
             {
                 var source = movieSources.Where(x => x.Id == kvp.Key).First();
                 foreach (var path in kvp.Value)
                 {
-                    moviePaths.Add(new MoviePath { Path = path, Source = source });
+                    var normalizedPath = Utility.NormalizePath(path, false);
+                    moviePaths.Add(new MoviePath { Path = normalizedPath, Source = source });
                 }
             }
 
@@ -157,11 +159,20 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                     {
                         this.Status.ActiveFiles.Add(path);
                     }
-                    var manager = new Manager();
-                    var movie = new Movie(manager, moviePath.Path, moviePath.Source.Id.Value);
+                    var managerForThread = new Manager(manager.BaseUrl);
+                    var movie = new Movie(managerForThread, moviePath.Path, moviePath.Source.Id.Value);
                     try
                     {
-                        movie.Process().Wait();
+                        this.Status.Log.Add($"Waiting for movie to process: {moviePath.Path}");
+                        try
+                        {
+                            movie.Process().Wait();
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("Error processing movie");
+                            Console.WriteLine(e);
+                        }
                     }
                     catch (Exception)
                     {
@@ -180,11 +191,11 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             //Wait for all work items to complete. equivalent to Thread.WaitAll()
             pool.WaitForIdle();
         }
-        private async Task ProcessSeries()
+        private async Task ProcessSeries(Manager manager)
         {
             var seriePaths = new List<string>();
 
-            var serieSources = await this.Manager.LibraryGeneration.Sources.GetByType("tvserie");
+            var serieSources = await manager.LibraryGeneration.Sources.GetByType("tvserie");
             //find all show folders from each source
             foreach (var source in serieSources)
             {
@@ -192,7 +203,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
 
             //find all shows from the db
-            seriePaths.AddRange(await this.Manager.LibraryGeneration.TvSeries.GetDirectories());
+            seriePaths.AddRange(await manager.LibraryGeneration.TvSeries.GetDirectories());
 
             //remove any duplicates
             seriePaths = seriePaths.Distinct().ToList();
@@ -201,7 +212,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             Parallel.ForEach(seriePaths, moviePath =>
             {
                 var sourceId = 0UL;
-                var show = new TvSerie(this.Manager, moviePath, sourceId);
+                var show = new TvSerie(manager, moviePath, sourceId);
                 show.Process();
             });
         }

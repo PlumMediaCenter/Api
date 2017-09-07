@@ -16,7 +16,7 @@ namespace PlumMediaCenter.Controllers
             {
                 if (_Manager == null)
                 {
-                    _Manager = new Manager();
+                    _Manager = new Manager(AppSettings.BaseUrlStatic);
                 }
                 return _Manager;
             }

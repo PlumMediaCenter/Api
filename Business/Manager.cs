@@ -1,16 +1,20 @@
 using System;
 using System.Data;
+using PlumMediaCenter.Business.MetadataProcessing;
 
 namespace PlumMediaCenter.Business
 {
     public class Manager
     {
-        public Manager()
+        public Manager(string baseUrl)
         {
             this.LibraryGeneration = new LibraryGenerationManager(this);
+            this.BaseUrl = baseUrl;
         }
 
         public LibraryGenerationManager LibraryGeneration;
+
+        public string BaseUrl;
 
         private Utility _Utility;
         public Utility Utility
@@ -38,6 +42,14 @@ namespace PlumMediaCenter.Business
                 return this._Movies = this._Movies != null ? this._Movies : new Managers.MovieManager(this);
             }
         }
+        public MovieMetadataProcessor MovieMetadataProcessor
+        {
+            get
+            {
+                return this._MovieMetadataProcessor = _MovieMetadataProcessor != null ? this._MovieMetadataProcessor : new MovieMetadataProcessor(this);
+            }
+        }
+        public MovieMetadataProcessor _MovieMetadataProcessor;
     }
 
     public class LibraryGenerationManager : BaseManager

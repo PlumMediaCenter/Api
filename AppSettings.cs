@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 
 namespace PlumMediaCenter
@@ -71,35 +72,18 @@ namespace PlumMediaCenter
         }
 
         /// <summary>
-        /// Get the full base url pointing to the root of this api
-        /// </summary>
-        /// <returns></returns>
-        public string BaseUrl
-        {
-            get
-            {
-                return AppSettings.BaseUrlStatic;
-            }
-        }
-
-        public string RequestUrl
-        {
-            get
-            {
-                var request = Middleware.RequestMiddleware.CurrentHttpContext.Request;
-                var url = $"{request.Scheme}://{request.Host}{request.Path}";
-                return url;
-            }
-        }
-
-        /// <summary>
-        /// A static accessor for the full base url pointing to the root of this api
+        /// WARNING: Only use this from a request thread!!
+        /// A static accessor for the full base url pointing to the root of this api.
         /// </summary>
         /// <returns></returns>
         public static string BaseUrlStatic
         {
             get
             {
+                if (Middleware.RequestMiddleware.CurrentHttpContext == null)
+                {
+                    throw new Exception("Unable to determine base url because current thread does not have an associated HttpContext");
+                }
                 var store = Middleware.RequestMiddleware.CurrentHttpContext.Items;
                 var request = Middleware.RequestMiddleware.CurrentHttpContext.Request;
                 if (store.ContainsKey("baseUrl") == false)

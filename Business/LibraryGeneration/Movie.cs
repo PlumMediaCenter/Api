@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using PlumMediaCenter.Business.LibraryGeneration.DotJson;
 using PlumMediaCenter.Data;
@@ -12,7 +13,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
     {
         public Movie(Manager manager, string moviePath, ulong sourceId)
         {
-            this.Manager = manager != null ? manager : new Manager();
+            this.Manager = manager;
             this.FolderPath = moviePath;
             this.SourceId = sourceId;
         }
@@ -206,8 +207,9 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 await this.Delete();
                 return;
             }
+            await this.DownloadMetadataIfPossible();
             //movie needs updated
-            else if (await this.Manager.LibraryGeneration.Movies.Exists(this.FolderPath))
+            if (await this.Manager.LibraryGeneration.Movies.Exists(this.FolderPath))
             {
                 this.Id = await this.Update();
             }
@@ -217,6 +219,90 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 this.Id = await this.Create();
             }
             await this.CopyImages();
+        }
+
+        Regex yearRegex = new Regex(@"\(\d\d\d\d\)");
+        private int? GetYearFromFolderName()
+        {
+            try
+            {
+                var match = yearRegex.Match(this.FolderName);
+                if (match.Captures.Count() == 1)
+                {
+                    return int.Parse(match.Captures.First().Value);
+                }
+            }
+            catch (Exception)
+            {
+            }
+            return null;
+        }
+        private string FolderName
+        {
+            get
+            {
+                var folderName = new DirectoryInfo(this.FolderPath).Name;
+                return folderName;
+            }
+        }
+
+        public async Task DownloadMetadataIfPossible()
+        {
+            Console.WriteLine("Download metadata if possible");
+            var movieDotJson = this.MovieDotJson;
+            //the movie doesn't have any metadata. Download some
+            if (movieDotJson == null)
+            {
+                Console.WriteLine("No movie.json exists");
+                var year = this.GetYearFromFolderName();
+                var folderName = this.FolderName;
+                string title = folderName;
+                if (year != null)
+                {
+                    var idx = folderName.LastIndexOf("(");
+                    if (idx > -1)
+                    {
+                        title = folderName.Substring(0, idx);
+                    }
+                }
+                Console.WriteLine("Searching for results");
+                //get search results
+                var results = await this.Manager.MovieMetadataProcessor.GetSearchResults(folderName);
+                Console.WriteLine($"Found {results.Count} results");
+                var matches = results.Where(x => x.Title.ToLower() == title.ToLower());
+                Console.WriteLine($"Found {matches.Count()} where the title matches");
+                if (year != null)
+                {
+                    Console.WriteLine("Filtering matches by year");
+                    matches = matches.Where(x => x.ReleaseDate.Value.Year == year.Value);
+                    Console.WriteLine($"Found {matches.Count()} matches with the same year");
+                }
+                //if we have any matches left, use the first one
+                var match = matches.FirstOrDefault();
+                if (match != null)
+                {
+                    Console.WriteLine("Downloading tmdb metadata");
+                    var metadata = await this.Manager.MovieMetadataProcessor.GetTmdbMetadata(match.TmdbId);
+                    Console.WriteLine("Saving metadata to disc");
+                    await this.Manager.MovieMetadataProcessor.DownloadMetadata(
+                        this.FolderPath,
+                        Models.Movie.GetFolderUrl(this.SourceId, this.FolderName, this.Manager.BaseUrl),
+                        metadata
+                    );
+                    Console.WriteLine("Clearing MovieDotJson");
+                    //clear _MovieDotJson so the next access will load the new one from disk
+                    this._MovieDotJson = null;
+                }
+                else
+                {
+                    Console.WriteLine("Found no matches");
+                }
+            }
+            else
+            {
+                //the movie already has metadata, so don't download anything 
+                return;
+            }
         }
 
         public async Task<ulong> Update()

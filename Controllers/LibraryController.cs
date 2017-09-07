@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using PlumMediaCenter.Business.LibraryGeneration;
 using Dapper;
 using PlumMediaCenter.Attributues;
+using PlumMediaCenter.Middleware;
 
 namespace PlumMediaCenter.Controllers
 {
@@ -24,9 +25,10 @@ namespace PlumMediaCenter.Controllers
             var initialStatus = generator.GetStatus();
             //temporarily delete all movies
             //Data.ConnectionManager.GetConnection().Execute("truncate movies");
+            var baseUrl = this.Manager.BaseUrl;
             Task.Run(() =>
             {
-                var libGenTask = generator.Generate();
+                var libGenTask = generator.Generate(baseUrl);
             });
             var startDate = DateTime.UtcNow;
             //spin until we get a new status

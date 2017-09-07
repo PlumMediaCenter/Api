@@ -10,9 +10,18 @@ namespace PlumMediaCenter.Business
             this.Manager = manager;
         }
 
-        public IDbConnection NewConnection(){
+        public IDbConnection NewConnection()
+        {
             return ConnectionManager.GetNewConnection();
         }
         public Manager Manager;
+
+        public string BaseUrl
+        {
+            get
+            {
+                return this.Manager.BaseUrl;
+            }
+        }
     }
 }

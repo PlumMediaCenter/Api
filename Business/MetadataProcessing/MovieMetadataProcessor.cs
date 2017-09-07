@@ -13,8 +13,12 @@ using TMDbLib.Objects.Movies;
 
 namespace PlumMediaCenter.Business.MetadataProcessing
 {
-    class MovieMetadataProcessor
+    public class MovieMetadataProcessor : BaseManager
     {
+        public MovieMetadataProcessor(Manager manager) : base(manager)
+        {
+        }
+
         private TMDbClient Client
         {
             get
@@ -29,16 +33,6 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             }
         }
         private TMDbClient _Client;
-
-        private Manager Manager
-        {
-            get
-            {
-
-                return this._Manager = this._Manager != null ? this._Manager : new Manager();
-            }
-        }
-        private Manager _Manager;
 
         public async Task<List<MovieSearchResult>> GetSearchResults(string text)
         {
@@ -59,10 +53,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return result;
         }
 
-        public async Task<MovieMetadataComparison> GetComparison(int tmdbId, int movieId)
+        public async Task<MovieMetadataComparison> GetComparison(int tmdbId, int movieId, string baseUrl)
         {
             var result = new MovieMetadataComparison();
-            var tcurrent = GetCurrentMetadata(movieId);
+            var tcurrent = GetCurrentMetadata(movieId, baseUrl);
             var tTmdb = GetTmdbMetadata(tmdbId);
 
             //convert current posters into tmdb poster urls
@@ -72,7 +66,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return result;
         }
 
-        private async Task<MovieMetadata> GetTmdbMetadata(int tmdbId)
+        public async Task<MovieMetadata> GetTmdbMetadata(int tmdbId)
         {
             Directory.CreateDirectory(this.Manager.AppSettings.TmdbCacheDirectoryPath);
             var cacheFilePath = $"{this.Manager.AppSettings.TmdbCacheDirectoryPath}{tmdbId}.json";
@@ -154,7 +148,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return metadata;
         }
 
-        private async Task<MovieMetadata> GetCurrentMetadata(int movieId)
+        private async Task<MovieMetadata> GetCurrentMetadata(int movieId, string baseUrl)
         {
             var movieModel = await this.Manager.Movies.GetById(movieId);
             var movie = new LibraryGeneration.Movie(this.Manager, movieModel.GetFolderPath(), movieModel.SourceId);
@@ -211,13 +205,17 @@ namespace PlumMediaCenter.Business.MetadataProcessing
 
         public async Task Save(int movieId, MovieMetadata metadata)
         {
-            //overwrite the MovieDotJson for this movie
-            var manager = new Manager();
-            var movie = await manager.Movies.GetById(movieId);
+            var movie = await this.Manager.Movies.GetById(movieId);
+            await DownloadMetadata(movie.GetFolderPath(), movie.FolderUrl, metadata);
+            //reprocess this movie so the library is updated with its info
+            await this.Manager.LibraryGeneration.Movies.Process(movie.GetFolderPath());
+        }
 
+        public async Task DownloadMetadata(string movieFolderPath, string movieFolderUrl, MovieMetadata metadata)
+        {
             //process the poster
             {
-                var posterPath = $"{movie.GetFolderPath()}poster.jpg";
+                var posterPath = $"{movieFolderPath}poster.jpg";
 
                 if (metadata.PosterUrls.Count == 0)
                 {
@@ -234,10 +232,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             }
 
             //copy the backdrops
-            CopyBackdrops(metadata, movie, movie.GetFolderPath());
+            CopyBackdrops(metadata, movieFolderUrl, movieFolderPath);
 
-            var movieDotJsonPath = $"{movie.GetFolderPath()}movie.json";
-            var movieDotJson = (MovieDotJson)metadata;
+            var movieDotJsonPath = $"{movieFolderPath}movie.json";
+            var movieDotJson = new MovieDotJson(metadata);
 
             var camelCaseFormatter = new JsonSerializerSettings();
             camelCaseFormatter.ContractResolver = new CamelCasePropertyNamesContractResolver();
@@ -246,8 +244,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             var json = Newtonsoft.Json.JsonConvert.SerializeObject(movieDotJson, camelCaseFormatter);
             await File.WriteAllTextAsync(movieDotJsonPath, json);
 
-            //reprocess this movie so the library is updated with its info
-            await this.Manager.LibraryGeneration.Movies.Process(movie.GetFolderPath());
+        }
+        public List<string> CopyBackdrops(MovieMetadata metadata, Models.Movie movie, string moviePath)
+        {
+            return this.CopyBackdrops(metadata, movie.FolderUrl, moviePath);
         }
 
         /// <summary>
@@ -257,7 +257,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         /// <param name="imageUrls"></param>
         /// <param name="destinationPath"></param>
         /// <returns></returns>
-        public List<string> CopyBackdrops(MovieMetadata metadata, Models.Movie movie, string moviePath)
+        public List<string> CopyBackdrops(MovieMetadata metadata, string movieFolderUrl, string moviePath)
         {
             var destinationPath = Utility.NormalizePath($"{moviePath}backdrops/", false);
             var tempPaths = new List<string>();
@@ -273,9 +273,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 var image = originalBackdrops.Where(x => x.SourceUrl == imageUrl).FirstOrDefault();
                 var imagePath = image?.Path == null ? null : Utility.NormalizePath($"{moviePath}{image.Path}", true);
                 //if this image originated from this url, store a basic image record in the json
-                if (imageUrl.ToLowerInvariant().Contains(this.Manager.AppSettings.BaseUrl.ToLowerInvariant()))
+                if (string.IsNullOrWhiteSpace(this.Manager.BaseUrl) == false &&
+                    imageUrl.ToLowerInvariant().Contains(this.Manager.BaseUrl.ToLowerInvariant()))
                 {
-                    var len = imageUrl.Length - imageUrl.ToLowerInvariant().Replace(movie.FolderUrl.ToLowerInvariant(), "").Length;
+                    var len = imageUrl.Length - imageUrl.ToLowerInvariant().Replace(movieFolderUrl.ToLowerInvariant(), "").Length;
                     var relativePath = imageUrl.Substring(len);
 
                     metadata.Backdrops.Add(new Image { Path = relativePath });
@@ -296,7 +297,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             }
 
             //download the new posters
-            Parallel.ForEach(backdropUrlsToProcess, (imageUrl) =>
+            foreach (var imageUrl in backdropUrlsToProcess)
             {
                 var ext = Path.GetExtension(imageUrl);
                 var filename = $"{Guid.NewGuid().ToString()}{ Path.GetExtension(imageUrl)}";
@@ -309,14 +310,13 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 //update metadata with backdrop filename
                 var imageFromJson = metadata.Backdrops.Where(x => x.SourceUrl == imageUrl).FirstOrDefault();
                 imageFromJson.Path = Utility.NormalizePath($"backdrops/{filename}", true);
-
-            });
+            }
             //make the backdrop folder in the movie folder
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
 
             var imagePaths = new List<string>();
             //copy all of the temp posters into the backdrops folder
-            Parallel.ForEach(tempPaths, (tempImagePath) =>
+            foreach (var tempImagePath in tempPaths)
             {
                 var filename = Path.GetFileName(tempImagePath);
                 var imagePath = $"{destinationPath}{filename}";
@@ -325,7 +325,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 //delete the temp image
                 File.Delete(tempImagePath);
                 imagePaths.Add(imagePath);
-            });
+            }
             return imagePaths;
         }
     }

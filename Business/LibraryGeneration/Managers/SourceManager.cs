@@ -86,12 +86,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             }
         }
 
-        public async Task Delete(ulong id)
+        public async Task Delete(ulong id, string baseUrl)
         {
             using (var connection = NewConnection())
             {
                 //delete all of the movies associated with this source
-                await this.Manager.LibraryGeneration.Movies.DeleteForSource(id);
+                await this.Manager.LibraryGeneration.Movies.DeleteForSource(id, baseUrl);
 
                 await connection.ExecuteAsync(@"
                     delete from sources
@@ -120,7 +120,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// </summary>
         /// <param name="sources"></param>
         /// <returns></returns>
-        public async Task SetAll(List<Source> sources)
+        public async Task SetAll(List<Source> sources, string baseUrl)
         {
             var existingSources = await this.GetAll();
             var existingIds = existingSources.Select(x => x.Id).ToList();
@@ -130,7 +130,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             //delete no longer existant items
             foreach (var id in deleteCandidateIds)
             {
-                await this.Delete(id.Value);
+                await this.Delete(id.Value, baseUrl);
             }
 
             foreach (var source in sources)

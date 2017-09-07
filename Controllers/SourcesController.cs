@@ -32,7 +32,7 @@ namespace PlumMediaCenter.Controllers
         [HttpPost()]
         public async Task SetAll([FromBody] List<Source> sources)
         {
-            await this.Manager.LibraryGeneration.Sources.SetAll(sources);
+            await this.Manager.LibraryGeneration.Sources.SetAll(sources, AppSettings.BaseUrlStatic);
 
             //update the middleware to serve the new set of sources
             MiddlewareInjectorOptions.InjectMiddleware(app =>

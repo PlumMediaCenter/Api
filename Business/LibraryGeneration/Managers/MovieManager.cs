@@ -275,7 +275,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             await movie.Process();
         }
 
-        public async Task DeleteForSource(ulong sourceId)
+        public async Task DeleteForSource(ulong sourceId, string baseUrl)
         {
             using (var connection = NewConnection())
             {
@@ -289,7 +289,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                 });
                 Parallel.ForEach(folderPaths, (folderPath) =>
                 {
-                    var manager = new Manager();
+                    var manager = new Manager(this.BaseUrl);
                     var movie = new Movie(manager, folderPath, sourceId);
                     movie.Delete().Wait();
                 });
