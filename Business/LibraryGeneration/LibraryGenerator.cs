@@ -106,7 +106,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             {
                 if (Directory.Exists(source.FolderPath))
                 {
-                    var directories = Directory.GetDirectories(source.FolderPath).ToList();
+                    var directories = Directory.GetDirectories(source.FolderPath);
                     foreach (var dir in directories)
                     {
                         var normalizedPath = Utility.NormalizePath(dir, false);
