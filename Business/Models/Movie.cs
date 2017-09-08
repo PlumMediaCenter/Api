@@ -87,7 +87,7 @@ namespace PlumMediaCenter.Models
         {
             get
             {
-                return GetFolderUrl(this.SourceId, this.FolderPath, this.BaseUrl);
+                return GetFolderUrl(this.SourceId, this.FolderName, this.BaseUrl);
             }
         }
 
