@@ -221,15 +221,16 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             await this.CopyImages();
         }
 
-        Regex yearRegex = new Regex(@"\(\d\d\d\d\)");
+        Regex yearRegex = new Regex(@"\((\d\d\d\d)\)");
         private int? GetYearFromFolderName()
         {
             try
             {
                 var match = yearRegex.Match(this.FolderName);
-                if (match.Captures.Count() == 1)
+                var yearString = match.Groups[1]?.Value;
+                if (yearString != null)
                 {
-                    return int.Parse(match.Captures.First().Value);
+                    return int.Parse(yearString);
                 }
             }
             catch (Exception)
@@ -259,17 +260,17 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 string title = folderName;
                 if (year != null)
                 {
-                    var idx = folderName.LastIndexOf("(");
+                    var idx = folderName.LastIndexOf($"({year})");
                     if (idx > -1)
                     {
-                        title = folderName.Substring(0, idx);
+                        title = folderName.Substring(0, idx).Trim();
                     }
                 }
                 Console.WriteLine("Searching for results");
                 //get search results
-                var results = await this.Manager.MovieMetadataProcessor.GetSearchResults(folderName);
+                var results = await this.Manager.MovieMetadataProcessor.GetSearchResults(title);
                 Console.WriteLine($"Found {results.Count} results");
-                var matches = results.Where(x => x.Title.ToLower() == title.ToLower());
+                var matches = results.Where(x => x.Title.ToLower().Trim() == title.ToLower());
                 Console.WriteLine($"Found {matches.Count()} where the title matches");
                 if (year != null)
                 {
