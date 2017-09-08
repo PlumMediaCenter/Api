@@ -19,24 +19,43 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         {
         }
 
-        private TMDbClient Client
+        private static TMDbClient Client
         {
             get
             {
-                if (_Client == null)
+                lock (ClientLock)
                 {
-                    _Client = new TMDbClient(new AppSettings().TmdbApiString);
-                    //load default config
-                    _Client.GetConfig();
+                    if (_Client == null)
+                    {
+
+                        _Client = new TMDbClient(new AppSettings().TmdbApiString);
+                        //load default config
+                        _Client.GetConfig();
+                        //retry a request 10 times.
+                        _Client.MaxRetryCount = 10;
+                    }
                 }
                 return _Client;
             }
         }
-        private TMDbClient _Client;
+        private static object ClientLock = new object();
+        private static TMDbClient _Client;
 
         public async Task<List<MovieSearchResult>> GetSearchResults(string text)
         {
-            var r = await Client.SearchMovieAsync(text);
+            SearchContainer<TMDbLib.Objects.Search.SearchMovie> r;
+            try
+            {
+                //only allow one tmdb request at a time
+                lock (Client)
+                {
+                    r = Client.SearchMovieAsync(text).Result;
+                }
+            }
+            catch (Exception e)
+            {
+                throw new Exception("TMDB Client was supposed to try again");
+            }
             var searchResults = r.Results;
             var result = new List<MovieSearchResult>();
             foreach (var searchResult in searchResults)
@@ -68,6 +87,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
 
         public async Task<MovieMetadata> GetTmdbMetadata(int tmdbId)
         {
+            Movie movie = null;
             Directory.CreateDirectory(this.Manager.AppSettings.TmdbCacheDirectoryPath);
             var cacheFilePath = $"{this.Manager.AppSettings.TmdbCacheDirectoryPath}{tmdbId}.json";
             //if a cache file exists, and it's was updated less than a month ago, use it.
@@ -75,23 +95,38 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             {
                 try
                 {
-                    var result = Newtonsoft.Json.JsonConvert.DeserializeObject<MovieMetadata>(File.ReadAllText(cacheFilePath));
-                    return result;
+                    movie = Newtonsoft.Json.JsonConvert.DeserializeObject<Movie>(File.ReadAllText(cacheFilePath));
                 }
                 catch (Exception)
                 {
 
                 }
             }
-            var movie = await Client.GetMovieAsync(tmdbId,
-                MovieMethods.AlternativeTitles |
-                MovieMethods.Credits |
-                MovieMethods.Images |
-                MovieMethods.Keywords |
-                MovieMethods.Releases |
-                MovieMethods.ReleaseDates |
-                MovieMethods.Videos
-            );
+            //if the movie could not be loaded from cache, retrieve a fresh copy from TMDB
+            if (movie == null)
+            {
+                //only allow one thread to use the client at a time
+                lock (Client)
+                {
+                    movie = Client.GetMovieAsync(tmdbId,
+                       MovieMethods.AlternativeTitles |
+                       MovieMethods.Credits |
+                       MovieMethods.Images |
+                       MovieMethods.Keywords |
+                       MovieMethods.Releases |
+                       MovieMethods.ReleaseDates |
+                       MovieMethods.Videos
+                   ).Result;
+                }
+                //save this result to disc
+                var camelCaseFormatter = new JsonSerializerSettings();
+                camelCaseFormatter.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                camelCaseFormatter.Formatting = Formatting.Indented;
+
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(movie, camelCaseFormatter);
+                await File.WriteAllTextAsync(cacheFilePath, json);
+            }
+
             var metadata = new MovieMetadata();
             metadata.AddCast(movie.Credits?.Cast);
             metadata.AddCrew(movie.Credits?.Crew);
@@ -132,19 +167,21 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             metadata.PosterUrls = metadata.PosterUrls.Distinct().ToList();
 
 
+            //add the marked backdrop path first
             if (movie.BackdropPath != null)
             {
                 metadata.BackdropUrls.Add(Client.GetImageUrl("original", movie.BackdropPath).ToString());
             }
+            //add all additional backdrops
             metadata.BackdropUrls.AddRange(
                 movie.Images?.Backdrops
-                ?.Where(x => x.Iso_639_1?.ToLower() == "en")
+                //move the highest rated backdrops to the top
+                ?.OrderByDescending(x => x.VoteAverage)
+                ?.Where(x => x.Iso_639_1?.ToLower() == "en" || x.Iso_639_1 == null)
                 ?.Select(x => Client.GetImageUrl("original", x.FilePath).ToString())
                 ?.ToList() ?? new List<string>()
             );
             metadata.BackdropUrls = metadata.BackdropUrls.Distinct().ToList();
-            var json = Newtonsoft.Json.JsonConvert.SerializeObject(metadata);
-            await File.WriteAllTextAsync(cacheFilePath, json);
             return metadata;
         }
 
@@ -168,16 +205,17 @@ namespace PlumMediaCenter.Business.MetadataProcessing
 
             //get all backdrops from filesystem, and include only those not already listed in the movie.json
             var backdropsFromFs = Directory.Exists(movie.BackdropFolderPath) ? Directory.GetFiles(movie.BackdropFolderPath) : new string[0];
-            foreach (var backdrop in backdropsFromFs)
+            foreach (var backdropPath in backdropsFromFs)
             {
+                var backdropFilename = Path.GetFileName(backdropPath);
                 var backdropAlreadyListed = backdrops.Where(x =>
                 {
-                    return Path.GetFileName(x.Path) == Path.GetFileName(backdrop);
+                    return Path.GetFileName(x.Path) == backdropFilename;
                 }).Count() > 0;
 
                 if (backdropAlreadyListed == false)
                 {
-                    var relativeBackdropPath = $"backdrops/{Path.GetFileName(backdrop)}";
+                    var relativeBackdropPath = $"backdrops/{backdropFilename}";
                     backdrops.Add(new Image { Path = relativeBackdropPath });
                 }
             }
@@ -191,7 +229,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 }
                 else
                 {
-                    //the poster doesn't have a source url...so assume it's a locally added image. add the local url
+                    //the backdrop doesn't have a source url...so assume it's a locally added image. add the local url
                     var path = $"{movie.FolderPath}/{backdrop.Path}";
                     if (File.Exists(path))
                     {
