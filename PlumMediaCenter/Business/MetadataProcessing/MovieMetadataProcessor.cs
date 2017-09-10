@@ -41,7 +41,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         private static object ClientLock = new object();
         private static TMDbClient _Client;
 
-        public async Task<List<MovieSearchResult>> GetSearchResults(string text)
+        public async Task<List<MovieSearchResult>> GetSearchResultsAsync(string text)
         {
             SearchContainer<TMDbLib.Objects.Search.SearchMovie> r;
             try
@@ -54,7 +54,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             }
             catch (Exception e)
             {
-                throw new Exception("TMDB Client was supposed to try again");
+                throw new Exception("TMDB Client was supposed to try again", e);
             }
             var searchResults = r.Results;
             var result = new List<MovieSearchResult>();
@@ -69,14 +69,14 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                     ReleaseDate = searchResult.ReleaseDate,
                 });
             }
-            return result;
+            return await Task.FromResult(result);
         }
 
-        public async Task<MovieMetadataComparison> GetComparison(int tmdbId, int movieId, string baseUrl)
+        public async Task<MovieMetadataComparison> GetComparisonAsync(int tmdbId, int movieId, string baseUrl)
         {
             var result = new MovieMetadataComparison();
-            var tcurrent = GetCurrentMetadata(movieId, baseUrl);
-            var tTmdb = GetTmdbMetadata(tmdbId);
+            var tcurrent = GetCurrentMetadataAsync(movieId, baseUrl);
+            var tTmdb = GetTmdbMetadataAsync(tmdbId);
 
             //convert current posters into tmdb poster urls
 
@@ -85,7 +85,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return result;
         }
 
-        public async Task<MovieMetadata> GetTmdbMetadata(int tmdbId)
+        public async Task<MovieMetadata> GetTmdbMetadataAsync(int tmdbId)
         {
             Movie movie = null;
             Directory.CreateDirectory(this.Manager.AppSettings.TmdbCacheDirectoryPath);
@@ -185,7 +185,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return metadata;
         }
 
-        private async Task<MovieMetadata> GetCurrentMetadata(int movieId, string baseUrl)
+        private async Task<MovieMetadata> GetCurrentMetadataAsync(int movieId, string baseUrl)
         {
             var movieModel = await this.Manager.Movies.GetById(movieId);
             var movie = new LibraryGeneration.Movie(this.Manager, movieModel.GetFolderPath(), movieModel.SourceId);
@@ -241,15 +241,15 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return metadata;
         }
 
-        public async Task Save(int movieId, MovieMetadata metadata)
+        public async Task SaveAsync(int movieId, MovieMetadata metadata)
         {
             var movie = await this.Manager.Movies.GetById(movieId);
-            await DownloadMetadata(movie.GetFolderPath(), movie.FolderUrl, metadata);
+            await DownloadMetadataAsync(movie.GetFolderPath(), movie.FolderUrl, metadata);
             //reprocess this movie so the library is updated with its info
             await this.Manager.LibraryGeneration.Movies.Process(movie.GetFolderPath());
         }
 
-        public async Task DownloadMetadata(string movieFolderPath, string movieFolderUrl, MovieMetadata metadata)
+        public async Task DownloadMetadataAsync(string movieFolderPath, string movieFolderUrl, MovieMetadata metadata)
         {
             //process the poster
             {

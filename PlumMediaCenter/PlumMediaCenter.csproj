@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <UserSecretsId>aspnet-PlumMediaCenter-81897A70-A42B-42D9-B371-736517CAEDF8</UserSecretsId>
+    <NoWarn>NU1701</NoWarn>
     <!-- <GenerateDocumentationFile>true</GenerateDocumentationFile> -->
   </PropertyGroup>
   <ItemGroup>

@@ -221,12 +221,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             await this.CopyImages();
         }
 
-        Regex yearRegex = new Regex(@"\((\d\d\d\d)\)");
-        private int? GetYearFromFolderName()
+        static Regex YearRegex = new Regex(@"\((\d\d\d\d)\)");
+        public static int? GetYearFromFolderName(string folderName)
         {
             try
             {
-                var match = yearRegex.Match(this.FolderName);
+                var match = YearRegex.Match(folderName);
                 var yearString = match.Groups[1]?.Value;
                 if (yearString != null)
                 {
@@ -237,6 +237,49 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             {
             }
             return null;
+        }
+
+        /// <summary>
+        /// Compare two titles, but remove some special characters and compare case insensitive.
+        /// </summary>
+        /// <param name="title1"></param>
+        /// <param name="title2"></param>
+        /// <returns></returns>
+        public static bool TitlesAreEquivalent(string title1, string title2)
+        {
+            var replacementChars = new string[] { "{", "}", "#", "@", "-", "(", ")", ":", ".", ",", "'", "&", "?", "!", "+", "$", "’", "…", "/", "_", "[", "]", "–", "*", "=" };
+            var titles = new string[] { title2, title2 };
+            for (var i = 0; i < titles.Length; i++)
+            {
+                var title = titles[i];
+                //replace lots of special characters with spaces
+                foreach (var replacementChar in replacementChars)
+                {
+                    title.Replace(replacementChar, " ");
+                }
+                title = title
+                     //force to lower case
+                     .ToLowerInvariant()
+                     //remove starting or trailing spaces
+                     .Trim()
+                     //remove any double spaces
+                     .Replace("  ", " ")
+                     //remove certain special chars
+                     ;
+                titles[i] = title;
+
+            }
+            title1 = titles[0];
+            title2 = titles[1];
+            if (title1 == title2)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+
         }
         private string FolderName
         {
@@ -255,7 +298,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             if (movieDotJson == null)
             {
                 Console.WriteLine("No movie.json exists");
-                var year = this.GetYearFromFolderName();
+                var year = GetYearFromFolderName(this.FolderName);
                 var folderName = this.FolderName;
                 string title = folderName;
                 if (year != null)
@@ -268,9 +311,9 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 }
                 Console.WriteLine("Searching for results");
                 //get search results
-                var results = await this.Manager.MovieMetadataProcessor.GetSearchResults(title);
+                var results = await this.Manager.MovieMetadataProcessor.GetSearchResultsAsync(title);
                 Console.WriteLine($"Found {results.Count} results");
-                var matches = results.Where(x => x.Title.ToLower().Trim() == title.ToLower());
+                var matches = results.Where(x => TitlesAreEquivalent(x.Title, title));
                 Console.WriteLine($"Found {matches.Count()} where the title matches");
                 if (year != null)
                 {
@@ -283,9 +326,9 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 if (match != null)
                 {
                     Console.WriteLine("Downloading tmdb metadata");
-                    var metadata = await this.Manager.MovieMetadataProcessor.GetTmdbMetadata(match.TmdbId);
+                    var metadata = await this.Manager.MovieMetadataProcessor.GetTmdbMetadataAsync(match.TmdbId);
                     Console.WriteLine("Saving metadata to disc");
-                    await this.Manager.MovieMetadataProcessor.DownloadMetadata(
+                    await this.Manager.MovieMetadataProcessor.DownloadMetadataAsync(
                         this.FolderPath,
                         Models.Movie.GetFolderUrl(this.SourceId, this.FolderName, this.Manager.BaseUrl),
                         metadata

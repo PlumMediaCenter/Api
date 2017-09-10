@@ -1,19 +1,35 @@
 {
     "version": "2.0.0",
     "args": [],
-    "command": "dotnet",
     "tasks": [
         {
+            "command": "dotnet",
             "taskName": "build",
             "type": "shell",
             "args": [
-                "${workspaceRoot}/pmc.csproj"
+                "build",
+                "${workspaceRoot}/PlumMediaCenter/PlumMediaCenter.csproj"
             ],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
             "problemMatcher": "$msCompile"
+        },
+        {
+            "taskName": "test",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "test",
+                "PlumMediaCenter.Tests"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "echo": true,
+                "focus": true
+            },
+            "isBackground": false
         },
         {
             "command": "dotnet",
@@ -45,7 +61,7 @@
             "type": "shell",
             "args": [
                 "publish",
-                "${workspaceRoot}/pmc.csproj",
+                "${workspaceRoot}/PlumMediaCenter/PlumMediaCenter.csproj",
                 "-r",
                 "linux-arm",
                 "-o",
