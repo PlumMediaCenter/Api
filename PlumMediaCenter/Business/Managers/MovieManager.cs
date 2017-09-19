@@ -14,14 +14,11 @@ namespace PlumMediaCenter.Business.Managers
 
         public async Task<List<Models.Movie>> GetAll()
         {
-            using (var connection = NewConnection())
-            {
-                var models = await connection.QueryAsync<Models.Movie>(@"
-                    select *, backdropGuids as _backdropGuids from movies
-                    order by title asc;
-                ");
-                return models.ToList();
-            }
+            var models = await this.QueryAsync<Models.Movie>(@"
+                select *, backdropGuids as _backdropGuids from movies
+                order by sortTitle asc;
+            ");
+            return models.ToList();
         }
 
         /// <summary>
@@ -31,15 +28,11 @@ namespace PlumMediaCenter.Business.Managers
         /// <returns></returns>
         public async Task<List<Models.Movie>> GetByIds(List<int> ids)
         {
-            using (var connection = NewConnection())
-            {
-
-                var models = await connection.QueryAsync<Models.Movie>(@"
-                    select *, backdropGuids as _backdropGuids from movies
-                    where id in @ids
-                ", new { ids = ids });
-                return models.ToList();
-            }
+            var models = await this.QueryAsync<Models.Movie>(@"
+                select *, backdropGuids as _backdropGuids from movies
+                where id in @ids
+            ", new { ids = ids });
+            return models.ToList();
         }
 
         /// <summary>

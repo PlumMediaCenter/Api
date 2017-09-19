@@ -144,12 +144,14 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             metadata.Runtime = movie.Runtime;
             metadata.Summary = movie.Overview;
             metadata.Title = movie.Title;
+            metadata.SortTitle = movie.Title;
 
-            metadata.Titles.Add(movie.Title);
-            metadata.Titles.AddRange(
+            metadata.SearchText.AddRange(
                 movie.AlternativeTitles?.Titles?.Where(x => x.Iso_3166_1.ToLower() == "us").Select(x => x.Title).ToList() ?? new List<string>()
             );
-            metadata.Titles = metadata.Titles.Distinct().ToList();
+            metadata.SearchText.Add(movie.OriginalTitle);
+
+            metadata.SearchText = metadata.SearchText.Distinct().ToList();
 
             metadata.TmdbId = movie.Id;
 

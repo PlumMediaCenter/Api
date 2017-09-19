@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using PlumMediaCenter.Business.LibraryGeneration.DotJson;
+using PlumMediaCenter.Business.MetadataProcessing;
 using PlumMediaCenter.Data;
 
 namespace PlumMediaCenter.Business.LibraryGeneration
@@ -77,20 +78,47 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             {
                 if (_Title == null)
                 {
-                    if (this.MovieDotJson != null && string.IsNullOrEmpty(this.MovieDotJson.Title) == false)
+                    if (string.IsNullOrEmpty(this.MovieDotJson?.Title) == false)
                     {
                         _Title = this.MovieDotJson.Title;
                     }
+                    //use the directory name
                     else
                     {
-                        //use the directory name
-                        _Title = new DirectoryInfo(this.FolderPath).Name;
+                        var year = GetYearFromFolderName(this.FolderName);
+                        if (year != null)
+                        {
+                            var idx = this.FolderName.LastIndexOf($"({year})");
+                            if (idx > -1)
+                            {
+                                _Title = this.FolderName.Substring(0, idx).Trim();
+                            }
+                        }
+                        else
+                        {
+                            _Title = this.FolderName;
+                        }
                     }
                 }
                 return _Title;
             }
         }
         private string _Title;
+
+        public string SortTitle
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(this.MovieDotJson?.SortTitle) == false)
+                {
+                    return this.MovieDotJson.SortTitle;
+                }
+                else
+                {
+                    return this.Title;
+                }
+            }
+        }
 
         public string Summary
         {
@@ -247,27 +275,29 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// <returns></returns>
         public static bool TitlesAreEquivalent(string title1, string title2)
         {
-            var replacementChars = new string[] { "{", "}", "#", "@", "-", "(", ")", ":", ".", ",", "'", "&", "?", "!", "+", "$", "’", "…", "/", "_", "[", "]", "–", "*", "=" };
-            var titles = new string[] { title2, title2 };
+            var replacementChars = new string[] { "{", "}", "#", "@", "-", "(", ")", ":", ".", ",", "'", "?", "!", "+", "$", "’", "…", "/", "_", "[", "]", "–", "*", "=" };
+            var titles = new string[] { title1, title2 };
             for (var i = 0; i < titles.Length; i++)
             {
-                var title = titles[i];
-                //replace lots of special characters with spaces
-                foreach (var replacementChar in replacementChars)
-                {
-                    title.Replace(replacementChar, " ");
-                }
-                title = title
+                var title = titles[i]
                      //force to lower case
                      .ToLowerInvariant()
                      //remove starting or trailing spaces
-                     .Trim()
-                     //remove any double spaces
-                     .Replace("  ", " ")
-                     //remove certain special chars
-                     ;
-                titles[i] = title;
+                     .Trim();
 
+                //replace lots of special characters with spaces
+                foreach (var replacementChar in replacementChars)
+                {
+                    title = title.Replace(replacementChar, " ");
+                }
+
+                //replace all instance of double spaces with single spaces
+                while (title.Contains("  "))
+                {
+                    title = title.Replace("  ", " ");
+                }
+                title = title.Replace("&", "and");
+                titles[i] = title;
             }
             title1 = titles[0];
             title2 = titles[1];
@@ -300,53 +330,69 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 Console.WriteLine("No movie.json exists");
                 var year = GetYearFromFolderName(this.FolderName);
                 var folderName = this.FolderName;
-                string title = folderName;
-                if (year != null)
-                {
-                    var idx = folderName.LastIndexOf($"({year})");
-                    if (idx > -1)
-                    {
-                        title = folderName.Substring(0, idx).Trim();
-                    }
-                }
+                string title = this.Title;
                 Console.WriteLine("Searching for results");
                 //get search results
                 var results = await this.Manager.MovieMetadataProcessor.GetSearchResultsAsync(title);
                 Console.WriteLine($"Found {results.Count} results");
-                var matches = results.Where(x => TitlesAreEquivalent(x.Title, title));
+                var matches = results.Where(x => TitlesAreEquivalent(x.Title, title)).ToList();
                 Console.WriteLine($"Found {matches.Count()} where the title matches");
                 if (year != null)
                 {
                     Console.WriteLine("Filtering matches by year");
-                    matches = matches.Where(x => x.ReleaseDate.Value.Year == year.Value);
+                    matches = matches.Where(x => x.ReleaseDate.Value.Year == year.Value).ToList();
                     Console.WriteLine($"Found {matches.Count()} matches with the same year");
                 }
                 //if we have any matches left, use the first one
                 var match = matches.FirstOrDefault();
-                if (match != null)
+                MovieMetadata metadata;
+                if (match == null)
                 {
-                    Console.WriteLine("Downloading tmdb metadata");
-                    var metadata = await this.Manager.MovieMetadataProcessor.GetTmdbMetadataAsync(match.TmdbId);
-                    Console.WriteLine("Saving metadata to disc");
-                    await this.Manager.MovieMetadataProcessor.DownloadMetadataAsync(
-                        this.FolderPath,
-                        Models.Movie.GetFolderUrl(this.SourceId, this.FolderName, this.Manager.BaseUrl),
-                        metadata
-                    );
-                    Console.WriteLine("Clearing MovieDotJson");
-                    //clear _MovieDotJson so the next access will load the new one from disk
-                    this._MovieDotJson = null;
+                    Console.WriteLine("No matches found: using generic metadata");
+                    metadata = GetGenericMetadata();
                 }
                 else
                 {
-                    Console.WriteLine("Found no matches");
+                    Console.WriteLine("Downloading TMDB metadata");
+                    metadata = await this.Manager.MovieMetadataProcessor.GetTmdbMetadataAsync(match.TmdbId);
                 }
+                Console.WriteLine("Saving metadata to disc");
+                await this.Manager.MovieMetadataProcessor.DownloadMetadataAsync(
+                    this.FolderPath,
+                    Models.Movie.GetFolderUrl(this.SourceId, this.FolderName, this.Manager.BaseUrl),
+                    metadata
+                );
+                Console.WriteLine("Clearing MovieDotJson");
+                //clear _MovieDotJson so the next access will load the new one from disk
+                this._MovieDotJson = null;
             }
             else
             {
                 //the movie already has metadata, so don't download anything 
                 return;
             }
+        }
+
+        public MovieMetadata GetGenericMetadata()
+        {
+            var movieMetadata = new MovieMetadata();
+            movieMetadata.Description = null;
+            movieMetadata.Rating = null;
+
+            //get the year from the folder name
+            var year = GetYearFromFolderName(this.FolderPath);
+            DateTime? releaseDate;
+            if (year != null)
+            {
+                releaseDate = new DateTime(year.Value, 1, 1);
+                movieMetadata.ReleaseDate = releaseDate;
+            }
+            //the runtime should be calculated from the video file's length
+            movieMetadata.Runtime = null;
+            movieMetadata.Summary = null;
+            movieMetadata.Title = this.Title;
+            movieMetadata.SortTitle = this.SortTitle;
+            return movieMetadata;
         }
 
         public async Task<ulong> Update()
@@ -445,10 +491,10 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             //poster
             var sourcePosterPath = $"{this.FolderPath}poster.jpg";
             var destinationPosterPath = $"{this.Manager.AppSettings.PosterFolderPath}{this.Id}.jpg";
-            //if the video has a poster, copy it
+
+            //the video doesn't have a poster. Create a text-based poster
             if (File.Exists(sourcePosterPath) == false)
             {
-                //the video doesn't have a poster. Create a text-based poster
                 this.Manager.Utility.CreateTextPoster(this.Title, sourcePosterPath);
             }
 

@@ -24,13 +24,13 @@ namespace PlumMediaCenter.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet()]
-        public async Task<List<Data.Source>> GetAll()
+        public async Task<IEnumerable<Data.Source>> GetAll()
         {
             return await this.Manager.LibraryGeneration.Sources.GetAll();
         }
 
         [HttpPost()]
-        public async Task SetAll([FromBody] List<Source> sources)
+        public async Task SetAll([FromBody] IEnumerable<Source> sources)
         {
             await this.Manager.LibraryGeneration.Sources.SetAll(sources, AppSettings.BaseUrlStatic);
 

@@ -9,7 +9,7 @@ namespace PlumMediaCenter.Data
 
         public static void SetDbCredentials(string username, string password)
         {
-            Username = username;
+            Username = username; 
             Password = password;
         }
 

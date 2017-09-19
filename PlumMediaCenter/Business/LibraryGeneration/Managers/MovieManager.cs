@@ -20,9 +20,9 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// Get a list of every movie directory
         /// </summary>
         /// <returns></returns>
-        public async Task<Dictionary<ulong, List<string>>> GetDirectories()
+        public async Task<Dictionary<ulong, IEnumerable<string>>> GetDirectories()
         {
-            using (var connection = NewConnection())
+            using (var connection = GetNewConnection())
             {
                 var sources = await this.Manager.LibraryGeneration.Sources.GetAll();
                 var rows = await connection.QueryAsync<DbDirResult>(@"
@@ -34,7 +34,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                     .GroupBy(x => x.SourceId)
                     .ToDictionary(
                         x => x.Key,
-                        x => x.Select(y => y.FolderPath).ToList()
+                        x => x.Select(y => y.FolderPath)
                     );
                 return results;
             }
@@ -52,7 +52,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<ulong?> GetId(string folderPath)
         {
-            using (var connection = NewConnection())
+            using (var connection = GetNewConnection())
             {
                 var rows = await connection.QueryAsync<ulong?>(@"
                     select id 
@@ -72,7 +72,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task Delete(string folderPath)
         {
-            using (var connection = NewConnection())
+            using (var connection = GetNewConnection())
             {
                 await connection.ExecuteAsync(@"
                     delete from movies
@@ -91,55 +91,57 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<ulong> Insert(LibraryGeneration.Movie movie)
         {
-            using (var connection = NewConnection())
+            var mediaId = await this.Manager.Media.GetNewMediaId(MediaType.Movie);
+            await this.ExecuteAsync(@"
+                insert into movies(
+                    id,
+                    folderPath, 
+                    videoPath, 
+                    title, 
+                    sortTitle,
+                    summary, 
+                    description, 
+                    rating,
+                    releaseDate,
+                    runtime,
+                    tmdbId,
+                    sourceId
+                )
+                values(
+                    @id,
+                    @folderPath,
+                    @videoPath, 
+                    @title, 
+                    @sortTitle,
+                    @summary,
+                    @description, 
+                    @rating,
+                    @releaseDate,
+                    @runtime,
+                    @tmdbId,
+                    @sourceId
+                )
+            ", new
             {
-                await connection.ExecuteAsync(@"
-                    insert into movies(
-                        folderPath, 
-                        videoPath, 
-                        title, 
-                        summary, 
-                        description, 
-                        rating,
-                        releaseDate,
-                        runtime,
-                        tmdbId,
-                        sourceId
-                    )
-                    values(
-                        @folderPath,
-                        @videoPath, 
-                        @title, 
-                        @summary,
-                        @description, 
-                        @rating,
-                        @releaseDate,
-                        @runtime,
-                        @tmdbId,
-                        @sourceId
-                    )
-                ", new
-
-                {
-                    folderPath = movie.FolderPath,
-                    videoPath = movie.VideoPath,
-                    title = movie.Title,
-                    summary = movie.Summary,
-                    description = movie.Description,
-                    rating = movie.Rating,
-                    releaseDate = movie.ReleaseDate,
-                    runtime = movie.Runtime,
-                    tmdbId = movie.TmdbId,
-                    sourceId = movie.SourceId
-                });
-                var id = await connection.GetLastInsertIdAsync();
-                return id.Value;
-            }
+                id = mediaId,
+                folderPath = movie.FolderPath,
+                videoPath = movie.VideoPath,
+                title = movie.Title,
+                sortTitle = movie.SortTitle,
+                summary = movie.Summary,
+                description = movie.Description,
+                rating = movie.Rating,
+                releaseDate = movie.ReleaseDate,
+                runtime = movie.Runtime,
+                tmdbId = movie.TmdbId,
+                sourceId = movie.SourceId
+            });
+            return mediaId;
         }
 
         public async Task<ulong> Update(LibraryGeneration.Movie movie)
         {
-            using (var connection = NewConnection())
+            using (var connection = GetNewConnection())
             {
                 var movieId = await connection.QueryFirstOrDefaultAsync<ulong?>(@"
                     select id from movies where folderPath = @folderPath
@@ -154,6 +156,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                         folderPath = @folderPath,
                         videoPath = @videoPath, 
                         title = @title, 
+                        sortTitle = @sortTitle,
                         summary = @summary,
                         description = @description, 
                         rating = @rating,
@@ -168,6 +171,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                     folderPath = movie.FolderPath,
                     videoPath = movie.VideoPath,
                     title = movie.Title,
+                    sortTitle = movie.SortTitle,
                     summary = movie.Summary,
                     description = movie.Description,
                     rating = movie.Rating,
@@ -189,7 +193,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<bool> Exists(string folderPath)
         {
-            using (var connection = NewConnection())
+            using (var connection = GetNewConnection())
             {
                 var result = await connection.QueryAsync<int>(@"
                     select count(*) 
@@ -201,19 +205,6 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             }
         }
 
-
-        public async Task<List<Data.Movie>> GetAll()
-        {
-            using (var connection = NewConnection())
-            {
-                var movies = await connection.QueryAsync<Data.Movie>(@"
-                    select * from movies
-                ");
-                return movies.ToList();
-            }
-        }
-
-
         /// <summary>
         /// Get a list of guids for all of the backdrops for a movie
         /// </summary>
@@ -221,7 +212,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<List<string>> GetBackdropGuids(ulong movieId)
         {
-            using (var connection = NewConnection())
+            using (var connection = GetNewConnection())
             {
                 var rows = await connection.QueryAsync<string>(@"
                     select backdropGuids from movies
@@ -248,7 +239,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task SetBackdropGuids(ulong movieId, List<string> backdropGuids)
         {
-            using (var connection = NewConnection())
+            using (var connection = GetNewConnection())
             {
                 var value = string.Join(",", backdropGuids);
                 await connection.ExecuteAsync(@"
@@ -277,7 +268,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
 
         public async Task DeleteForSource(ulong sourceId, string baseUrl)
         {
-            using (var connection = NewConnection())
+            using (var connection = GetNewConnection())
             {
                 var folderPaths = await connection.QueryAsync<string>(@"
                     select folderPath

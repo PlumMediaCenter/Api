@@ -18,47 +18,40 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// </summary>
         /// <param name="sourceType"></param>
         /// <returns></returns>
-        public async Task<List<Source>> GetByType(string sourceType)
+        public async Task<IEnumerable<Source>> GetByType(MediaType mediaType)
         {
-
-
-            using (var connection = NewConnection())
+            var result = await this.QueryAsync<Source>(@"
+                select * 
+                from sources
+                where mediaType = @mediaType
+            ", new
             {
-                var result = await connection.QueryAsync<Source>(@"
-                    select * 
-                    from sources
-                    where sourceType = @sourceType
-                ", new
-                {
-                    sourceType = sourceType
-                });
-                return result.ToList();
-            }
+                mediaType = (int)mediaType
+            });
+            return result;
         }
 
-        public async Task<List<Source>> GetAll()
+        public async Task<IEnumerable<Source>> GetAll()
         {
-            using (var connection = NewConnection())
-            {
-                var result = await connection.QueryAsync<Source>(@"
-                    select * from sources
-                ");
-                return result.ToList();
-            }
+
+            var result = await this.QueryAsync<Source>(@"
+                select * from sources
+            ");
+            return result;
         }
 
         public async Task<ulong?> Insert(Source source)
         {
 
-            using (var connection = NewConnection())
+            using (var connection = GetNewConnection())
             {
                 await connection.ExecuteAsync(@"
-                    insert into sources(folderPath, sourceType)
-                    values(@folderPath, @sourceType)
+                    insert into sources(folderPath, mediaType)
+                    values(@folderPath, @mediaType)
                 ", new
                 {
                     folderPath = source.FolderPath,
-                    sourceType = source.SourceType
+                    mediaType = (int)source.MediaType
                 });
                 return await connection.GetLastInsertIdAsync();
             }
@@ -67,40 +60,33 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
 
         public async Task<ulong?> Update(Source source)
         {
-            using (var connection = NewConnection())
+            await this.ExecuteAsync(@"
+                update sources
+                set 
+                    folderPath = @folderPath,
+                    mediaType = @mediaType
+                where id = @id
+            ", new
             {
-
-                await connection.ExecuteAsync(@"
-                    update sources
-                    set 
-                        folderPath = @folderPath,
-                        sourceType = @sourceType
-                    where id = @id
-                ", new
-                {
-                    folderPath = source.FolderPath,
-                    sourceType = source.SourceType,
-                    id = source.Id
-                });
-                return source.Id;
-            }
+                folderPath = source.FolderPath,
+                mediaType = (int)source.MediaType,
+                id = source.Id
+            });
+            return source.Id;
         }
 
         public async Task Delete(ulong id, string baseUrl)
         {
-            using (var connection = NewConnection())
-            {
-                //delete all of the movies associated with this source
-                await this.Manager.LibraryGeneration.Movies.DeleteForSource(id, baseUrl);
+            //delete all of the movies associated with this source
+            await this.Manager.LibraryGeneration.Movies.DeleteForSource(id, baseUrl);
 
-                await connection.ExecuteAsync(@"
-                    delete from sources
-                    where id = @id
-                ", new
-                {
-                    id = id
-                });
-            }
+            await this.ExecuteAsync(@"
+                delete from sources
+                where id = @id
+            ", new
+            {
+                id = id
+            });
         }
 
         public async Task<ulong?> Save(Source source)
@@ -120,12 +106,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// </summary>
         /// <param name="sources"></param>
         /// <returns></returns>
-        public async Task SetAll(List<Source> sources, string baseUrl)
+        public async Task SetAll(IEnumerable<Source> sources, string baseUrl)
         {
             var existingSources = await this.GetAll();
-            var existingIds = existingSources.Select(x => x.Id).ToList();
-            var incomingIds = sources.Select(x => x.Id).ToList();
-            var deleteCandidateIds = existingIds.Where(existingId => incomingIds.Contains(existingId) == false).ToList();
+            var existingIds = existingSources.Select(x => x.Id);
+            var incomingIds = sources.Select(x => x.Id);
+            var deleteCandidateIds = existingIds.Where(existingId => incomingIds.Contains(existingId) == false);
 
             //delete no longer existant items
             foreach (var id in deleteCandidateIds)

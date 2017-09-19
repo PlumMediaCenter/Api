@@ -14,13 +14,14 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "problemMatcher": "$msCompile"
+            "problemMatcher": []
         },
         {
             "taskName": "test",
             "command": "dotnet",
             "type": "shell",
             "args": [
+                "watch",
                 "test",
                 "PlumMediaCenter.Tests"
             ],
@@ -29,7 +30,8 @@
                 "echo": true,
                 "focus": true
             },
-            "isBackground": false
+            "isBackground": false,
+            "problemMatcher": []
         },
         {
             "command": "dotnet",
@@ -40,6 +42,9 @@
                 "--urls",
                 "http://*:5001"
             ],
+            "options": {
+                "cwd": "${workspaceRoot}/PlumMediaCenter"
+            },
             "isBackground": true,
             "presentation": {
                 "echo": true,
@@ -47,7 +52,7 @@
                 "focus": true,
                 "panel": "new"
             },
-            "problemMatcher": "$msCompile"
+            "problemMatcher":[]
         },
         {
             "command": "dotnet",

@@ -16,7 +16,7 @@
                 "--urls",
                 "http://*:5001"
             ],
-            "cwd": "${workspaceRoot}",
+            "cwd": "${workspaceRoot}/PlumMediaCenter",
             "stopAtEntry": false,
             "internalConsoleOptions": "openOnSessionStart",
             "launchBrowser": {

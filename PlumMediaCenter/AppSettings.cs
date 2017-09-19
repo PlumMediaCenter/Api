@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using PlumMediaCenter.Business;
 
 namespace PlumMediaCenter
 {
@@ -60,7 +61,10 @@ namespace PlumMediaCenter
         {
             get
             {
-                return $"{Directory.GetCurrentDirectory()}/temp/";
+                var path = Utility.NormalizePath($"{Directory.GetCurrentDirectory()}/temp/", false);
+                //make sure the temp folder path exists
+                Directory.CreateDirectory(path);
+                return path;
             }
         }
         public string TmdbApiString

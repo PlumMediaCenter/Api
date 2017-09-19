@@ -20,17 +20,24 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         {
             try
             {
-                //load any old status saved in cache
-                var statusJson = File.ReadAllText(LibraryGenerator.StatusFilePath);
-                this.Status = Newtonsoft.Json.JsonConvert.DeserializeObject<Status>(statusJson);
+                if (File.Exists(LibraryGenerator.StatusFilePath))
+                {
+                    //load any old status saved in cache
+                    var statusJson = File.ReadAllText(LibraryGenerator.StatusFilePath);
+                    this.Status = Newtonsoft.Json.JsonConvert.DeserializeObject<Status>(statusJson);
+                }
             }
-            catch (Exception) { }
+            catch (Exception)
+            {
+            }
         }
         private static string StatusFilePath
         {
             get
             {
-                return $"{AppSettings.TempPath}libraryStatus.json";
+                //make sure the temp folder exists
+                var path = Utility.NormalizePath($"{AppSettings.TempPath}libraryStatus.json", true);
+                return path;
             }
         }
 
@@ -88,10 +95,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
             try
             {
-                var json = JsonConvert.SerializeObject(LibraryGenerator.StatusFilePath);
-                File.WriteAllText(AppSettings.TempPath, json);
+                var json = JsonConvert.SerializeObject(this.Status);
+                File.WriteAllText(LibraryGenerator.StatusFilePath, json);
             }
-            catch (Exception) { }
+            catch (Exception)
+            {
+            }
             IsGenerating = false;
         }
 
@@ -99,7 +108,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         {
             var moviePaths = new List<MoviePath>();
 
-            var movieSources = await manager.LibraryGeneration.Sources.GetByType("movie");
+            var movieSources = await manager.LibraryGeneration.Sources.GetByType(MediaType.Movie);
 
             //find all movie folders from each source
             foreach (var source in movieSources)
@@ -152,38 +161,42 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 this.Status.Log.Add($"Adding {loopMoviePath.Path} to pool");
                 var workItemResult = pool.QueueWorkItem((moviePath) =>
                 {
-                    this.Status.Log.Add($"Processing pool movie: {moviePath.Path}");
-                    var path = moviePath.Path;
-                    //add this move to the list of currently processing movies
-                    lock (this.Status.ActiveFiles)
+                    //temp lock to process movies one by one
+                    lock (this)
                     {
-                        this.Status.ActiveFiles.Add(path);
-                    }
-                    var managerForThread = new Manager(manager.BaseUrl);
-                    var movie = new Movie(managerForThread, moviePath.Path, moviePath.Source.Id.Value);
-                    try
-                    {
-                        this.Status.Log.Add($"Waiting for movie to process: {moviePath.Path}");
+                        this.Status.Log.Add($"Processing pool movie: {moviePath.Path}");
+                        var path = moviePath.Path;
+                        //add this move to the list of currently processing movies
+                        lock (this.Status.ActiveFiles)
+                        {
+                            this.Status.ActiveFiles.Add(path);
+                        }
+                        var managerForThread = new Manager(manager.BaseUrl);
+                        var movie = new Movie(managerForThread, moviePath.Path, moviePath.Source.Id.Value);
                         try
                         {
-                            movie.Process().Wait();
+                            this.Status.Log.Add($"Waiting for movie to process: {moviePath.Path}");
+                            try
+                            {
+                                movie.Process().Wait();
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine($"Error processing movie {moviePath.Path}");
+                                Console.WriteLine(e);
+                            }
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
-                            Console.WriteLine("Error processing movie");
-                            Console.WriteLine(e);
+                            this.Status.FailedItems.Add(Newtonsoft.Json.JsonConvert.SerializeObject(movie));
                         }
-                    }
-                    catch (Exception)
-                    {
-                        this.Status.FailedItems.Add(Newtonsoft.Json.JsonConvert.SerializeObject(movie));
-                    }
-                    Thread.Sleep(5000);
-                    this.Status.MovieCountCompleted++;
-                    //remove the movie from the list of currently processing movies
-                    lock (this.Status.ActiveFiles)
-                    {
-                        this.Status.ActiveFiles.Remove(path);
+                        Thread.Sleep(5000);
+                        this.Status.MovieCountCompleted++;
+                        //remove the movie from the list of currently processing movies
+                        lock (this.Status.ActiveFiles)
+                        {
+                            this.Status.ActiveFiles.Remove(path);
+                        }
                     }
                 }, loopMoviePath);
 
@@ -195,7 +208,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         {
             var seriePaths = new List<string>();
 
-            var serieSources = await manager.LibraryGeneration.Sources.GetByType("tvserie");
+            var serieSources = await manager.LibraryGeneration.Sources.GetByType(MediaType.TvShow);
             //find all show folders from each source
             foreach (var source in serieSources)
             {

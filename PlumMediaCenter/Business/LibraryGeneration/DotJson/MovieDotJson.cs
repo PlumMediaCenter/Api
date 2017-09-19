@@ -28,9 +28,14 @@ namespace PlumMediaCenter.Business.LibraryGeneration.DotJson
         /// </summary>
         public string Title { get; set; }
         /// <summary>
+        /// The title to use to sort the movie with. If omitted, Title should be used
+        /// </summary>
+        /// <returns></returns>
+        public string SortTitle { get; set; }
+        /// <summary>
         /// A collection of all possible titles for the movie. This will also include the Title property
         /// </summary>
-        public List<string> Titles { get; set; } = new List<string>();
+        public List<string> SearchText { get; set; } = new List<string>();
         /// <summary>
         /// A short summary of the movie
         /// </summary>
