@@ -146,12 +146,12 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             metadata.Title = movie.Title;
             metadata.SortTitle = movie.Title;
 
-            metadata.SearchText.AddRange(
+            metadata.ExtraSearchText.AddRange(
                 movie.AlternativeTitles?.Titles?.Where(x => x.Iso_3166_1.ToLower() == "us").Select(x => x.Title).ToList() ?? new List<string>()
             );
-            metadata.SearchText.Add(movie.OriginalTitle);
+            metadata.ExtraSearchText.Add(movie.OriginalTitle);
 
-            metadata.SearchText = metadata.SearchText.Distinct().ToList();
+            metadata.ExtraSearchText = metadata.ExtraSearchText.Distinct().ToList();
 
             metadata.TmdbId = movie.Id;
 
@@ -199,7 +199,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             if (File.Exists(posterPath))
             {
                 var name = Path.GetFileName(posterPath);
-                metadata.PosterUrls.Add($"{movieModel.FolderUrl}{name}");
+                metadata.PosterUrls.Add($"{movieModel.GetFolderUrl()}{name}");
             }
 
             //get all backdrops listed in movie.json
@@ -236,7 +236,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                     if (File.Exists(path))
                     {
                         var name = Path.GetFileName(path);
-                        metadata.BackdropUrls.Add($"{movieModel.FolderUrl}{backdrop.Path}");
+                        metadata.BackdropUrls.Add($"{movieModel.GetFolderUrl()}{backdrop.Path}");
                     }
                 }
             }
@@ -246,7 +246,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         public async Task SaveAsync(int movieId, MovieMetadata metadata)
         {
             var movie = await this.Manager.Movies.GetById(movieId);
-            await DownloadMetadataAsync(movie.GetFolderPath(), movie.FolderUrl, metadata);
+            await DownloadMetadataAsync(movie.GetFolderPath(), movie.GetFolderUrl(), metadata);
             //reprocess this movie so the library is updated with its info
             await this.Manager.LibraryGeneration.Movies.Process(movie.GetFolderPath());
         }
@@ -287,7 +287,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         }
         public List<string> CopyBackdrops(MovieMetadata metadata, Models.Movie movie, string moviePath)
         {
-            return this.CopyBackdrops(metadata, movie.FolderUrl, moviePath);
+            return this.CopyBackdrops(metadata, movie.GetFolderUrl(), moviePath);
         }
 
         /// <summary>

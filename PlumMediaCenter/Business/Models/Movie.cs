@@ -10,6 +10,7 @@ namespace PlumMediaCenter.Models
         public ulong Id;
         public string Title;
         public ulong SourceId;
+        public string Summary;
         public string Description;
         public string PosterUrl
         {
@@ -18,7 +19,7 @@ namespace PlumMediaCenter.Models
                 return $"{AppSettings.BaseUrlStatic}posters/{this.Id}.jpg";
             }
         }
-        public static string GetFolderUrl(ulong sourceId, string folderName, string baseUrl)
+        public static string CalculateFolderUrl(ulong sourceId, string folderName, string baseUrl)
         {
             return $"{baseUrl}source{sourceId}/{folderName}/";
         }
@@ -75,7 +76,7 @@ namespace PlumMediaCenter.Models
                 var filename = Path.GetFileName(VideoPath);
 
 
-                return $"{FolderUrl}{filename}";
+                return $"{GetFolderUrl()}{filename}";
             }
         }
 
@@ -83,12 +84,9 @@ namespace PlumMediaCenter.Models
         /// URL pointing to the folder for this movie
         /// </summary>
         /// <returns></returns>
-        public string FolderUrl
+        public string GetFolderUrl()
         {
-            get
-            {
-                return GetFolderUrl(this.SourceId, this.FolderName, this.BaseUrl);
-            }
+            return CalculateFolderUrl(this.SourceId, this.FolderName, this.BaseUrl);
         }
 
         public int Duration;

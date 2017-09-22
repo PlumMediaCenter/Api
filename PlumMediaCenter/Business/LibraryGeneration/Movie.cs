@@ -359,7 +359,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 Console.WriteLine("Saving metadata to disc");
                 await this.Manager.MovieMetadataProcessor.DownloadMetadataAsync(
                     this.FolderPath,
-                    Models.Movie.GetFolderUrl(this.SourceId, this.FolderName, this.Manager.BaseUrl),
+                    Models.Movie.CalculateFolderUrl(this.SourceId, this.FolderName, this.Manager.BaseUrl),
                     metadata
                 );
                 Console.WriteLine("Clearing MovieDotJson");

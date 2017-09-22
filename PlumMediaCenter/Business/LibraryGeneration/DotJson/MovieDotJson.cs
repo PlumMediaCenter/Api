@@ -33,9 +33,10 @@ namespace PlumMediaCenter.Business.LibraryGeneration.DotJson
         /// <returns></returns>
         public string SortTitle { get; set; }
         /// <summary>
-        /// A collection of all possible titles for the movie. This will also include the Title property
+        /// Additional phrases to use for searching. For example, sometimes people spell Dalmatians with an o "Dalmations", 
+        /// so adding "101 Dalmations" into this list would help with that search
         /// </summary>
-        public List<string> SearchText { get; set; } = new List<string>();
+        public List<string> ExtraSearchText { get; set; } = new List<string>();
         /// <summary>
         /// A short summary of the movie
         /// </summary>
@@ -54,15 +55,6 @@ namespace PlumMediaCenter.Business.LibraryGeneration.DotJson
         /// The number in the collection, if it is in one. (i.e. Star Trek: The Wrath of Kahn would be 2, since it's the second star trek movie)
         /// </summary>
         public int? CollectionOrder { get; set; }
-        /// <summary>
-        /// A list of all actors in the film
-        /// </summary>
-        public List<CastMember> Cast { get; set; } = new List<CastMember>();
-        /// <summary>
-        /// A list of crew members who worked on the film (directors, writers)
-        /// </summary>
-        /// <returns></returns>
-        public List<CrewMember> Crew { get; set; } = new List<CrewMember>();
         /// <summary>
         /// A list of high-level genres for the movie. These would be things like "Action", "Thriller"
         /// </summary>
@@ -89,6 +81,15 @@ namespace PlumMediaCenter.Business.LibraryGeneration.DotJson
         /// The TMDB ID for this movie. Null if movie is not on TMDB
         /// </summary>
         public int? TmdbId { get; set; }
+        /// <summary>
+        /// A list of all actors in the film
+        /// </summary>
+        public List<CastMember> Cast { get; set; } = new List<CastMember>();
+        /// <summary>
+        /// A list of crew members who worked on the film (directors, writers)
+        /// </summary>
+        /// <returns></returns>
+        public List<CrewMember> Crew { get; set; } = new List<CrewMember>();
 
         /// <summary>
         /// A collection of posters. Each item is relative to the root folder, and should use linux slashes
