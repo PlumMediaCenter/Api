@@ -26,14 +26,14 @@ namespace PlumMediaCenter.Business.Managers
             });
         }
 
-        public async Task<ulong> GetNewMediaId(MediaType mediaType)
+        public async Task<ulong> GetNewMediaId(MediaTypeId mediaTypeId)
         {
             using (var connection = GetNewConnection())
             {
                 var rows = await this.QueryAsync<ulong?>(@"
-                    insert into mediaIds(mediaType) values(@mediaType);select last_insert_id();
-                ", new { mediaType = (int)mediaType });
-                
+                    insert into mediaIds(mediaTypeId) values(@mediaTypeId);select last_insert_id();
+                ", new { mediaTypeId= (int)mediaTypeId });
+
                 var id = rows.FirstOrDefault();
 
                 if (id == null || id.Value == 0)

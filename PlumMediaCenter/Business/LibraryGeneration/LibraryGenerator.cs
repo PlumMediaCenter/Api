@@ -108,7 +108,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         {
             var moviePaths = new List<MoviePath>();
 
-            var movieSources = await manager.LibraryGeneration.Sources.GetByType(MediaType.Movie);
+            var movieSources = await manager.LibraryGeneration.Sources.GetByType(MediaTypeId.Movie);
 
             //find all movie folders from each source
             foreach (var source in movieSources)
@@ -208,7 +208,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         {
             var seriePaths = new List<string>();
 
-            var serieSources = await manager.LibraryGeneration.Sources.GetByType(MediaType.TvShow);
+            var serieSources = await manager.LibraryGeneration.Sources.GetByType(MediaTypeId.TvShow);
             //find all show folders from each source
             foreach (var source in serieSources)
             {

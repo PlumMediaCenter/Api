@@ -32,17 +32,17 @@ namespace PlumMediaCenter.Data
                 connection.Execute($@"
                     insert into mediaTypes(id,name)
                     values 
-                        ({(int)MediaType.Movie}, 'Movie'),
-                        ({(int)MediaType.TvShow}, 'TvShow'),
-                        ({(int)MediaType.TvEpisode}, 'TvEpisode')
+                        ({(int)MediaTypeId.Movie}, 'Movie'),
+                        ({(int)MediaTypeId.TvShow}, 'TvShow'),
+                        ({(int)MediaTypeId.TvEpisode}, 'TvEpisode')
                 ");
 
                 connection.Execute(@"
                     create table sources(
                         id int unsigned not null AUTO_INCREMENT primary key comment 'id of source',
                         folderPath varchar(4000) not null comment 'full path to source folder',
-                        mediaType tinyint not null comment 'the id of the mediaType of the type of media the source contains (i.e. movies, tvshows, etc...)',
-                        foreign key (mediaType) references mediaTypes(id)
+                        mediaTypeId tinyint not null comment 'the id of the mediaType of the type of media the source contains (i.e. movies, tvshows, etc...)',
+                        foreign key (mediaTypeId) references mediaTypes(id)
                     );
                 ");
 
@@ -50,7 +50,7 @@ namespace PlumMediaCenter.Data
                 connection.Execute(@"
                     create table mediaIds(
                         id integer unsigned not null AUTO_INCREMENT primary key comment 'id of',
-                        mediaType tinyint not null comment 'the type of media this ID was created for'
+                        mediaTypeId tinyint not null comment 'the type of media this ID was created for'
                     );
                 ");
 

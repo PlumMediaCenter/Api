@@ -91,7 +91,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<ulong> Insert(LibraryGeneration.Movie movie)
         {
-            var mediaId = await this.Manager.Media.GetNewMediaId(MediaType.Movie);
+            var mediaId = await this.Manager.Media.GetNewMediaId(MediaTypeId.Movie);
             await this.ExecuteAsync(@"
                 insert into movies(
                     id,

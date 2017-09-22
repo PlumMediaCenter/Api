@@ -18,15 +18,15 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// </summary>
         /// <param name="sourceType"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<Source>> GetByType(MediaType mediaType)
+        public async Task<IEnumerable<Source>> GetByType(MediaTypeId mediaTypeId)
         {
             var result = await this.QueryAsync<Source>(@"
                 select * 
                 from sources
-                where mediaType = @mediaType
+                where mediaTypeId = @mediaTypeId
             ", new
             {
-                mediaType = (int)mediaType
+                mediaTypeId = (int)mediaTypeId
             });
             return result;
         }
@@ -46,12 +46,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             using (var connection = GetNewConnection())
             {
                 await connection.ExecuteAsync(@"
-                    insert into sources(folderPath, mediaType)
-                    values(@folderPath, @mediaType)
+                    insert into sources(folderPath, mediaTypeId)
+                    values(@folderPath, @mediaTypeId)
                 ", new
                 {
                     folderPath = source.FolderPath,
-                    mediaType = (int)source.MediaType
+                    mediaTypeId = (int)source.MediaTypeId
                 });
                 return await connection.GetLastInsertIdAsync();
             }
@@ -64,12 +64,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                 update sources
                 set 
                     folderPath = @folderPath,
-                    mediaType = @mediaType
+                    mediaTypeId = @mediaTypeId
                 where id = @id
             ", new
             {
                 folderPath = source.FolderPath,
-                mediaType = (int)source.MediaType,
+                mediaTypeId = (int)source.MediaTypeId,
                 id = source.Id
             });
             return source.Id;
