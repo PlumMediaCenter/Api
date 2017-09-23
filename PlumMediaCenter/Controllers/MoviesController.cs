@@ -30,7 +30,7 @@ namespace PlumMediaCenter.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet]
-        public async Task<List<Models.Movie>> GetAll()
+        public async Task<IEnumerable<Models.Movie>> GetAll()
         {
             var movies = await this.Manager.Movies.GetAll();
             return movies;

@@ -12,13 +12,13 @@ namespace PlumMediaCenter.Business.Managers
         {
         }
 
-        public async Task<List<Models.Movie>> GetAll()
+        public async Task<IEnumerable<Models.Movie>> GetAll()
         {
             var models = await this.QueryAsync<Models.Movie>(@"
                 select *, backdropGuids as _backdropGuids from movies
                 order by sortTitle asc;
             ");
-            return models.ToList();
+            return models;
         }
 
         /// <summary>
@@ -26,13 +26,13 @@ namespace PlumMediaCenter.Business.Managers
         /// </summary>
         /// <param name="ids"></param>
         /// <returns></returns>
-        public async Task<List<Models.Movie>> GetByIds(List<ulong> ids)
+        public async Task<IEnumerable<Models.Movie>> GetByIds(IEnumerable<ulong> ids)
         {
             var models = await this.QueryAsync<Models.Movie>(@"
                 select *, backdropGuids as _backdropGuids from movies
                 where id in @ids
             ", new { ids = ids });
-            return models.ToList();
+            return models;
         }
 
         /// <summary>
@@ -42,8 +42,8 @@ namespace PlumMediaCenter.Business.Managers
         /// <returns></returns>
         public async Task<Models.Movie> GetById(ulong id)
         {
-            var movies = await this.GetByIds(new List<ulong> { id });
-            return movies.FirstOrDefault();
+            var movie = (await this.GetByIds(new List<ulong> { id })).FirstOrDefault();
+            return movie;
         }
     }
 }

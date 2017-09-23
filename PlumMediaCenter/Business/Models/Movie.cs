@@ -146,7 +146,7 @@ namespace PlumMediaCenter.Models
         /// <summary>
         /// The runtime of the movie in minutes
         /// </summary>
-        public int Runtime;
+        public int RuntimeMinutes;
         /// <summary>
         /// The TMDB if of the movie.
         /// </summary>

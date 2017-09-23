@@ -152,13 +152,13 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
         }
 
-        public int? Runtime
+        public int? RuntimeMinutes
         {
             get
             {
                 if (_Runtime == null)
                 {
-                    var runtimeFromJson = this.MovieDotJson?.Runtime;
+                    var runtimeFromJson = this.MovieDotJson?.RuntimeMinutes;
                     if (runtimeFromJson != null)
                     {
                         _Runtime = runtimeFromJson;
@@ -389,7 +389,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 movieMetadata.ReleaseDate = releaseDate;
             }
             //the runtime should be calculated from the video file's length
-            movieMetadata.Runtime = null;
+            movieMetadata.RuntimeMinutes = null;
             movieMetadata.Summary = null;
             movieMetadata.Title = this.Title;
             movieMetadata.SortTitle = this.SortTitle;

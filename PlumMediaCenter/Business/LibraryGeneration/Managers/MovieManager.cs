@@ -103,7 +103,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                     description, 
                     rating,
                     releaseDate,
-                    runtime,
+                    runtimeMinutes,
                     tmdbId,
                     sourceId
                 )
@@ -117,7 +117,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                     @description, 
                     @rating,
                     @releaseDate,
-                    @runtime,
+                    @runtimeMinutes,
                     @tmdbId,
                     @sourceId
                 )
@@ -132,7 +132,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                 description = movie.Description,
                 rating = movie.Rating,
                 releaseDate = movie.ReleaseDate,
-                runtime = movie.Runtime,
+                runtimeMinutes = movie.RuntimeMinutes,
                 tmdbId = movie.TmdbId,
                 sourceId = movie.SourceId
             });
@@ -161,7 +161,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                         description = @description, 
                         rating = @rating,
                         releaseDate = @releaseDate,
-                        runtime = @runtime,
+                        runtimeMinutes = @runtimeMinutes,
                         tmdbId = @tmdbId,
                         sourceId = @sourceId
                     where id = @movieId
@@ -176,7 +176,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                     description = movie.Description,
                     rating = movie.Rating,
                     releaseDate = movie.ReleaseDate,
-                    runtime = movie.Runtime,
+                    runtimeMinutes = movie.RuntimeMinutes,
                     tmdbId = movie.TmdbId,
                     sourceId = movie.SourceId,
                     movieId = movieId

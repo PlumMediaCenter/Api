@@ -141,7 +141,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             //get the oldest US rating
             metadata.Rating = release?.Certification;
             metadata.ReleaseDate = release?.ReleaseDate;
-            metadata.Runtime = movie.Runtime;
+            metadata.RuntimeMinutes = movie.Runtime;
             metadata.Summary = movie.Overview;
             metadata.Title = movie.Title;
             metadata.SortTitle = movie.Title;

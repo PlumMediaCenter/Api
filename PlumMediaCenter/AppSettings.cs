@@ -67,13 +67,17 @@ namespace PlumMediaCenter
                 return path;
             }
         }
-        public string TmdbApiString
-        {
-            get
-            {
-                return "90dbc17887e30eae3095d213fa803190";
-            }
-        }
+        public string TmdbApiString = "90dbc17887e30eae3095d213fa803190";
+
+        /// <summary>
+        /// The total number of seconds of wiggle room between media item progress before it creates a new progress record.
+        /// For example, when you are watching a movie, every n seconds a new progress event will be sent. Those are consecutive, and because 
+        /// the amount of progress from last entry to this entry equals the difference in thime, that gap would be roughly zero.
+        /// Now imagine the user pauses the movie for 5 minutes for a snack break. The next progress gap will be roughly 5 minutes. This is still 
+        /// the same viewing session, so we need to account for the max size of a gap before creating a new progress record.
+        /// </summary>
+        public int MaxMediaProgressGapSeconds = 20;
+
 
         /// <summary>
         /// WARNING: Only use this from a request thread!!

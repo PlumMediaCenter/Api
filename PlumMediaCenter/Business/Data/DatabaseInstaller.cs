@@ -23,14 +23,14 @@ namespace PlumMediaCenter.Data
             VersionRun("0.1.0", connection, () =>
             {
                 connection.Execute(@"
-                    create table mediaTypes(
+                    create table MediaTypes(
                         id tinyint not null primary key comment 'id of media type',
                         name varchar(10) not null comment 'the name of the media type'
                     );
                 ");
 
                 connection.Execute($@"
-                    insert into mediaTypes(id,name)
+                    insert into MediaTypes(id,name)
                     values 
                         ({(int)MediaTypeId.Movie}, 'Movie'),
                         ({(int)MediaTypeId.TvShow}, 'TvShow'),
@@ -38,24 +38,24 @@ namespace PlumMediaCenter.Data
                 ");
 
                 connection.Execute(@"
-                    create table sources(
+                    create table Sources(
                         id int unsigned not null AUTO_INCREMENT primary key comment 'id of source',
                         folderPath varchar(4000) not null comment 'full path to source folder',
                         mediaTypeId tinyint not null comment 'the id of the mediaType of the type of media the source contains (i.e. movies, tvshows, etc...)',
-                        foreign key (mediaTypeId) references mediaTypes(id)
+                        foreign key (mediaTypeId) references MediaTypes(id)
                     );
                 ");
 
                 // Used to generate an ID that is unique between all media types
                 connection.Execute(@"
-                    create table mediaIds(
+                    create table MediaIds(
                         id integer unsigned not null AUTO_INCREMENT primary key comment 'id of',
                         mediaTypeId tinyint not null comment 'the type of media this ID was created for'
                     );
                 ");
 
                 connection.Execute(@"
-                    create table movies(
+                    create table Movies(
                         id int unsigned not null primary key comment 'mediaId of movie',
                         folderPath varchar(4000) not null comment 'full path to folder for movie',
                         videoPath varchar(4000) not null comment 'full path to video file',
@@ -65,20 +65,25 @@ namespace PlumMediaCenter.Data
                         description varchar(4000) comment 'long explanation of movie plot',
                         rating varchar(10) comment 'MPAA rating for movie',
                         releaseDate date comment 'Date the movie was first released',
-                        runtime integer comment 'Runtime of movie in minutes',
+                        runtimeMinutes integer comment 'Runtime of movie in minutes',
                         tmdbId integer comment 'The tmdb id for this movie, if one exists',
                         sourceId int unsigned not null comment 'fk for sources table',
                         backdropGuids varchar(4000) not null comment 'comma separated list of backdrop guids',
-                        foreign key(sourceId) references sources(id)
+                        foreign key(sourceId) references Sources(id),
+                        foreign key(id) references MediaIds(id)
                     );
                 ");
 
                 connection.Execute(@"
-                    create table mediaProgress(
+                    create table MediaProgress(
+                        id int unsigned not null AUTO_INCREMENT primary key comment 'Unique identifier for this table',
                         profileId int unsigned not null comment 'id of the profile that interacted with this media item',
                         mediaId int unsigned not null comment 'id of the media item',
-                        progressSeconds int not null comment 'the number of seconds of progress. If -1, the media item is considered complete',
-                        date datetime not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP
+                        progressSecondsBegin int not null comment 'the second count when the media interaction began',
+                        progressSecondsEnd int not null comment 'the second count when the media interaction ended',
+                        dateBegin datetime not null,
+                        dateEnd datetime not null,
+                        foreign key(mediaId) references MediaIds(id)
                     );
                 ");
             });
