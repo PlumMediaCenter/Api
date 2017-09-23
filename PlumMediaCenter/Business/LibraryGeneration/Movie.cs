@@ -10,7 +10,7 @@ using PlumMediaCenter.Data;
 
 namespace PlumMediaCenter.Business.LibraryGeneration
 {
-    public class Movie
+    public class Movie : IMediaItem
     {
         public Movie(Manager manager, string moviePath, ulong sourceId)
         {
@@ -324,51 +324,52 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         {
             Console.WriteLine("Download metadata if possible");
             var movieDotJson = this.MovieDotJson;
+            var folderName = this.FolderName;
             //the movie doesn't have any metadata. Download some
             if (movieDotJson == null)
             {
-                Console.WriteLine("No movie.json exists");
+                Console.WriteLine($"{folderName}: No movie.json exists");
                 var year = GetYearFromFolderName(this.FolderName);
-                var folderName = this.FolderName;
                 string title = this.Title;
-                Console.WriteLine("Searching for results");
+                Console.WriteLine($"{folderName}: Searching for results");
                 //get search results
                 var results = await this.Manager.MovieMetadataProcessor.GetSearchResultsAsync(title);
-                Console.WriteLine($"Found {results.Count} results");
+                Console.WriteLine($"{folderName}: Found {results.Count} results");
                 var matches = results.Where(x => TitlesAreEquivalent(x.Title, title)).ToList();
-                Console.WriteLine($"Found {matches.Count()} where the title matches");
+                Console.WriteLine($"{folderName}: Found {matches.Count()} where the title matches");
                 if (year != null)
                 {
-                    Console.WriteLine("Filtering matches by year");
+                    Console.WriteLine($"{folderName}: Filtering matches by year");
                     matches = matches.Where(x => x.ReleaseDate.Value.Year == year.Value).ToList();
-                    Console.WriteLine($"Found {matches.Count()} matches with the same year");
+                    Console.WriteLine($"{folderName}: Found {matches.Count()} matches with the same year");
                 }
                 //if we have any matches left, use the first one
                 var match = matches.FirstOrDefault();
                 MovieMetadata metadata;
                 if (match == null)
                 {
-                    Console.WriteLine("No matches found: using generic metadata");
+                    Console.WriteLine($"{folderName}: No matches found: using generic metadata");
                     metadata = GetGenericMetadata();
                 }
                 else
                 {
-                    Console.WriteLine("Downloading TMDB metadata");
+                    Console.WriteLine($"{folderName}: Downloading TMDB metadata");
                     metadata = await this.Manager.MovieMetadataProcessor.GetTmdbMetadataAsync(match.TmdbId);
                 }
-                Console.WriteLine("Saving metadata to disc");
+                Console.WriteLine($"{folderName}: Saving metadata to disc");
                 await this.Manager.MovieMetadataProcessor.DownloadMetadataAsync(
                     this.FolderPath,
                     Models.Movie.CalculateFolderUrl(this.SourceId, this.FolderName, this.Manager.BaseUrl),
                     metadata
                 );
-                Console.WriteLine("Clearing MovieDotJson");
+                Console.WriteLine($"{folderName}: Clearing MovieDotJson");
                 //clear _MovieDotJson so the next access will load the new one from disk
                 this._MovieDotJson = null;
             }
             else
             {
                 //the movie already has metadata, so don't download anything 
+                Console.WriteLine($"{folderName}: Already has metadata. Skipping metadata retrieval");
                 return;
             }
         }
@@ -522,10 +523,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             //if the movie already has at least one backdrop, we don't need to generate the text-based image
             if (guidsFromFilesystem.Count == 0)
             {
-                var backdropPath = $"{this.BackdropFolderPath}{Guid.NewGuid()}.jpg";
+                var textBackdropGuid = Guid.NewGuid().ToString();
+                var backdropPath = $"{this.BackdropFolderPath}{textBackdropGuid}.jpg";
                 //the video doesn't have a backdrop. Create a text-based image
                 this.Manager.Utility.CreateTextBackdrop(this.Title, backdropPath);
                 backdropPaths.Add(backdropPath);
+                guidsFromFilesystem.Add(textBackdropGuid);
             }
             //copy all of the not-yet-cached backdrops to the cached backdrops folder
             foreach (var path in backdropPaths)

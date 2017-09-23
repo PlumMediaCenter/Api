@@ -8,6 +8,7 @@ using System.Threading;
 using Newtonsoft.Json;
 using Amib.Threading;
 using PlumMediaCenter.Middleware;
+using Dapper;
 
 namespace PlumMediaCenter.Business.LibraryGeneration
 {
@@ -54,6 +55,32 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         public Status GetStatus()
         {
             return this.Status?.Clone();
+        }
+
+        public async Task<IMediaItem> GetMediaItem(ulong mediaId)
+        {
+            using (var connection = ConnectionManager.GetNewConnection())
+            {
+                var manager = new Manager(AppSettings.BaseUrlStatic);
+                var rows = await connection.QueryAsync<MediaTypeId>(@"
+                    select mediaTypeId
+                    from mediaIds 
+                    where id = @id
+                ", new
+                {
+                    id = mediaId
+                });
+                var mediaTypeId = rows.FirstOrDefault();
+                switch (mediaTypeId)
+                {
+                    case MediaTypeId.Movie:
+                        var movieModel = await manager.Movies.GetById(mediaId);
+                        var movie = new LibraryGeneration.Movie(manager, movieModel.GetFolderPath(), movieModel.SourceId);
+                        return movie;
+                    default:
+                        throw new Exception($"{mediaTypeId} Not implemented");
+                }
+            }
         }
 
         private bool IsGenerating = false;

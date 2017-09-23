@@ -20,7 +20,7 @@ namespace PlumMediaCenter.Controllers
     public class MoviesController : BaseController
     {
         [HttpGet("{id}")]
-        public async Task<Models.Movie> GetById(int id)
+        public async Task<Models.Movie> GetById(ulong id)
         {
             return await this.Manager.Movies.GetById(id);
         }

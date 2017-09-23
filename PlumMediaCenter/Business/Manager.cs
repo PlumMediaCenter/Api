@@ -9,11 +9,17 @@ namespace PlumMediaCenter.Business
     {
         public Manager(string baseUrl)
         {
-            this.LibraryGeneration = new LibraryGenerationManager(this);
             this.BaseUrl = baseUrl;
         }
 
-        public LibraryGenerationManager LibraryGeneration;
+        public LibraryGenerationManager LibraryGeneration
+        {
+            get
+            {
+                return this._LibraryGeneration = this._LibraryGeneration ?? new LibraryGenerationManager(this);
+            }
+        }
+        private LibraryGenerationManager _LibraryGeneration;
 
         public string BaseUrl;
 

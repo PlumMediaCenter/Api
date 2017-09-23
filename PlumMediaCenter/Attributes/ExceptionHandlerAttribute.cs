@@ -23,8 +23,8 @@ namespace PlumMediaCenter.Attributues
             var responseObj = new
             {
                 message = baseException.Message,
-                stacktrace = stacktrace,
-                sourceStacktrace = sourceStacktrace
+                fullStack = stacktrace,
+                stack = sourceStacktrace
             };
 
             context.HttpContext.Response.StatusCode = 500;

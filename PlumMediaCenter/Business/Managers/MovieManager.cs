@@ -26,7 +26,7 @@ namespace PlumMediaCenter.Business.Managers
         /// </summary>
         /// <param name="ids"></param>
         /// <returns></returns>
-        public async Task<List<Models.Movie>> GetByIds(List<int> ids)
+        public async Task<List<Models.Movie>> GetByIds(List<ulong> ids)
         {
             var models = await this.QueryAsync<Models.Movie>(@"
                 select *, backdropGuids as _backdropGuids from movies
@@ -40,9 +40,9 @@ namespace PlumMediaCenter.Business.Managers
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public async Task<Models.Movie> GetById(int id)
+        public async Task<Models.Movie> GetById(ulong id)
         {
-            var movies = await this.GetByIds(new List<int> { id });
+            var movies = await this.GetByIds(new List<ulong> { id });
             return movies.FirstOrDefault();
         }
     }

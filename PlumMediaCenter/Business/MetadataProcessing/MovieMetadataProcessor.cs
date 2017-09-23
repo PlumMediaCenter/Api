@@ -72,7 +72,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return await Task.FromResult(result);
         }
 
-        public async Task<MovieMetadataComparison> GetComparisonAsync(int tmdbId, int movieId, string baseUrl)
+        public async Task<MovieMetadataComparison> GetComparisonAsync(int tmdbId, ulong movieId, string baseUrl)
         {
             var result = new MovieMetadataComparison();
             var tcurrent = GetCurrentMetadataAsync(movieId, baseUrl);
@@ -187,7 +187,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return metadata;
         }
 
-        private async Task<MovieMetadata> GetCurrentMetadataAsync(int movieId, string baseUrl)
+        private async Task<MovieMetadata> GetCurrentMetadataAsync(ulong movieId, string baseUrl)
         {
             var movieModel = await this.Manager.Movies.GetById(movieId);
             var movie = new LibraryGeneration.Movie(this.Manager, movieModel.GetFolderPath(), movieModel.SourceId);
@@ -243,7 +243,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return metadata;
         }
 
-        public async Task SaveAsync(int movieId, MovieMetadata metadata)
+        public async Task SaveAsync(ulong movieId, MovieMetadata metadata)
         {
             var movie = await this.Manager.Movies.GetById(movieId);
             await DownloadMetadataAsync(movie.GetFolderPath(), movie.GetFolderUrl(), metadata);
