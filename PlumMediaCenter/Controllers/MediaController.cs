@@ -89,5 +89,15 @@ namespace PlumMediaCenter.Controllers
             return await this.Manager.Media.GetMediaItem(mediaId.Value);
         }
 
+        [HttpDelete("history")]
+        public async Task DeleteHistoryRecord([FromQuery] ulong? id)
+        {
+            if (id == null)
+            {
+                throw new Exception("No id provided");
+            }
+            await this.Manager.Media.DeleteHistoryRecord(id.Value);
+        }
+
     }
 }

@@ -113,7 +113,7 @@ namespace PlumMediaCenter.Business.Managers
         public async Task<IEnumerable<MediaHistoryRecord>> GetHistory(int profileId, uint index = 0, uint limit = 50)
         {
             var items = (await this.QueryAsync<MediaHistoryRecord>(@"
-                select * from MediaProgress, MediaIds
+                select *, MediaProgress.id as id from MediaProgress, MediaIds
                 where   
                     MediaProgress.mediaId = MediaIds.id
                     and profileId = @profileId
@@ -136,6 +136,14 @@ namespace PlumMediaCenter.Business.Managers
                 item.Title = movie.Title;
             }
             return items;
+        }
+
+        public async Task DeleteHistoryRecord(ulong id)
+        {
+            await this.ExecuteAsync(@"
+                delete from MediaProgress
+                where id = @id
+            ", new { id = id });
         }
 
         public async Task<ulong> GetNewMediaId(MediaTypeId mediaTypeId)

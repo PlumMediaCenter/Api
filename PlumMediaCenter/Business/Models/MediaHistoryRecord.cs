@@ -12,18 +12,20 @@ namespace PlumMediaCenter.Models
         public int RuntimeMinutes;
         public new int? ProgressSecondsBegin
         {
+            //make the get private so it's not serialized
             private get
             {
                 return this.ProgressMinutesBegin * 60;
             }
             set
             {
-                this.ProgressMinutesBegin = value / 60;
+                this.ProgressMinutesBegin = (int)Math.Floor((decimal)value / 60);
             }
         }
         public int? ProgressMinutesBegin { get; set; }
 
         public new int? ProgressSecondsEnd
+
         {
             private get
             {
@@ -31,7 +33,7 @@ namespace PlumMediaCenter.Models
             }
             set
             {
-                this.ProgressMinutesEnd = value / 60;
+                this.ProgressMinutesEnd = (int)Math.Ceiling((decimal)value / 60);
             }
         }
         public int? ProgressMinutesEnd { get; set; }
