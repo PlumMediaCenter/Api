@@ -53,13 +53,13 @@ namespace PlumMediaCenter.Controllers
         }
 
         [HttpPost("processItem")]
-        public async Task Process([FromQuery] ulong? mediaId)
+        public async Task Process([FromQuery] ulong? mediaItemId)
         {
-            if (mediaId == null)
+            if (mediaItemId == null)
             {
-                throw new Exception("No mediaId provided");
+                throw new Exception("No mediaItemId provided");
             }
-            var mediaItem = await LibraryGenerator.Instance.GetMediaItem(mediaId.Value);
+            var mediaItem = await LibraryGenerator.Instance.GetMediaItem(mediaItemId.Value);
             await mediaItem.Process();
         }
     }

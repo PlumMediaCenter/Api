@@ -15,18 +15,18 @@ namespace PlumMediaCenter.Business.Managers
         {
         }
 
-        public async Task<MediaProgress> SetProgress(int profileId, ulong mediaId, int progressSeconds)
+        public async Task<MediaProgress> SetProgress(int profileId, ulong mediaItemId, int progressSeconds)
         {
             //get the last progress record for this user and item
             var progress = (await this.QueryAsync<MediaProgress>(@"
                 select * from mediaProgress
-                where profileId = @profileId and mediaId = @mediaId
+                where profileId = @profileId and mediaItemId = @mediaItemId
                 order by dateEnd desc
                 limit 1
             ", new
             {
                 profileId = profileId,
-                mediaId = mediaId
+                mediaItemId = mediaItemId
             })).FirstOrDefault();
 
             //if we have a progress object, see if it's close enough to our new progress to be merged
@@ -54,7 +54,7 @@ namespace PlumMediaCenter.Business.Managers
             return await this.InsertMediaProgress(new MediaProgress
             {
                 ProfileId = profileId,
-                MediaId = mediaId,
+                MediaItemId = mediaItemId,
                 ProgressSecondsBegin = progressSeconds,
                 ProgressSecondsEnd = progressSeconds,
                 DateBegin = DateTime.UtcNow,
@@ -65,8 +65,8 @@ namespace PlumMediaCenter.Business.Managers
         public async Task<MediaProgress> InsertMediaProgress(MediaProgress progress)
         {
             progress.Id = (await this.QueryAsync<ulong?>(@"
-                insert into mediaProgress(profileId, mediaId, progressSecondsBegin,progressSecondsEnd, dateBegin, dateEnd)
-                values(@profileId, @mediaId, @progressSecondsBegin, @progressSecondsEnd, @dateBegin, @dateEnd);
+                insert into mediaProgress(profileId, mediaItemId, progressSecondsBegin,progressSecondsEnd, dateBegin, dateEnd)
+                values(@profileId, @mediaItemId, @progressSecondsBegin, @progressSecondsEnd, @dateBegin, @dateEnd);
                 select last_insert_id();
             ", progress)).FirstOrDefault();
             return progress;
@@ -78,7 +78,7 @@ namespace PlumMediaCenter.Business.Managers
                 update mediaProgress
                 set 
                     profileId=@profileId,
-                    mediaId=@mediaId, 
+                    mediaItemId=@mediaItemId, 
                     progressSecondsBegin=@progressSecondsBegin,
                     progressSecondsEnd=@progressSecondsEnd,
                     dateBegin=@dateBegin, 
@@ -93,31 +93,46 @@ namespace PlumMediaCenter.Business.Managers
         /// </summary>
         /// <param name="profileId"></param>
         /// <returns></returns>
-        public async Task<MediaProgress> GetCurrentProgress(int profileId, ulong mediaId)
+        public async Task<MediaProgress> GetCurrentProgress(int profileId, ulong mediaItemId)
         {
             var progress = (await this.QueryAsync<MediaProgress>(@"
                 select * from mediaProgress
                 where 
                     profileId = @profileId
-                    and mediaId = @mediaId
+                    and mediaItemId = @mediaItemId
                 order by dateEnd desc
                 limit 1
             ", new
             {
                 profileId = profileId,
-                mediaId = mediaId
+                mediaItemId = mediaItemId
             })).FirstOrDefault();
             return progress;
         }
 
+        /// <summary>
+        /// Get a full list of all history for the specified media item
+        /// </summary>
+        /// <param name="mediaItemId"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<MediaHistoryRecord>> GetHistoryForMediaItem(int profileId, ulong mediaItemId)
+        {
+            var ids = (await this.QueryAsync<ulong>(@"
+                select id from MediaProgress
+                where profileId = @profileId
+                  and mediaItemId = @mediaItemId
+            ", new
+            {
+                mediaItemId = mediaItemId
+            }));
+            return await this.GetHistoryByIds(ids);
+        }
+
         public async Task<IEnumerable<MediaHistoryRecord>> GetHistory(int profileId, uint index = 0, uint limit = 50)
         {
-            var items = (await this.QueryAsync<MediaHistoryRecord>(@"
-                select *, MediaProgress.id as id from MediaProgress, MediaIds
-                where   
-                    MediaProgress.mediaId = MediaIds.id
-                    and profileId = @profileId
-                order by dateEnd desc
+            var ids = (await this.QueryAsync<ulong>(@"
+                select id from MediaProgress
+                where profileId = @profileId
                 limit @limit offset @index
             ", new
             {
@@ -125,12 +140,36 @@ namespace PlumMediaCenter.Business.Managers
                 index = index,
                 limit = limit
             }));
+            return await this.GetHistoryByIds(ids);
+        }
+
+
+        /// <summary>
+        /// Get a list of history records by an id list
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<MediaHistoryRecord>> GetHistoryByIds(IEnumerable<ulong> ids)
+        {
+            if (ids.Count() == 0)
+            {
+                return new List<MediaHistoryRecord>();
+            }
+            var items = (await this.QueryAsync<MediaHistoryRecord>(@"
+                select *, MediaProgress.id as id from MediaProgress, MediaItemIds
+                where MediaProgress.mediaItemId = MediaItemIds.id
+                  and MediaProgress.id in @ids
+                order by dateEnd desc
+            ", new
+            {
+                ids = ids
+            }));
             //get all of the movies for these media items
-            var movieIds = items.Where(x => x.MediaTypeId == MediaTypeId.Movie).Select(x => x.MediaId.Value);
+            var movieIds = items.Where(x => x.MediaTypeId == MediaTypeId.Movie).Select(x => x.MediaItemId.Value);
             var movies = await this.Manager.Movies.GetByIds(movieIds);
             foreach (var item in items)
             {
-                var movie = movies.Where(x => x.Id == item.MediaId).FirstOrDefault();
+                var movie = movies.Where(x => x.Id == item.MediaItemId).FirstOrDefault();
                 item.PosterUrl = movie.PosterUrl;
                 item.RuntimeMinutes = movie.RuntimeMinutes;
                 item.Title = movie.Title;
@@ -151,7 +190,7 @@ namespace PlumMediaCenter.Business.Managers
             using (var connection = GetNewConnection())
             {
                 var rows = await this.QueryAsync<ulong?>(@"
-                    insert into mediaIds(mediaTypeId) values(@mediaTypeId);select last_insert_id();
+                    insert into MediaItemIds(mediaTypeId) values(@mediaTypeId);select last_insert_id();
                 ", new { mediaTypeId = (int)mediaTypeId });
 
                 var id = rows.FirstOrDefault();
@@ -174,23 +213,23 @@ namespace PlumMediaCenter.Business.Managers
         /// <summary>
         /// Get the specific model by its media id
         /// </summary>
-        /// <param name="mediaId"></param>
+        /// <param name="mediaItemId"></param>
         /// <returns></returns>
-        public async Task<object> GetMediaItem(uint mediaId)
+        public async Task<object> GetMediaItem(uint mediaItemId)
         {
             //get the media type id from the db.
             var mediaTypeId = (await this.QueryAsync<MediaTypeId>(@"
                 select mediaTypeId 
-                from MediaIds
-                where id = @mediaId
+                from MediaItemIds
+                where id = @mediaItemId
             ", new
             {
-                mediaId = mediaId
+                mediaItemId = mediaItemId
             })).FirstOrDefault();
             switch (mediaTypeId)
             {
                 case MediaTypeId.Movie:
-                    return await this.Manager.Movies.GetById(mediaId);
+                    return await this.Manager.Movies.GetById(mediaItemId);
                 default:
                     throw new Exception("Not implemented");
             }

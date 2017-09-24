@@ -49,7 +49,7 @@ namespace PlumMediaCenter.Data
 
                 // Used to generate an ID that is unique between all media types
                 connection.Execute(@"
-                    create table MediaIds(
+                    create table MediaItemIds(
                         id integer unsigned not null AUTO_INCREMENT primary key comment 'id of',
                         mediaTypeId tinyint not null comment 'the type of media this ID was created for'
                     );
@@ -57,7 +57,7 @@ namespace PlumMediaCenter.Data
 
                 connection.Execute(@"
                     create table Movies(
-                        id int unsigned not null primary key comment 'mediaId of movie',
+                        id int unsigned not null primary key comment 'mediaItemId of movie',
                         folderPath varchar(4000) not null comment 'full path to folder for movie',
                         videoPath varchar(4000) not null comment 'full path to video file',
                         title varchar(200) not null comment 'title of movie',
@@ -71,7 +71,7 @@ namespace PlumMediaCenter.Data
                         sourceId int unsigned not null comment 'fk for sources table',
                         backdropGuids varchar(4000) not null comment 'comma separated list of backdrop guids',
                         foreign key(sourceId) references Sources(id),
-                        foreign key(id) references MediaIds(id)
+                        foreign key(id) references MediaItemIds(id)
                     );
                 ");
 
@@ -79,12 +79,12 @@ namespace PlumMediaCenter.Data
                     create table MediaProgress(
                         id int unsigned not null AUTO_INCREMENT primary key comment 'Unique identifier for this table',
                         profileId int unsigned not null comment 'id of the profile that interacted with this media item',
-                        mediaId int unsigned not null comment 'id of the media item',
+                        mediaItemId int unsigned not null comment 'id of the media item',
                         progressSecondsBegin int not null comment 'the second count when the media interaction began',
                         progressSecondsEnd int not null comment 'the second count when the media interaction ended',
                         dateBegin datetime not null,
                         dateEnd datetime not null,
-                        foreign key(mediaId) references MediaIds(id)
+                        foreign key(mediaItemId) references MediaItemIds(id)
                     );
                 ");
             });

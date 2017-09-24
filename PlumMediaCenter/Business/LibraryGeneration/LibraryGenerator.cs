@@ -58,24 +58,24 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             return this.Status?.Clone();
         }
 
-        public async Task<IMediaItem> GetMediaItem(ulong mediaId)
+        public async Task<IMediaItem> GetMediaItem(ulong mediaItemId)
         {
             using (var connection = ConnectionManager.GetNewConnection())
             {
                 var manager = new Manager(AppSettings.BaseUrlStatic);
                 var rows = await connection.QueryAsync<MediaTypeId>(@"
                     select mediaTypeId
-                    from mediaIds 
+                    from MediaItemIds 
                     where id = @id
                 ", new
                 {
-                    id = mediaId
+                    id = mediaItemId
                 });
                 var mediaTypeId = rows.FirstOrDefault();
                 switch (mediaTypeId)
                 {
                     case MediaTypeId.Movie:
-                        var movieModel = await manager.Movies.GetById(mediaId);
+                        var movieModel = await manager.Movies.GetById(mediaItemId);
                         var movie = new LibraryGeneration.Movie(manager, movieModel.GetFolderPath(), movieModel.SourceId);
                         return movie;
                     default:

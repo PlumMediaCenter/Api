@@ -92,7 +92,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<ulong> Insert(LibraryGeneration.Movie movie)
         {
-            var mediaId = await this.Manager.Media.GetNewMediaId(MediaTypeId.Movie);
+            var mediaItemId = await this.Manager.Media.GetNewMediaId(MediaTypeId.Movie);
             await this.ExecuteAsync(@"
                 insert into movies(
                     id,
@@ -124,7 +124,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                 )
             ", new
             {
-                id = mediaId,
+                id = mediaItemId,
                 folderPath = movie.FolderPath,
                 videoPath = movie.VideoPath,
                 title = movie.Title,
@@ -137,7 +137,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                 tmdbId = movie.TmdbId,
                 sourceId = movie.SourceId
             });
-            return mediaId;
+            return mediaItemId;
         }
 
         public async Task<ulong> Update(LibraryGeneration.Movie movie)

@@ -6,7 +6,7 @@ namespace PlumMediaCenter.Models
     {
         public ulong? Id { get; set; }
         public int? ProfileId { get; set; }
-        public ulong? MediaId { get; set; }
+        public ulong? MediaItemId { get; set; }
         public int? ProgressSecondsBegin { get; set; }
         public int? ProgressSecondsEnd { get; set; }
         public DateTime DateBegin { get; set; }
