@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Amib.Threading;
 using PlumMediaCenter.Middleware;
 using Dapper;
+using PlumMediaCenter.Business.Enums;
 
 namespace PlumMediaCenter.Business.LibraryGeneration
 {

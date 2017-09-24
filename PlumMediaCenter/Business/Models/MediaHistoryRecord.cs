@@ -1,4 +1,5 @@
 using System;
+using PlumMediaCenter.Business.Enums;
 using PlumMediaCenter.Data;
 
 namespace PlumMediaCenter.Models

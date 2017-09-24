@@ -1,3 +1,5 @@
+using PlumMediaCenter.Business.Enums;
+
 namespace PlumMediaCenter.Data
 {
     public class Source
@@ -9,13 +11,6 @@ namespace PlumMediaCenter.Data
         /// </summary>
         public MediaTypeId MediaTypeId;
 
-    }
-
-    public enum MediaTypeId
-    {
-        Movie = 1,
-        TvShow = 2,
-        TvEpisode = 3
     }
 
 }

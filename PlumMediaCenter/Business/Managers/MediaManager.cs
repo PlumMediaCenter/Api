@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Dapper;
 using PlumMediaCenter.Data;
 using PlumMediaCenter.Models;
+using PlumMediaCenter.Business.Enums;
 
 namespace PlumMediaCenter.Business.Managers
 {
@@ -160,6 +161,31 @@ namespace PlumMediaCenter.Business.Managers
             return await this.QueryAsync<MediaTypeObj>(@"
                 select * from mediaTypes
             ");
+        }
+
+        /// <summary>
+        /// Get the specific model by its media id
+        /// </summary>
+        /// <param name="mediaId"></param>
+        /// <returns></returns>
+        public async Task<object> GetMediaItem(uint mediaId)
+        {
+            //get the media type id from the db.
+            var mediaTypeId = (await this.QueryAsync<MediaTypeId>(@"
+                select mediaTypeId 
+                from MediaIds
+                where id = @mediaId
+            ", new
+            {
+                mediaId = mediaId
+            })).FirstOrDefault();
+            switch (mediaTypeId)
+            {
+                case MediaTypeId.Movie:
+                    return await this.Manager.Movies.GetById(mediaId);
+                default:
+                    throw new Exception("Not implemented");
+            }
         }
     }
 }

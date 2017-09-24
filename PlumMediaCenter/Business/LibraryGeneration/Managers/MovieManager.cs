@@ -6,6 +6,7 @@ using PlumMediaCenter.Business.LibraryGeneration.DotJson;
 using System.Linq;
 using System;
 using System.IO;
+using PlumMediaCenter.Business.Enums;
 
 namespace PlumMediaCenter.Business.LibraryGeneration.Managers
 {

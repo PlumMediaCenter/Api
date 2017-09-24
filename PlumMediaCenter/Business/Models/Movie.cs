@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using PlumMediaCenter.Business;
+using PlumMediaCenter.Business.Enums;
+using PlumMediaCenter.Data;
+
 namespace PlumMediaCenter.Models
 {
     public class Movie
@@ -134,6 +137,8 @@ namespace PlumMediaCenter.Models
                 return info.Parent.Name;
             }
         }
+
+        public MediaTypeId MediaTypeId;
 
         /// <summary>
         /// The MPAA rating of the movie

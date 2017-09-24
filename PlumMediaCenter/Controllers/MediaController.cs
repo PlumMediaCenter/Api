@@ -82,5 +82,12 @@ namespace PlumMediaCenter.Controllers
             public ulong? mediaId;
             public decimal? seconds;
         }
+
+        [HttpGet("item")]
+        public async Task<object> GetMediaItem([FromQuery] uint? mediaId)
+        {
+            return await this.Manager.Media.GetMediaItem(mediaId.Value);
+        }
+
     }
 }

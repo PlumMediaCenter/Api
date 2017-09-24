@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using PlumMediaCenter.Business.Enums;
 
 namespace PlumMediaCenter.Business.Managers
 {
@@ -28,10 +29,10 @@ namespace PlumMediaCenter.Business.Managers
         /// <returns></returns>
         public async Task<IEnumerable<Models.Movie>> GetByIds(IEnumerable<ulong> ids)
         {
-            var models = await this.QueryAsync<Models.Movie>(@"
-                select *, backdropGuids as _backdropGuids from movies
+            var models = (await this.QueryAsync<Models.Movie>($@"
+                select *, backdropGuids as _backdropGuids, {(int)MediaTypeId.Movie} as mediaTypeId from movies
                 where id in @ids
-            ", new { ids = ids });
+            ", new { ids = ids }));
             return models;
         }
 

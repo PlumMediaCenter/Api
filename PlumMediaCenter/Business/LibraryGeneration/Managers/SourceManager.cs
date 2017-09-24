@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using PlumMediaCenter.Data;
 using Dapper;
 using System.Linq;
+using PlumMediaCenter.Business.Enums;
 
 namespace PlumMediaCenter.Business.LibraryGeneration.Managers
 {
