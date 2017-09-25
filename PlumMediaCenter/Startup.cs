@@ -31,20 +31,6 @@ namespace PlumMediaCenter
         {
             Configuration = configuration;
             Data.ConnectionManager.SetDbCredentials("pmc", "pmc");
-            var args = Environment.GetCommandLineArgs();
-            var virtualDirectoryArgument = args.Where(x => x.Contains("--virtualDirectoryName")).FirstOrDefault();
-            if (virtualDirectoryArgument != null)
-            {
-                try
-                {
-                    var virtualDirectoryName = virtualDirectoryArgument.Split("=")[1];
-                    AppSettings.SetVirtualDirectoryName(virtualDirectoryName);
-                }
-                catch (Exception)
-                {
-                    throw new Exception("Invalid virtual directory name");
-                }
-            }
         }
 
         public IConfiguration Configuration { get; }

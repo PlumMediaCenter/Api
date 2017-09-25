@@ -212,11 +212,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                         {
                             Console.WriteLine($"Error processing movie {moviePath.Path}");
                             Console.WriteLine(e);
+                            throw e;
                         }
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                        this.Status.FailedItems.Add(Newtonsoft.Json.JsonConvert.SerializeObject(movie));
+                        this.Status.FailedItems.Add(JsonConvert.SerializeObject(movie) + " " + JsonConvert.SerializeObject(e));
                     }
                     Thread.Sleep(5000);
                     this.Status.MovieCountCompleted++;

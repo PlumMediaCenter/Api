@@ -23,7 +23,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         {
             var result = await this.QueryAsync<Source>(@"
                 select * 
-                from sources
+                from Sources
                 where mediaTypeId = @mediaTypeId
             ", new
             {
@@ -36,7 +36,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         {
 
             var result = await this.QueryAsync<Source>(@"
-                select * from sources
+                select * from Sources
             ");
             return result;
         }
@@ -47,7 +47,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             using (var connection = GetNewConnection())
             {
                 await connection.ExecuteAsync(@"
-                    insert into sources(folderPath, mediaTypeId)
+                    insert into Sources(folderPath, mediaTypeId)
                     values(@folderPath, @mediaTypeId)
                 ", new
                 {
@@ -62,7 +62,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         public async Task<int?> Update(Source source)
         {
             await this.ExecuteAsync(@"
-                update sources
+                update Sources
                 set 
                     folderPath = @folderPath,
                     mediaTypeId = @mediaTypeId
@@ -82,7 +82,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             await this.Manager.LibraryGeneration.Movies.DeleteForSource(id, baseUrl);
 
             await this.ExecuteAsync(@"
-                delete from sources
+                delete from Sources
                 where id = @id
             ", new
             {

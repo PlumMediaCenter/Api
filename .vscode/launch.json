@@ -14,7 +14,7 @@
             "program": "${workspaceRoot}/PlumMediaCenter/bin/Debug/netcoreapp2.0/PlumMediaCenter.dll",
             "args": [
                 "--urls",
-                "http://*:5001"
+                "http://*:7586"
             ],
             "cwd": "${workspaceRoot}/PlumMediaCenter",
             "stopAtEntry": false,

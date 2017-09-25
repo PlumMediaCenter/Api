@@ -247,7 +247,7 @@ namespace PlumMediaCenter.Business.Managers
         public async Task<IEnumerable<MediaTypeObj>> GetAllMediaTypes()
         {
             return await this.QueryAsync<MediaTypeObj>(@"
-                select * from mediaTypes
+                select * from MediaTypes
             ");
         }
 

@@ -49,8 +49,8 @@ namespace PlumMediaCenter.Data
 
                 // Used to generate an ID that is unique between all media types
                 connection.Execute(@"
-                        id int not null AUTO_INCREMENT primary key comment 'id of',
                     create table MediaItemIds(
+                        id int not null AUTO_INCREMENT primary key comment 'id of',
                         mediaTypeId tinyint not null comment 'the type of media this ID was created for'
                     );
                 ");
@@ -68,7 +68,7 @@ namespace PlumMediaCenter.Data
                         releaseDate date comment 'Date the movie was first released',
                         runtimeSeconds int comment 'Runtime of movie in seconds',
                         tmdbId int comment 'The tmdb id for this movie, if one exists',
-                        sourceId int not null comment 'fk for sources table',
+                        sourceId int not null comment 'fk for Sources table',
                         backdropGuids varchar(4000) not null comment 'comma separated list of backdrop guids',
                         completionSeconds int comment 'the number of seconds at which time the movie would be considered watched',
                         foreign key(sourceId) references Sources(id),
@@ -106,7 +106,7 @@ namespace PlumMediaCenter.Data
             if (currentVersion < version)
             {
                 callback();
-                connection.Execute("update version set version = @version", new { version = version.ToString() });
+                connection.Execute("update Version set version = @version", new { version = version.ToString() });
             }
         }
 
@@ -118,7 +118,7 @@ namespace PlumMediaCenter.Data
                 {
                     var versionString = connection.Query<string>(@"
                     select version
-                    from version
+                    from Version
                 ").ToList().First();
                     var version = new Version(versionString);
                     connection.Close();
@@ -150,8 +150,8 @@ namespace PlumMediaCenter.Data
             }
             using (var connection = ConnectionManager.GetNewConnection())
             {
-                connection.Execute("create table version(version text)");
-                connection.Execute("insert into version(version) values('0.0.0')");
+                connection.Execute("create table Version(version text)");
+                connection.Execute("insert into Version(version) values('0.0.0')");
                 connection.Close();
             }
         }
@@ -169,7 +169,7 @@ namespace PlumMediaCenter.Data
                 {
                     var rows = await connection.QueryAsync(@"
                         select version
-                        from version
+                        from Version
                     ");
                     if (rows.FirstOrDefault() != null)
                     {

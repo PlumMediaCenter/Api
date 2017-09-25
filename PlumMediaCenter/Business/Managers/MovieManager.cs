@@ -17,7 +17,8 @@ namespace PlumMediaCenter.Business.Managers
         public async Task<IEnumerable<Models.Movie>> GetAll()
         {
             var models = await this.QueryAsync<Models.Movie>(@"
-                select *, backdropGuids as _backdropGuids from movies
+                select *, backdropGuids as _backdropGuids 
+                from Movies
                 order by sortTitle asc;
             ");
             return models;
@@ -31,7 +32,8 @@ namespace PlumMediaCenter.Business.Managers
         public async Task<IEnumerable<Models.Movie>> GetByIds(IEnumerable<int> ids)
         {
             var models = (await this.QueryAsync<Models.Movie>($@"
-                select *, backdropGuids as _backdropGuids, {(int)MediaTypeId.Movie} as mediaTypeId from movies
+                select *, backdropGuids as _backdropGuids, {(int)MediaTypeId.Movie} as mediaTypeId 
+                from Movies
                 where id in @ids
             ", new { ids = ids }));
             return models;
@@ -55,7 +57,8 @@ namespace PlumMediaCenter.Business.Managers
                 or = " or ";
             }
             var ids = await this.QueryAsync<int>($@"
-                select id from movies
+                select id 
+                from Movies
                 where {sql.ToString()}
             ", dbParams);
             var movies = await this.GetByIds(ids);

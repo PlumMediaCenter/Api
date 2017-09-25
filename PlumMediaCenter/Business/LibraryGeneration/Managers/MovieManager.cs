@@ -28,7 +28,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                 var sources = await this.Manager.LibraryGeneration.Sources.GetAll();
                 var rows = await connection.QueryAsync<DbDirResult>(@"
                     select folderPath, sourceId 
-                    from movies
+                    from Movies
                 ");
 
                 var results = rows
@@ -57,7 +57,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             {
                 var rows = await connection.QueryAsync<int?>(@"
                     select id 
-                    from movies
+                    from Movies
                     where folderPath = @folderPath",
                 new
                 {
@@ -76,7 +76,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             using (var connection = GetNewConnection())
             {
                 await connection.ExecuteAsync(@"
-                    delete from movies
+                    delete from Movies
                     where folderPath = @folderPath
                 ", new
                 {
@@ -94,7 +94,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         {
             var mediaItemId = await this.Manager.Media.GetNewMediaId(MediaTypeId.Movie);
             await this.ExecuteAsync(@"
-                insert into movies(
+                insert into Movies(
                     id,
                     folderPath, 
                     videoPath, 
@@ -148,14 +148,14 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             using (var connection = GetNewConnection())
             {
                 var movieId = await connection.QueryFirstOrDefaultAsync<int?>(@"
-                    select id from movies where folderPath = @folderPath
+                    select id from Movies where folderPath = @folderPath
                 ", new { folderPath = movie.FolderPath });
                 if (movieId == null)
                 {
                     throw new Exception($"Movie not found in database with path {movie.FolderPath}");
                 }
                 await connection.ExecuteAsync(@"
-                    update movies
+                    update Movies
                     set
                         folderPath = @folderPath,
                         videoPath = @videoPath, 
@@ -201,7 +201,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             {
                 var result = await connection.QueryAsync<int>(@"
                     select count(*) 
-                    from movies
+                    from Movies
                     where folderPath = @folderPath
                 ", new { folderPath = folderPath });
                 var count = result.ToList().First();
@@ -219,7 +219,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             using (var connection = GetNewConnection())
             {
                 var rows = await connection.QueryAsync<string>(@"
-                    select backdropGuids from movies
+                    select backdropGuids from Movies
                     where id = @movieId
                 ", new { movieId = movieId });
 
@@ -247,7 +247,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             {
                 var value = string.Join(",", backdropGuids);
                 await connection.ExecuteAsync(@"
-                    update movies
+                    update Movies
                     set backdropGuids = @value
                     where id = @movieId
                 ", new { movieId = movieId, value = value });
@@ -276,7 +276,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             {
                 var folderPaths = await connection.QueryAsync<string>(@"
                     select folderPath
-                    from movies
+                    from Movies
                     where sourceId = @sourceId
                 ", new
                 {
