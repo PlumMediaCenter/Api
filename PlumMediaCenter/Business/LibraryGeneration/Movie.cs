@@ -275,6 +275,29 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             return null;
         }
 
+        public static string NormalizeTitle(string title)
+        {
+            var replacementChars = new string[] { "{", "}", "#", "@", "-", "(", ")", ":", ".", ",", "'", "?", "!", "+", "$", "’", "…", "/", "_", "[", "]", "–", "*", "=" };
+            //force to lower case
+            title.ToLowerInvariant()
+            //remove starting or trailing spaces
+            .Trim();
+
+            //replace lots of special characters with spaces
+            foreach (var replacementChar in replacementChars)
+            {
+                title = title.Replace(replacementChar, " ");
+            }
+
+            //replace all instance of double spaces with single spaces
+            while (title.Contains("  "))
+            {
+                title = title.Replace("  ", " ");
+            }
+            title = title.Replace("&", "and");
+            return title;
+        }
+
         /// <summary>
         /// Compare two titles, but remove some special characters and compare case insensitive.
         /// </summary>
@@ -283,32 +306,9 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// <returns></returns>
         public static bool TitlesAreEquivalent(string title1, string title2)
         {
-            var replacementChars = new string[] { "{", "}", "#", "@", "-", "(", ")", ":", ".", ",", "'", "?", "!", "+", "$", "’", "…", "/", "_", "[", "]", "–", "*", "=" };
-            var titles = new string[] { title1, title2 };
-            for (var i = 0; i < titles.Length; i++)
-            {
-                var title = titles[i]
-                     //force to lower case
-                     .ToLowerInvariant()
-                     //remove starting or trailing spaces
-                     .Trim();
 
-                //replace lots of special characters with spaces
-                foreach (var replacementChar in replacementChars)
-                {
-                    title = title.Replace(replacementChar, " ");
-                }
-
-                //replace all instance of double spaces with single spaces
-                while (title.Contains("  "))
-                {
-                    title = title.Replace("  ", " ");
-                }
-                title = title.Replace("&", "and");
-                titles[i] = title;
-            }
-            title1 = titles[0];
-            title2 = titles[1];
+            title1 = NormalizeTitle(title1);
+            title2 = NormalizeTitle(title2);
             if (title1 == title2)
             {
                 return true;

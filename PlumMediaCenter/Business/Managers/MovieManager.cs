@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Dapper;
 using PlumMediaCenter.Business.Enums;
@@ -34,6 +35,45 @@ namespace PlumMediaCenter.Business.Managers
                 where id in @ids
             ", new { ids = ids }));
             return models;
+        }
+
+        public async Task<IEnumerable<Models.Movie>> GetSearchResults(string text)
+        {
+            text = LibraryGeneration.Movie.NormalizeTitle(text);
+            //split the text by spaces
+            var parts = text.Split(" ");
+            var i = 0;
+            var sql = new StringBuilder();
+            var or = "";
+            //construct a where clause with all of the parts
+            var dbParams = new DynamicParameters();
+            foreach (var part in parts)
+            {
+                sql.Append($"{or} title like @part{i}");
+                //add wildcards around the part
+                dbParams.Add($"part{i++}", $"%{part}%");
+                or = " or ";
+            }
+            var ids = await this.QueryAsync<int>($@"
+                select id from movies
+                where {sql.ToString()}
+            ", dbParams);
+            var movies = await this.GetByIds(ids);
+
+            //sort the movies by how many times each part appears
+            movies = movies.OrderByDescending(movie =>
+            {
+                var count = 0;
+                foreach (var part in parts)
+                {
+                    if (movie.Title.IndexOf(part) > 0)
+                    {
+                        count++;
+                    }
+                }
+                return count;
+            });
+            return movies;
         }
 
         /// <summary>

@@ -125,5 +125,11 @@ namespace PlumMediaCenter.Controllers
         {
             return await this.Manager.Media.GetMediaItemResumeSeconds(this.CurrentProfileId, mediaItemId);
         }
+
+        [HttpGet]
+        public async Task<object> Search([FromQuery]string q)
+        {
+            return await this.Manager.Media.GetSearchResults(q);
+        }
     }
 }

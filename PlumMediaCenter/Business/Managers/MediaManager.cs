@@ -111,7 +111,7 @@ namespace PlumMediaCenter.Business.Managers
             if (historyRecord == null)
             {
                 return 0;
-        }
+            }
             //if the progress is within the threshold of "finished the show", then return zero
             else if (await this.SecondCountIsConsideredFinished(mediaItemId, historyRecord.ProgressSecondsEnd))
             {
@@ -274,6 +274,17 @@ namespace PlumMediaCenter.Business.Managers
                 default:
                     throw new Exception("Not implemented");
             }
+        }
+
+        /// <summary>
+        /// Get a list of search results from all media types
+        /// </summary>
+        /// <param name="searchText"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<object>> GetSearchResults(string searchText)
+        {
+            var movieResults = await this.Manager.Movies.GetSearchResults(searchText);
+            return movieResults;
         }
     }
 }
