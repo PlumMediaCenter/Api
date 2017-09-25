@@ -4,49 +4,22 @@ using PlumMediaCenter.Data;
 
 namespace PlumMediaCenter.Models
 {
-    public class MediaHistoryRecord : MediaProgress
+    public class MediaHistoryRecord : MediaItemProgress
     {
         public MediaTypeId MediaTypeId;
         public string PosterUrl;
         public string Title;
-        public int RuntimeMinutes;
-        public new int? ProgressSecondsBegin
-        {
-            //make the get private so it's not serialized
-            private get
-            {
-                return this.ProgressMinutesBegin * 60;
-            }
-            set
-            {
-                this.ProgressMinutesBegin = (int)Math.Floor((decimal)value / 60);
-            }
-        }
-        public int? ProgressMinutesBegin { get; set; }
-
-        public new int? ProgressSecondsEnd
-
-        {
-            private get
-            {
-                return this.ProgressMinutesEnd * 60;
-            }
-            set
-            {
-                this.ProgressMinutesEnd = (int)Math.Ceiling((decimal)value / 60);
-            }
-        }
-        public int? ProgressMinutesEnd { get; set; }
-
+        public int RuntimeSeconds;
+       
         /// <summary>
-        /// The number of total minutes of progress. For example, if a movie was watched from 4 minutes to 6 minutes, this would equal 2 (6-4).
+        /// The number of total seconds of progress. For example, if a movie was watched from 30 seconds to 50 seconds, this would equal 20 seconds.
         /// </summary>
         /// <returns></returns>
-        public int? TotalProgressMinutes
+        public int? TotalProgressSeconds
         {
             get
             {
-                return this.ProgressMinutesEnd - this.ProgressMinutesBegin;
+                return this.ProgressSecondsEnd - this.ProgressSecondsBegin;
             }
         }
 

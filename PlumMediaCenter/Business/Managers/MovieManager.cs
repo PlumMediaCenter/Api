@@ -27,7 +27,7 @@ namespace PlumMediaCenter.Business.Managers
         /// </summary>
         /// <param name="ids"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<Models.Movie>> GetByIds(IEnumerable<ulong> ids)
+        public async Task<IEnumerable<Models.Movie>> GetByIds(IEnumerable<int> ids)
         {
             var models = (await this.QueryAsync<Models.Movie>($@"
                 select *, backdropGuids as _backdropGuids, {(int)MediaTypeId.Movie} as mediaTypeId from movies
@@ -41,9 +41,9 @@ namespace PlumMediaCenter.Business.Managers
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public async Task<Models.Movie> GetById(ulong id)
+        public async Task<Models.Movie> GetById(int id)
         {
-            var movie = (await this.GetByIds(new List<ulong> { id })).FirstOrDefault();
+            var movie = (await this.GetByIds(new List<int> { id })).FirstOrDefault();
             return movie;
         }
     }

@@ -74,9 +74,14 @@ namespace PlumMediaCenter.Business.LibraryGeneration.DotJson
         public System.DateTime? ReleaseDate { get; set; }
 
         /// <summary>
-        /// The runtime of the movie in minutes
+        /// The runtime of the movie in seconds
         /// </summary>
-        public int? RuntimeMinutes { get; set; }
+        public int? RuntimeSeconds { get; set; }
+        /// <summary>
+        /// The number of seconds at which time the movie is considered 'watched'.
+        /// </summary>
+        /// <returns></returns>
+        public int? CompletionSeconds { get; set; }
         /// <summary>
         /// The TMDB ID for this movie. Null if movie is not on TMDB
         /// </summary>

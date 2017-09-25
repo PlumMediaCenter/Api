@@ -22,5 +22,13 @@ namespace PlumMediaCenter.Controllers
             }
         }
         private Manager _Manager;
+
+        public int CurrentProfileId
+        {
+            get
+            {
+                return this.Manager.Users.CurrentProfileId;
+            }
+        }
     }
 }

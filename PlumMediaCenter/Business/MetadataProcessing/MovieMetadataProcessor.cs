@@ -72,7 +72,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return await Task.FromResult(result);
         }
 
-        public async Task<MovieMetadataComparison> GetComparisonAsync(int tmdbId, ulong movieId, string baseUrl)
+        public async Task<MovieMetadataComparison> GetComparisonAsync(int tmdbId, int movieId, string baseUrl)
         {
             var result = new MovieMetadataComparison();
             var tcurrent = GetCurrentMetadataAsync(movieId, baseUrl);
@@ -141,7 +141,8 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             //get the oldest US rating
             metadata.Rating = release?.Certification;
             metadata.ReleaseDate = release?.ReleaseDate;
-            metadata.RuntimeMinutes = movie.Runtime;
+            //conver the runtime to seconds
+            metadata.RuntimeSeconds = movie.Runtime * 60;
             metadata.Summary = movie.Overview;
             metadata.Title = movie.Title;
             metadata.SortTitle = movie.Title;
@@ -187,7 +188,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return metadata;
         }
 
-        private async Task<MovieMetadata> GetCurrentMetadataAsync(ulong movieId, string baseUrl)
+        private async Task<MovieMetadata> GetCurrentMetadataAsync(int movieId, string baseUrl)
         {
             var movieModel = await this.Manager.Movies.GetById(movieId);
             var movie = new LibraryGeneration.Movie(this.Manager, movieModel.GetFolderPath(), movieModel.SourceId);
@@ -243,7 +244,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return metadata;
         }
 
-        public async Task SaveAsync(ulong movieId, MovieMetadata metadata)
+        public async Task SaveAsync(int movieId, MovieMetadata metadata)
         {
             var movie = await this.Manager.Movies.GetById(movieId);
             await DownloadMetadataAsync(movie.GetFolderPath(), movie.GetFolderUrl(), metadata);

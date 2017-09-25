@@ -10,9 +10,9 @@ namespace PlumMediaCenter.Models
 {
     public class Movie
     {
-        public ulong Id;
+        public int Id;
         public string Title;
-        public ulong SourceId;
+        public int SourceId;
         public string Summary;
         public string Description;
         public string PosterUrl
@@ -22,7 +22,7 @@ namespace PlumMediaCenter.Models
                 return $"{AppSettings.BaseUrlStatic}posters/{this.Id}.jpg";
             }
         }
-        public static string CalculateFolderUrl(ulong sourceId, string folderName, string baseUrl)
+        public static string CalculateFolderUrl(int sourceId, string folderName, string baseUrl)
         {
             return $"{baseUrl}source{sourceId}/{folderName}/";
         }
@@ -138,6 +138,7 @@ namespace PlumMediaCenter.Models
             }
         }
 
+
         public MediaTypeId MediaTypeId;
 
         /// <summary>
@@ -149,13 +150,34 @@ namespace PlumMediaCenter.Models
         /// </summary>
         public DateTime? ReleaseDate;
         /// <summary>
-        /// The runtime of the movie in minutes
+        /// The runtime of the movie in seconds
         /// </summary>
-        public int RuntimeMinutes;
+        public int RuntimeSeconds;
         /// <summary>
         /// The TMDB if of the movie.
         /// </summary>
-        public ulong? TmdbId;
+        public int? TmdbId;
 
+        /// <summary>
+        /// The number of seconds into a video at which time the video is considered to be completed or watched. 
+        /// When not explicitly set by a config file, this value will equal a percentage of the RuntimeSeconds value
+        /// </summary>
+        public int? CompletionSeconds
+        {
+            get
+            {
+                if (this._CompletionSeconds != null)
+                {
+                    return this._CompletionSeconds;
+                }
+                //when not explicitly set, calculate a percentage for the video
+                else
+                {
+                    this._CompletionSeconds = (int)(this.RuntimeSeconds * ((float)AppSettings.CompletionPercentageStatic / 100));
+                }
+                return this._CompletionSeconds;
+            }
+        }
+        private int? _CompletionSeconds;
     }
 }

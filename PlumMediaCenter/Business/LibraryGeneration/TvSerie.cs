@@ -6,7 +6,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
 {
     public class TvSerie
     {
-        public TvSerie(Manager manager, string folderPath, ulong sourceId)
+        public TvSerie(Manager manager, string folderPath, int sourceId)
         {
             this.Manager = manager;
             this.FolderPath = folderPath;
@@ -22,7 +22,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// <summary>
         /// The id for the video source
         /// </summary>
-        public ulong SourceId;
+        public int SourceId;
 
         /// <summary>
         /// 

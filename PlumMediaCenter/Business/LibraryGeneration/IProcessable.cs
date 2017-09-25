@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 
 namespace PlumMediaCenter.Business.LibraryGeneration
 {
-    public interface IMediaItem
+    public interface IProcessable
     {
         Task Process();
     }

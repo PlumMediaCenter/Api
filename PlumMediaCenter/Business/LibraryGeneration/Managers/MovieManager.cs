@@ -21,7 +21,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// Get a list of every movie directory
         /// </summary>
         /// <returns></returns>
-        public async Task<Dictionary<ulong, IEnumerable<string>>> GetDirectories()
+        public async Task<Dictionary<int, IEnumerable<string>>> GetDirectories()
         {
             using (var connection = GetNewConnection())
             {
@@ -43,7 +43,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         private class DbDirResult
         {
             public string FolderPath { get; set; }
-            public ulong SourceId { get; set; }
+            public int SourceId { get; set; }
         }
 
         /// <summary>
@@ -51,11 +51,11 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// </summary>
         /// <param name="folderPath"></param>
         /// <returns></returns>
-        public async Task<ulong?> GetId(string folderPath)
+        public async Task<int?> GetId(string folderPath)
         {
             using (var connection = GetNewConnection())
             {
-                var rows = await connection.QueryAsync<ulong?>(@"
+                var rows = await connection.QueryAsync<int?>(@"
                     select id 
                     from movies
                     where folderPath = @folderPath",
@@ -90,7 +90,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// Get a list of every movie directory
         /// </summary>
         /// <returns></returns>
-        public async Task<ulong> Insert(LibraryGeneration.Movie movie)
+        public async Task<int> Insert(LibraryGeneration.Movie movie)
         {
             var mediaItemId = await this.Manager.Media.GetNewMediaId(MediaTypeId.Movie);
             await this.ExecuteAsync(@"
@@ -104,9 +104,10 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                     description, 
                     rating,
                     releaseDate,
-                    runtimeMinutes,
+                    runtimeSeconds,
                     tmdbId,
-                    sourceId
+                    sourceId,
+                    completionSeconds
                 )
                 values(
                     @id,
@@ -118,9 +119,10 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                     @description, 
                     @rating,
                     @releaseDate,
-                    @runtimeMinutes,
+                    @runtimeSeconds,
                     @tmdbId,
-                    @sourceId
+                    @sourceId,
+                    @completionSeconds
                 )
             ", new
             {
@@ -133,18 +135,19 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                 description = movie.Description,
                 rating = movie.Rating,
                 releaseDate = movie.ReleaseDate,
-                runtimeMinutes = movie.RuntimeMinutes,
+                runtimeSeconds = movie.RuntimeSeconds,
                 tmdbId = movie.TmdbId,
-                sourceId = movie.SourceId
+                sourceId = movie.SourceId,
+                completionSeconds = movie.CompletionSeconds
             });
             return mediaItemId;
         }
 
-        public async Task<ulong> Update(LibraryGeneration.Movie movie)
+        public async Task<int> Update(LibraryGeneration.Movie movie)
         {
             using (var connection = GetNewConnection())
             {
-                var movieId = await connection.QueryFirstOrDefaultAsync<ulong?>(@"
+                var movieId = await connection.QueryFirstOrDefaultAsync<int?>(@"
                     select id from movies where folderPath = @folderPath
                 ", new { folderPath = movie.FolderPath });
                 if (movieId == null)
@@ -162,7 +165,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                         description = @description, 
                         rating = @rating,
                         releaseDate = @releaseDate,
-                        runtimeMinutes = @runtimeMinutes,
+                        runtimeSeconds = @runtimeSeconds,
                         tmdbId = @tmdbId,
                         sourceId = @sourceId
                     where id = @movieId
@@ -177,7 +180,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
                     description = movie.Description,
                     rating = movie.Rating,
                     releaseDate = movie.ReleaseDate,
-                    runtimeMinutes = movie.RuntimeMinutes,
+                    runtimeSeconds = movie.RuntimeSeconds,
                     tmdbId = movie.TmdbId,
                     sourceId = movie.SourceId,
                     movieId = movieId
@@ -211,7 +214,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// </summary>
         /// <param name="movieId"></param>
         /// <returns></returns>
-        public async Task<List<string>> GetBackdropGuids(ulong movieId)
+        public async Task<List<string>> GetBackdropGuids(int movieId)
         {
             using (var connection = GetNewConnection())
             {
@@ -238,7 +241,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <param name="movieId"></param>
         /// <param name="backdropGuids"></param>
         /// <returns></returns>
-        public async Task SetBackdropGuids(ulong movieId, List<string> backdropGuids)
+        public async Task SetBackdropGuids(int movieId, List<string> backdropGuids)
         {
             using (var connection = GetNewConnection())
             {
@@ -267,7 +270,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             await movie.Process();
         }
 
-        public async Task DeleteForSource(ulong sourceId, string baseUrl)
+        public async Task DeleteForSource(int sourceId, string baseUrl)
         {
             using (var connection = GetNewConnection())
             {

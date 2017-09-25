@@ -12,28 +12,19 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Http;
 using PlumMediaCenter.Business;
 using PlumMediaCenter.Attributues;
+using PlumMediaCenter.Models;
 
 namespace PlumMediaCenter.Controllers
 {
     [Route("api/[controller]")]
     [ExceptionHandlerFilter]
-    public class MoviesController : BaseController
+    public class MediaTypesController : BaseController
     {
-        [HttpGet("{id}")]
-        public async Task<Models.Movie> GetById(int id)
+        [HttpGet]
+        public async Task<IEnumerable<MediaTypeObj>> GetAll()
         {
-            return await this.Manager.Movies.GetById(id);
+            return await this.Manager.Media.GetAllMediaTypes();
         }
 
-        /// <summary>
-        /// Get a list of all movies
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet]
-        public async Task<IEnumerable<Models.Movie>> GetAll()
-        {
-            var movies = await this.Manager.Movies.GetAll();
-            return movies;
-        }
     }
 }

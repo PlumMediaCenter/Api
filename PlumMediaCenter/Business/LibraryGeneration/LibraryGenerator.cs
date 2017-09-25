@@ -58,7 +58,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             return this.Status?.Clone();
         }
 
-        public async Task<IMediaItem> GetMediaItem(ulong mediaItemId)
+        public async Task<IProcessable> GetMediaItem(int mediaItemId)
         {
             using (var connection = ConnectionManager.GetNewConnection())
             {
@@ -252,8 +252,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             //process each show. movie.Process will handle adding, updating, and deleting
             Parallel.ForEach(seriePaths, moviePath =>
             {
-                var sourceId = 0UL;
-                var show = new TvSerie(manager, moviePath, sourceId);
+                var show = new TvSerie(manager, moviePath, 0);
                 show.Process();
             });
         }
@@ -326,7 +325,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 return this.MovieCountTotal + this.TvSerieCountTotal;
             }
         }
-        public long? SecondsRemaining
+        public int? SecondsRemaining
         {
             get
             {
@@ -341,7 +340,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                     var millisecondsPerItem = timeTaken.Value.TotalMilliseconds / this.CountCompleted;
                     var millisecondsremaining = this.CountRemaining * millisecondsPerItem;
                     var secondsRemaining = millisecondsremaining / 1000;
-                    return (long)secondsRemaining;
+                    return (int)secondsRemaining;
                 }
             }
         }

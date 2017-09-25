@@ -78,6 +78,24 @@ namespace PlumMediaCenter
         /// </summary>
         public int MaxMediaProgressGapSeconds = 20;
 
+        /// <summary>
+        /// The percentage of a video that must be watched before being consered watched.
+        /// This value is used whenever a media item does not explicitly indicate a CompletionSeconds value
+        /// </summary>
+        public int CompletionPercentage
+        {
+            get
+            {
+                return CompletionPercentageStatic;
+            }
+        }
+
+        /// <summary>
+        /// The percentage of a video that must be watched before being consered watched.
+        /// This value is used whenever a media item does not explicitly indicate a CompletionSeconds value
+        /// </summary>
+        public static int CompletionPercentageStatic = 95;
+
 
         /// <summary>
         /// WARNING: Only use this from a request thread!!

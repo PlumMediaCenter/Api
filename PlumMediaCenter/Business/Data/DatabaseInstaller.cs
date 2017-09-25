@@ -40,7 +40,7 @@ namespace PlumMediaCenter.Data
 
                 connection.Execute(@"
                     create table Sources(
-                        id int unsigned not null AUTO_INCREMENT primary key comment 'id of source',
+                        id int not null AUTO_INCREMENT primary key comment 'id of source',
                         folderPath varchar(4000) not null comment 'full path to source folder',
                         mediaTypeId tinyint not null comment 'the id of the mediaType of the type of media the source contains (i.e. movies, tvshows, etc...)',
                         foreign key (mediaTypeId) references MediaTypes(id)
@@ -49,37 +49,38 @@ namespace PlumMediaCenter.Data
 
                 // Used to generate an ID that is unique between all media types
                 connection.Execute(@"
+                        id int not null AUTO_INCREMENT primary key comment 'id of',
                     create table MediaItemIds(
-                        id integer unsigned not null AUTO_INCREMENT primary key comment 'id of',
                         mediaTypeId tinyint not null comment 'the type of media this ID was created for'
                     );
                 ");
 
                 connection.Execute(@"
                     create table Movies(
-                        id int unsigned not null primary key comment 'mediaItemId of movie',
+                        id int not null primary key comment 'mediaItemId of movie',
                         folderPath varchar(4000) not null comment 'full path to folder for movie',
                         videoPath varchar(4000) not null comment 'full path to video file',
                         title varchar(200) not null comment 'title of movie',
                         sortTitle varchar(200) not null comment 'title to use for sorting movies',
                         summary varchar(100) comment 'short explanation of movie plot',
-                        description varchar(4000) comment 'long explanation of movie plot',
+                        description varchar(4000) comment 'int explanation of movie plot',
                         rating varchar(10) comment 'MPAA rating for movie',
                         releaseDate date comment 'Date the movie was first released',
-                        runtimeMinutes integer comment 'Runtime of movie in minutes',
-                        tmdbId integer comment 'The tmdb id for this movie, if one exists',
-                        sourceId int unsigned not null comment 'fk for sources table',
+                        runtimeSeconds int comment 'Runtime of movie in seconds',
+                        tmdbId int comment 'The tmdb id for this movie, if one exists',
+                        sourceId int not null comment 'fk for sources table',
                         backdropGuids varchar(4000) not null comment 'comma separated list of backdrop guids',
+                        completionSeconds int comment 'the number of seconds at which time the movie would be considered watched',
                         foreign key(sourceId) references Sources(id),
                         foreign key(id) references MediaItemIds(id)
                     );
                 ");
 
                 connection.Execute(@"
-                    create table MediaProgress(
-                        id int unsigned not null AUTO_INCREMENT primary key comment 'Unique identifier for this table',
-                        profileId int unsigned not null comment 'id of the profile that interacted with this media item',
-                        mediaItemId int unsigned not null comment 'id of the media item',
+                    create table MediaItemProgress(
+                        id int not null AUTO_INCREMENT primary key comment 'Unique identifier for this table',
+                        profileId int not null comment 'id of the profile that interacted with this media item',
+                        mediaItemId int not null comment 'id of the media item',
                         progressSecondsBegin int not null comment 'the second count when the media interaction began',
                         progressSecondsEnd int not null comment 'the second count when the media interaction ended',
                         dateBegin datetime not null,

@@ -53,7 +53,7 @@ namespace PlumMediaCenter.Controllers
         }
 
         [HttpPost("processItem")]
-        public async Task Process([FromQuery] ulong? mediaItemId)
+        public async Task Process([FromQuery] int? mediaItemId)
         {
             if (mediaItemId == null)
             {

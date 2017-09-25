@@ -41,7 +41,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             return result;
         }
 
-        public async Task<ulong?> Insert(Source source)
+        public async Task<int?> Insert(Source source)
         {
 
             using (var connection = GetNewConnection())
@@ -59,7 +59,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         }
 
 
-        public async Task<ulong?> Update(Source source)
+        public async Task<int?> Update(Source source)
         {
             await this.ExecuteAsync(@"
                 update sources
@@ -76,7 +76,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             return source.Id;
         }
 
-        public async Task Delete(ulong id, string baseUrl)
+        public async Task Delete(int id, string baseUrl)
         {
             //delete all of the movies associated with this source
             await this.Manager.LibraryGeneration.Movies.DeleteForSource(id, baseUrl);
@@ -90,7 +90,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             });
         }
 
-        public async Task<ulong?> Save(Source source)
+        public async Task<int?> Save(Source source)
         {
             if (source.Id == null)
             {

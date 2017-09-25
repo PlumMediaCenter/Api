@@ -10,9 +10,9 @@ using PlumMediaCenter.Data;
 
 namespace PlumMediaCenter.Business.LibraryGeneration
 {
-    public class Movie : IMediaItem
+    public class Movie : IProcessable
     {
-        public Movie(Manager manager, string moviePath, ulong sourceId)
+        public Movie(Manager manager, string moviePath, int sourceId)
         {
             this.Manager = manager;
             this.FolderPath = moviePath;
@@ -23,8 +23,8 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// <summary>
         /// The id for this video. This is only set during Process(), so don't depend on it unless you are calling a function from Process()
         /// </summary>
-        private ulong? Id;
-        public ulong? GetId()
+        private int? Id;
+        public int? GetId()
         {
             return this.Id;
         }
@@ -32,7 +32,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// <summary>
         /// The id for the video source
         /// </summary>
-        public ulong SourceId;
+        public int SourceId;
 
         /// <summary>
         /// A full path to the movie folder (including trailing slash)
@@ -71,6 +71,14 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
         }
         private string _Md5 { get; set; }
+
+        public int? CompletionSeconds
+        {
+            get
+            {
+                return this.MovieDotJson?.CompletionSeconds;
+            }
+        }
 
         public string Title
         {
@@ -152,13 +160,13 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
         }
 
-        public int? RuntimeMinutes
+        public int? RuntimeSeconds
         {
             get
             {
                 if (_Runtime == null)
                 {
-                    var runtimeFromJson = this.MovieDotJson?.RuntimeMinutes;
+                    var runtimeFromJson = this.MovieDotJson?.RuntimeSeconds;
                     if (runtimeFromJson != null)
                     {
                         _Runtime = runtimeFromJson;
@@ -169,7 +177,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                         {
                             //get runtime from video file 
                             var file = TagLib.File.Create(this.VideoPath);
-                            _Runtime = (int?)Math.Ceiling(file.Properties.Duration.TotalMinutes);
+                            _Runtime = (int?)Math.Ceiling(file.Properties.Duration.TotalSeconds);
                         }
                         catch (Exception)
                         {
@@ -389,19 +397,19 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 movieMetadata.ReleaseDate = releaseDate;
             }
             //the runtime should be calculated from the video file's length
-            movieMetadata.RuntimeMinutes = null;
+            movieMetadata.RuntimeSeconds = null;
             movieMetadata.Summary = null;
             movieMetadata.Title = this.Title;
             movieMetadata.SortTitle = this.SortTitle;
             return movieMetadata;
         }
 
-        public async Task<ulong> Update()
+        public async Task<int> Update()
         {
             return await this.Manager.LibraryGeneration.Movies.Update(this);
         }
 
-        public async Task<ulong> Create()
+        public async Task<int> Create()
         {
             return await this.Manager.LibraryGeneration.Movies.Insert(this);
         }
