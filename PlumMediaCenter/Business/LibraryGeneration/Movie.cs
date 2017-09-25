@@ -237,9 +237,11 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// </summary>
         public async Task Process()
         {
+            Console.WriteLine($"{this.FolderPath}: Process movie");
             //if the movie was deleted, remove it from the system
             if (Directory.Exists(this.FolderPath) == false)
             {
+                Console.WriteLine($"{this.FolderPath}: Delete");
                 await this.Delete();
                 return;
             }
@@ -247,11 +249,13 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             //movie needs updated
             if (await this.Manager.LibraryGeneration.Movies.Exists(this.FolderPath))
             {
+                Console.WriteLine($"{this.FolderPath}: Update");
                 this.Id = await this.Update();
             }
             //new movie
             else
             {
+                Console.WriteLine($"{this.FolderPath}: Create");
                 this.Id = await this.Create();
             }
             await this.CopyImages();
@@ -330,54 +334,54 @@ namespace PlumMediaCenter.Business.LibraryGeneration
 
         public async Task DownloadMetadataIfPossible()
         {
-            Console.WriteLine("Download metadata if possible");
+            Console.WriteLine($"{this.FolderPath}: Download metadata if possible");
             var movieDotJson = this.MovieDotJson;
             var folderName = this.FolderName;
             //the movie doesn't have any metadata. Download some
             if (movieDotJson == null)
             {
-                Console.WriteLine($"{folderName}: No movie.json exists");
+                Console.WriteLine($"{FolderPath}: No movie.json exists");
                 var year = GetYearFromFolderName(this.FolderName);
                 string title = this.Title;
-                Console.WriteLine($"{folderName}: Searching for results");
+                Console.WriteLine($"{FolderPath}: Searching for results");
                 //get search results
                 var results = await this.Manager.MovieMetadataProcessor.GetSearchResultsAsync(title);
-                Console.WriteLine($"{folderName}: Found {results.Count} results");
+                Console.WriteLine($"{FolderPath}: Found {results.Count} results");
                 var matches = results.Where(x => TitlesAreEquivalent(x.Title, title)).ToList();
-                Console.WriteLine($"{folderName}: Found {matches.Count()} where the title matches");
+                Console.WriteLine($"{FolderPath}: Found {matches.Count()} where the title matches");
                 if (year != null)
                 {
-                    Console.WriteLine($"{folderName}: Filtering matches by year");
+                    Console.WriteLine($"{FolderPath}: Filtering matches by year");
                     matches = matches.Where(x => x.ReleaseDate.Value.Year == year.Value).ToList();
-                    Console.WriteLine($"{folderName}: Found {matches.Count()} matches with the same year");
+                    Console.WriteLine($"{FolderPath}: Found {matches.Count()} matches with the same year");
                 }
                 //if we have any matches left, use the first one
                 var match = matches.FirstOrDefault();
                 MovieMetadata metadata;
                 if (match == null)
                 {
-                    Console.WriteLine($"{folderName}: No matches found: using generic metadata");
+                    Console.WriteLine($"{FolderPath}: No matches found: using generic metadata");
                     metadata = GetGenericMetadata();
                 }
                 else
                 {
-                    Console.WriteLine($"{folderName}: Downloading TMDB metadata");
+                    Console.WriteLine($"{FolderPath}: Downloading TMDB metadata");
                     metadata = await this.Manager.MovieMetadataProcessor.GetTmdbMetadataAsync(match.TmdbId);
                 }
-                Console.WriteLine($"{folderName}: Saving metadata to disc");
+                Console.WriteLine($"{FolderPath}: Saving metadata to disc");
                 await this.Manager.MovieMetadataProcessor.DownloadMetadataAsync(
                     this.FolderPath,
                     Models.Movie.CalculateFolderUrl(this.SourceId, this.FolderName, this.Manager.BaseUrl),
                     metadata
                 );
-                Console.WriteLine($"{folderName}: Clearing MovieDotJson");
+                Console.WriteLine($"{FolderPath}: Clearing MovieDotJson");
                 //clear _MovieDotJson so the next access will load the new one from disk
                 this._MovieDotJson = null;
             }
             else
             {
                 //the movie already has metadata, so don't download anything 
-                Console.WriteLine($"{folderName}: Already has metadata. Skipping metadata retrieval");
+                Console.WriteLine($"{FolderPath}: Already has metadata. Skipping metadata retrieval");
                 return;
             }
         }

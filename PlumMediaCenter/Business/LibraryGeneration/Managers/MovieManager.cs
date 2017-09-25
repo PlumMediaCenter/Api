@@ -92,6 +92,8 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<int> Insert(LibraryGeneration.Movie movie)
         {
+            Console.WriteLine("Movie.Insert -> Movie folder path: " + movie.FolderPath);
+            Console.WriteLine("Movie.Insert -> Movie VideoPath: " + movie.VideoPath);
             var mediaItemId = await this.Manager.Media.GetNewMediaId(MediaTypeId.Movie);
             await this.ExecuteAsync(@"
                 insert into Movies(
