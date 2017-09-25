@@ -190,42 +190,42 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 var workItemResult = pool.QueueWorkItem((moviePath) =>
                 {
                     //temp lock to process movies one by one
-                    lock (this)
+                    // lock (this)
+                    // {
+                    this.Status.Log.Add($"Processing pool movie: {moviePath.Path}");
+                    var path = moviePath.Path;
+                    //add this move to the list of currently processing movies
+                    lock (this.Status.ActiveFiles)
                     {
-                        this.Status.Log.Add($"Processing pool movie: {moviePath.Path}");
-                        var path = moviePath.Path;
-                        //add this move to the list of currently processing movies
-                        lock (this.Status.ActiveFiles)
-                        {
-                            this.Status.ActiveFiles.Add(path);
-                        }
-                        var managerForThread = new Manager(manager.BaseUrl);
-                        var movie = new Movie(managerForThread, moviePath.Path, moviePath.Source.Id.Value);
+                        this.Status.ActiveFiles.Add(path);
+                    }
+                    var managerForThread = new Manager(manager.BaseUrl);
+                    var movie = new Movie(managerForThread, moviePath.Path, moviePath.Source.Id.Value);
+                    try
+                    {
+                        this.Status.Log.Add($"Waiting for movie to process: {moviePath.Path}");
                         try
                         {
-                            this.Status.Log.Add($"Waiting for movie to process: {moviePath.Path}");
-                            try
-                            {
-                                movie.Process().Wait();
-                            }
-                            catch (Exception e)
-                            {
-                                Console.WriteLine($"Error processing movie {moviePath.Path}");
-                                Console.WriteLine(e);
-                            }
+                            movie.Process().Wait();
                         }
-                        catch (Exception)
+                        catch (Exception e)
                         {
-                            this.Status.FailedItems.Add(Newtonsoft.Json.JsonConvert.SerializeObject(movie));
-                        }
-                        Thread.Sleep(5000);
-                        this.Status.MovieCountCompleted++;
-                        //remove the movie from the list of currently processing movies
-                        lock (this.Status.ActiveFiles)
-                        {
-                            this.Status.ActiveFiles.Remove(path);
+                            Console.WriteLine($"Error processing movie {moviePath.Path}");
+                            Console.WriteLine(e);
                         }
                     }
+                    catch (Exception)
+                    {
+                        this.Status.FailedItems.Add(Newtonsoft.Json.JsonConvert.SerializeObject(movie));
+                    }
+                    Thread.Sleep(5000);
+                    this.Status.MovieCountCompleted++;
+                    //remove the movie from the list of currently processing movies
+                    lock (this.Status.ActiveFiles)
+                    {
+                        this.Status.ActiveFiles.Remove(path);
+                    }
+                    // }
                 }, loopMoviePath);
 
             }
