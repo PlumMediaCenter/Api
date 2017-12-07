@@ -179,7 +179,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                             var file = TagLib.File.Create(this.VideoPath);
                             _Runtime = (int?)Math.Ceiling(file.Properties.Duration.TotalSeconds);
                         }
-                        catch (Exception)
+                        catch (System.Exception)
                         {
                             _Runtime = -1;
                         }
@@ -273,7 +273,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                     return int.Parse(yearString);
                 }
             }
-            catch (Exception)
+            catch (System.Exception)
             {
             }
             return null;
@@ -352,7 +352,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 if (year != null)
                 {
                     Console.WriteLine($"{FolderPath}: Filtering matches by year");
-                    matches = matches.Where(x => x.ReleaseDate.Value.Year == year.Value).ToList();
+                    matches = matches.Where((x) =>
+                    {
+                        return x.ReleaseDate != null &&
+                                year != null &&
+                                x.ReleaseDate.Value.Year == year.Value;
+                    }).ToList();
                     Console.WriteLine($"{FolderPath}: Found {matches.Count()} matches with the same year");
                 }
                 //if we have any matches left, use the first one
@@ -504,7 +509,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             //poster
             var sourcePosterPath = $"{this.FolderPath}poster.jpg";
             var destinationPosterPath = $"{this.Manager.AppSettings.PosterFolderPath}{this.Id}.jpg";
-
+            var resizedPosterWidths = new int[] { 100, 200 };
             //the video doesn't have a poster. Create a text-based poster
             if (File.Exists(sourcePosterPath) == false)
             {
@@ -514,6 +519,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             //copy the poster
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPosterPath));
             File.Copy(sourcePosterPath, destinationPosterPath, true);
+
+            foreach (var posterWidth in resizedPosterWidths)
+            {
+                var path = $"{this.Manager.AppSettings.PosterFolderPath}{this.Id}w{posterWidth}.jpg";
+                this.Manager.Utility.ResizeImage(sourcePosterPath, path, posterWidth);
+            }
 
             //backdrop
             var sourceBackdropPath = $"{this.FolderPath}backdrop.jpg";
@@ -551,6 +562,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 File.Copy(path, destinationPath);
             }
             await this.Manager.LibraryGeneration.Movies.SetBackdropGuids(this.Id.Value, guidsFromFilesystem);
+
         }
     }
 }

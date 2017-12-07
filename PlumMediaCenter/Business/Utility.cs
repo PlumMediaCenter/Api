@@ -26,6 +26,25 @@ namespace PlumMediaCenter.Business
                 return _FontFamily;
             }
         }
+
+        /// <summary>
+        /// Resize an image to the given width. The height is auto-calculated and will preserve the image's aspect ratio
+        /// </summary>
+        /// <param name="sourcePath"></param>
+        /// <param name="destinationPath"></param>
+        /// <param name="targetWidth"></param>
+        public void ResizeImage(string sourcePath, string destinationPath, int targetWidth)
+        {
+            Image<Rgba32> image;
+            using (var file = File.OpenRead(sourcePath)) { image = Image.Load(file); }
+            //calculate the new height
+            var targetHeight = (int)Math.Ceiling(((float)image.Height / (float)image.Width) * (float)targetWidth);
+            using (Stream fileStream = File.Create(destinationPath))
+            {
+                image.Resize(targetWidth, targetHeight).SaveAsJpeg(fileStream);
+            }
+        }
+
         public void CreateTextPoster(string text, string destinationPath)
         {
             Font font = new Font(this.FontFamily, 120f, FontStyle.Regular);
