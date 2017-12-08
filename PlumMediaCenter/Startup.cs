@@ -21,6 +21,7 @@ using PlumMediaCenter;
 using PlumMediaCenter.Controllers;
 using PlumMediaCenter.Data;
 using PlumMediaCenter.Middleware;
+using PlumMediaCenter.Middlewares;
 using Swashbuckle.AspNetCore.Swagger;
 
 namespace PlumMediaCenter
@@ -74,7 +75,7 @@ namespace PlumMediaCenter
 
             var injectorOptions = app.ApplicationServices.GetService<MiddlewareInjectorOptions>();
             app.UseMiddlewareInjector(injectorOptions);
-
+            app.UseGraphQl();
             app.UseMvc();
             app.UseSwagger();
             app.UseSwaggerUI(c =>

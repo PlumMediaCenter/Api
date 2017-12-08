@@ -10,17 +10,85 @@ namespace PlumMediaCenter.Business.Managers
 {
     public class MovieManager : BaseManager
     {
+        private static List<string> ColumnNameWhitelist = new List<string>{
+            "id",
+            "folderPath".ToLower(),
+            "videoPath".ToLower(),
+            "title",
+            "sortTitle".ToLower(),
+            "summary",
+            "description",
+            "rating",
+            "releaseDate".ToLower(),
+            "runtimeSeconds".ToLower(),
+            "tmdbId".ToLower(),
+            "sourceId".ToLower(),
+            "backdropGuids".ToLower(),
+            "completionSeconds".ToLower(),
+        };
+
+        private static Dictionary<string, string[]> ComputedPropertyRequirements = new Dictionary<string, string[]>{
+            {"posterUrl".ToLower(), new string[]{"id"}},
+            {"backdropUrls".ToLower(), new string[]{"backdropGuids".ToLower()}}
+        };
+
         public MovieManager(Manager manager) : base(manager)
         {
         }
 
-        public async Task<IEnumerable<Models.Movie>> GetAll()
+        private List<string> SanitizeColumnNames(List<string> columnNames)
         {
-            var models = await this.QueryAsync<Models.Movie>(@"
-                select *, backdropGuids as _backdropGuids 
+            //force the column names to lower case for comparisons
+            var lowerColumnNames = columnNames.Select(x => x.ToLower()).ToList();
+
+            //if column names is wildcard, use entire column name list
+            bool wasWildcard = false;
+            if (columnNames.First() == "*")
+            {
+                columnNames = ColumnNameWhitelist.ToList();
+                wasWildcard = true;
+            }
+
+            //certain properties are computed and don't exist in the db. Those properties require that certain columns are loaded
+            //so the properties can be calculated. Get the list of columns required for the requested properties
+            var columnRequirements = ComputedPropertyRequirements
+                .Where(x => lowerColumnNames.Contains(x.Key))
+                .SelectMany(x => x.Value)
+                .Distinct();
+
+            //throw away anything that is not a known column name
+            var result = columnNames.Where(x => ColumnNameWhitelist.Contains(x.ToLower())).ToList();
+            //add the column requirements
+            result.AddRange(columnRequirements);
+            return result;
+        }
+
+        /// <summary>
+        /// Get a list of movies filtered by the provided where clause
+        /// </summary>
+        /// <param name="columnNames"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<Models.Movie>> GetMovies(string sql = null, object bindings = null, List<string> columnNames = null)
+        {
+            columnNames = columnNames ?? new List<string> { "*" };
+
+            columnNames = SanitizeColumnNames(columnNames);
+
+            var fullSql = $@"
+                select {string.Join(',', columnNames)}
                 from Movies
-                order by sortTitle asc;
-            ");
+                {sql ?? ""}
+            ";
+
+            IEnumerable<Models.Movie> models;
+            if (bindings == null)
+            {
+                models = await this.QueryAsync<Models.Movie>(fullSql);
+            }
+            else
+            {
+                models = await this.QueryAsync<Models.Movie>(fullSql, bindings);
+            }
             return models;
         }
 
@@ -29,17 +97,12 @@ namespace PlumMediaCenter.Business.Managers
         /// </summary>
         /// <param name="ids"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<Models.Movie>> GetByIds(IEnumerable<int> ids)
+        public async Task<IEnumerable<Models.Movie>> GetByIds(IEnumerable<int> ids, List<string> columnNames = null)
         {
-            var models = (await this.QueryAsync<Models.Movie>($@"
-                select *, backdropGuids as _backdropGuids, {(int)MediaTypeId.Movie} as mediaTypeId 
-                from Movies
-                where id in @ids
-            ", new { ids = ids }));
-            return models;
+            return await this.GetMovies("where id in @ids", new { ids = ids }, columnNames);
         }
 
-        public async Task<IEnumerable<Models.Movie>> GetSearchResults(string text)
+        public async Task<IEnumerable<Models.Movie>> GetSearchResults(string text, List<string> columnNames = null)
         {
             text = LibraryGeneration.Movie.NormalizeTitle(text);
             //split the text by spaces
@@ -56,12 +119,12 @@ namespace PlumMediaCenter.Business.Managers
                 dbParams.Add($"part{i++}", $"%{part}%");
                 or = " or ";
             }
-            var ids = await this.QueryAsync<int>($@"
-                select id 
-                from Movies
-                where {sql.ToString()}
-            ", dbParams);
-            var movies = await this.GetByIds(ids);
+            //we need title to handle the sorting, so make sure it's included
+            if (columnNames.Contains("title") == false)
+            {
+                columnNames.Add("title");
+            }
+            var movies = await this.GetMovies($"where {sql.ToString()}", dbParams, columnNames);
 
             //sort the movies by how many times each part appears
             movies = movies.OrderByDescending(movie =>
@@ -84,9 +147,9 @@ namespace PlumMediaCenter.Business.Managers
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public async Task<Models.Movie> GetById(int id)
+        public async Task<Models.Movie> GetById(int id, List<string> columnNames = null)
         {
-            var movie = (await this.GetByIds(new List<int> { id })).FirstOrDefault();
+            var movie = (await this.GetByIds(new List<int> { id }, columnNames)).FirstOrDefault();
             return movie;
         }
     }

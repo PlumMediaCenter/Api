@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using PlumMediaCenter.Business;
 
 namespace PlumMediaCenter.Attributues
 {
@@ -16,16 +18,7 @@ namespace PlumMediaCenter.Attributues
                 // should never happen
                 return;
             }
-            var stacktrace = exception.ToString().Split('\n');
-            var sourceStacktrace = stacktrace.Where(x => x.Contains(":line ")).ToList();
-            var baseException = exception.GetBaseException();
-
-            var responseObj = new
-            {
-                message = baseException.Message,
-                fullStack = stacktrace,
-                stack = sourceStacktrace
-            };
+            var responseObj = Utility.GetCommonException(exception);
 
             context.HttpContext.Response.StatusCode = 500;
 
@@ -33,5 +26,6 @@ namespace PlumMediaCenter.Attributues
 
             context.Result = new ObjectResult(responseObj);
         }
+
     }
 }

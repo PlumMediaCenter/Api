@@ -181,5 +181,25 @@ namespace PlumMediaCenter.Business
             }
             return path;
         }
+
+        /// <summary>
+        /// Given an exception object, convert it into a common exception object
+        /// </summary>
+        /// <param name="exception"></param>
+        /// <returns></returns>
+        public static object GetCommonException(Exception exception)
+        {
+            var stacktrace = exception.ToString().Split('\n');
+            var sourceStacktrace = stacktrace.Where(x => x.Contains(":line ")).ToList();
+            var baseException = exception.GetBaseException();
+
+            var responseObj = new
+            {
+                message = baseException.Message,
+                fullStack = stacktrace,
+                stack = sourceStacktrace
+            };
+            return responseObj;
+        }
     }
 }

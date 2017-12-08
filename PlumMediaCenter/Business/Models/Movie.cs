@@ -12,6 +12,7 @@ namespace PlumMediaCenter.Models
     {
         public int Id;
         public string Title;
+        public string SortTitle;
         public int SourceId;
         public string Summary;
         public string Description;
@@ -44,32 +45,54 @@ namespace PlumMediaCenter.Models
             }
         }
         private string _BaseUrl;
-        public string _BackdropGuids
+
+        public IEnumerable<string> BackdropUrls
         {
+            //split the BackdropGuids string on first read.
+            get
+            {
+                if (_BackdropUrls == null)
+                {
+                    if (string.IsNullOrEmpty(BackdropGuids))
+                    {
+                        _BackdropUrls = new List<string>();
+                    }
+                    else
+                    {
+                        _BackdropUrls = BackdropGuids.Split(",").Select((backdropGuid) =>
+                        {
+                            return $"{AppSettings.BaseUrlStatic}backdrops/{backdropGuid}.jpg";
+                        }).ToList();
+                    }
+                }
+                return _BackdropUrls;
+            }
             set
             {
-                if (string.IsNullOrEmpty(value))
-                {
-                    BackdropUrlList = new List<string>();
-                }
-                else
-                {
-
-                    BackdropUrlList = value.Split(",").Select(backdropGuid =>
-                    {
-                        return $"{AppSettings.BaseUrlStatic}backdrops/{backdropGuid}.jpg";
-                    }).ToList();
-                }
+                _BackdropUrls = value;
+                _BackdropGuids = string.Join(",", value);
             }
         }
-        private List<string> BackdropUrlList;
-        public List<string> BackdropUrls
+        private IEnumerable<string> _BackdropUrls;
+
+        /// <summary>
+        /// DON'T USE. Set from database. Don't use this externally
+        /// </summary>
+        /// <returns></returns>
+        public string BackdropGuids
         {
             get
             {
-                return BackdropUrlList;
+                return _BackdropGuids;
+            }
+            set
+            {
+                _BackdropUrls = null;
+                _BackdropGuids = value;
             }
         }
+        private string _BackdropGuids;
+
 
         public string VideoUrl
         {
@@ -138,8 +161,7 @@ namespace PlumMediaCenter.Models
             }
         }
 
-
-        public MediaTypeId MediaTypeId;
+        public MediaTypeId MediaTypeId = MediaTypeId.Movie;
 
         /// <summary>
         /// The MPAA rating of the movie
@@ -162,20 +184,15 @@ namespace PlumMediaCenter.Models
         /// The number of seconds into a video at which time the video is considered to be completed or watched. 
         /// When not explicitly set by a config file, this value will equal a percentage of the RuntimeSeconds value
         /// </summary>
-        public int? CompletionSeconds
+        public int CompletionSeconds
         {
             get
             {
-                if (this._CompletionSeconds != null)
-                {
-                    return this._CompletionSeconds;
-                }
-                //when not explicitly set, calculate a percentage for the video
-                else
+                if (this._CompletionSeconds == null)
                 {
                     this._CompletionSeconds = (int)(this.RuntimeSeconds * ((float)AppSettings.CompletionPercentageStatic / 100));
                 }
-                return this._CompletionSeconds;
+                return this._CompletionSeconds.Value;
             }
         }
         private int? _CompletionSeconds;
