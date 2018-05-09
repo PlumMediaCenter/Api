@@ -203,45 +203,5 @@ namespace PlumMediaCenter.Business
             return responseObj;
         }
 
-        
-        public static List<string> GetColumnNames<T>(ResolveFieldContext<T> context)
-        {
-            var columnNames = new List<string>();
-            foreach (var selection in context.FieldAst.SelectionSet.Children)
-            {
-                columnNames.AddRange(GetTopLevelFieldNames(selection, context));
-            }
-
-            return columnNames;
-        }
-
-        public static List<string> GetTopLevelFieldNames<T>(GraphQL.Language.AST.INode currentNode, ResolveFieldContext<T> context)
-        {
-            var columnNames = new List<string>();
-            var type = currentNode.GetType();
-            //if this is a raw field, use its name
-            if (type == typeof(GraphQL.Language.AST.Field))
-            {
-                var field = (GraphQL.Language.AST.Field)currentNode;
-                columnNames.Add(field.Name);
-            }
-            else if (type == typeof(GraphQL.Language.AST.FragmentSpread))
-            {
-                var fragmentSpread = (GraphQL.Language.AST.FragmentSpread)currentNode;
-                var fragment = context.Fragments.Where(x => x.Name == fragmentSpread.Name).FirstOrDefault();
-                if (fragment == null)
-                {
-                    throw new Exception($"Unable to find fragment with name {fragmentSpread.Name}");
-                }
-                else
-                {
-                    foreach (var child in fragment.SelectionSet.Children)
-                    {
-                        columnNames.AddRange(GetTopLevelFieldNames(child, context));
-                    }
-                }
-            }
-            return columnNames;
-        }
     }
 }

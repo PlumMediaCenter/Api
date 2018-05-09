@@ -10,12 +10,11 @@ using System.Threading.Tasks;
 using GraphQL;
 using GraphQL.DataLoader;
 using GraphQL.Http;
-using LetsVote.Business;
-using LetsVote.GraphQL;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using LetsVote.Attributues;
+using PlumMediaCenter.Attributues;
 using Newtonsoft.Json.Linq;
+using PlumMediaCenter.Graphql;
 
 namespace PlumMediaCenter.Controllers
 {

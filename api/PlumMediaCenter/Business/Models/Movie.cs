@@ -6,21 +6,21 @@ using PlumMediaCenter.Business;
 using PlumMediaCenter.Business.Enums;
 using PlumMediaCenter.Data;
 
-namespace PlumMediaCenter.Models
+namespace PlumMediaCenter.Business.Models
 {
-    public class Movie
+    public class Movie : IHasId
     {
-        public int Id;
-        public string Title;
-        public string SortTitle;
-        public int SourceId;
-        public string Summary;
-        public string Description;
+        public int Id { get; set; }
+        public string Title { get; set; }
+        public string SortTitle { get; set; }
+        public int SourceId { get; set; }
+        public string Summary { get; set; }
+        public string Description { get; set; }
         public string PosterUrl
         {
             get
             {
-                return $"{AppSettings.BaseUrlStatic}posters/{this.Id}.jpg";
+                return $"{AppSettings.GetBaseUrlStatic()}posters/{this.Id}.jpg";
             }
         }
         public static string CalculateFolderUrl(int sourceId, string folderName, string baseUrl)
@@ -37,7 +37,7 @@ namespace PlumMediaCenter.Models
         {
             private get
             {
-                return _BaseUrl != null ? _BaseUrl : AppSettings.BaseUrlStatic;
+                return _BaseUrl != null ? _BaseUrl : AppSettings.GetBaseUrlStatic();
             }
             set
             {
@@ -61,7 +61,7 @@ namespace PlumMediaCenter.Models
                     {
                         _BackdropUrls = BackdropGuids.Split(",").Select((backdropGuid) =>
                         {
-                            return $"{AppSettings.BaseUrlStatic}backdrops/{backdropGuid}.jpg";
+                            return $"{AppSettings.GetBaseUrlStatic()}backdrops/{backdropGuid}.jpg";
                         }).ToList();
                     }
                 }
@@ -115,7 +115,7 @@ namespace PlumMediaCenter.Models
             return CalculateFolderUrl(this.SourceId, this.FolderName, this.BaseUrl);
         }
 
-        public int Duration;
+        public int Duration { get; set; }
 
         private string _VideoPath;
         public string VideoPath
@@ -166,19 +166,19 @@ namespace PlumMediaCenter.Models
         /// <summary>
         /// The MPAA rating of the movie
         /// </summary>
-        public string Rating;
+        public string Rating { get; set; }
         /// <summary>
         /// The date that the movie was first released
         /// </summary>
-        public DateTime? ReleaseDate;
+        public DateTime? ReleaseDate { get; set; }
         /// <summary>
         /// The runtime of the movie in seconds
         /// </summary>
-        public int RuntimeSeconds;
+        public int RuntimeSeconds { get; set; }
         /// <summary>
         /// The TMDB if of the movie.
         /// </summary>
-        public int? TmdbId;
+        public int? TmdbId { get; set; }
 
         /// <summary>
         /// The number of seconds into a video at which time the video is considered to be completed or watched. 

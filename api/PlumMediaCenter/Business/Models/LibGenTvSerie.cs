@@ -2,17 +2,15 @@ using System.IO;
 using System.Threading.Tasks;
 using PlumMediaCenter.Data;
 
-namespace PlumMediaCenter.Business.LibraryGeneration
+namespace PlumMediaCenter.Business.Models
 {
-    public class TvSerie
+    public class LibGenTvSerie
     {
-        public TvSerie(Manager manager, string folderPath, int sourceId)
+        public LibGenTvSerie(string folderPath, int sourceId)
         {
-            this.Manager = manager;
             this.FolderPath = folderPath;
             this.SourceId = sourceId;
         }
-        private Manager Manager;
 
         /// <summary>
         /// A full path to the root folder of this tv serie

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Data;
 using System.Threading.Tasks;
 using PlumMediaCenter.Business.Enums;
+using PlumMediaCenter.Business.Data;
 
 namespace PlumMediaCenter.Data
 {
@@ -20,7 +21,7 @@ namespace PlumMediaCenter.Data
         public void Install()
         {
             CreateDbIfNotExist();
-            var connection = ConnectionManager.GetNewConnection();
+            var connection = ConnectionManager.CreateConnection();
             VersionRun("0.1.0", connection, () =>
             {
                 connection.Execute(@"
@@ -114,7 +115,7 @@ namespace PlumMediaCenter.Data
         {
             try
             {
-                using (var connection = ConnectionManager.GetNewConnection())
+                using (var connection = ConnectionManager.CreateConnection())
                 {
                     var versionString = connection.Query<string>(@"
                     select version
@@ -138,7 +139,7 @@ namespace PlumMediaCenter.Data
                 return;
             }
             //the db has not yet been created. create it
-            using (var connection = ConnectionManager.GetNewConnection(this.RootUsername, this.RootPassword, false))
+            using (var connection = ConnectionManager.CreateConnection(this.RootUsername, this.RootPassword, false))
             {
                 connection.Execute(@"
                     create database `pmc`;
@@ -148,7 +149,7 @@ namespace PlumMediaCenter.Data
                     FLUSH PRIVILEGES;
                 ");
             }
-            using (var connection = ConnectionManager.GetNewConnection())
+            using (var connection = ConnectionManager.CreateConnection())
             {
                 connection.Execute("create table Version(version text)");
                 connection.Execute("insert into Version(version) values('0.0.0')");
@@ -165,7 +166,7 @@ namespace PlumMediaCenter.Data
         {
             try
             {
-                using (var connection = ConnectionManager.GetNewConnection())
+                using (var connection = ConnectionManager.CreateConnection())
                 {
                     var rows = await connection.QueryAsync(@"
                         select version

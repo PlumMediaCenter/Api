@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace PlumMediaCenter.Business.LibraryGeneration
+namespace PlumMediaCenter.Business
 {
     public interface IProcessable
     {

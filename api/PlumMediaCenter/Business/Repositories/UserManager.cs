@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using PlumMediaCenter.Models;
 
-namespace PlumMediaCenter.Business.Managers
+namespace PlumMediaCenter.Business.Repositories
 {
-    public class UserManager : BaseManager
+    public class UserRepository : BaseRepository<User>
     {
-        public UserManager(Manager manager) : base(manager)
+        public UserRepository() : base()
         {
         }
 

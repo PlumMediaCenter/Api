@@ -1,11 +1,24 @@
 using System;
 using System.IO;
+using Microsoft.AspNetCore.Http;
 using PlumMediaCenter.Business;
 
 namespace PlumMediaCenter
 {
     public class AppSettings
     {
+        public AppSettings(
+        )
+        {
+        }
+        public static HttpContextAccessor HttpContextAccessor;
+
+        public string ApiUrl { get; set; }
+        public int BCryptWorkFactor { get; set; }
+        public string DbHost { get; set; }
+        public string DbName { get; set; }
+        public string DbUsername { get; set; }
+        public string DbPassword { get; set; }
         public string TmdbCacheDirectoryPath
         {
             get
@@ -72,51 +85,43 @@ namespace PlumMediaCenter
         /// </summary>
         public static int CompletionPercentageStatic = 95;
 
-        public string BaseUrl
+        public string GetBaseUrl()
         {
-            get
-            {
-                return BaseUrlStatic;
-            }
+            return GetBaseUrlStatic();
         }
-
 
         /// <summary>
-        /// WARNING: Only use this from a request thread!!
-        /// A static accessor for the full base url pointing to the root of this api.
+        /// Get the base url statically. This will still derive the value from an instance of AppSettings and HttpContext,
+        /// so only call
         /// </summary>
         /// <returns></returns>
-        public static string BaseUrlStatic
+        public static string GetBaseUrlStatic()
         {
-            get
+            if (HttpContextAccessor.HttpContext == null)
             {
-                if (Middleware.RequestMiddleware.CurrentHttpContext == null)
-                {
-                    throw new Exception("Unable to determine base url because current thread does not have an associated HttpContext");
-                }
-
-                var store = Middleware.RequestMiddleware.CurrentHttpContext.Items;
-                if (store.ContainsKey("baseUrl") == false)
-                {
-                    var request = Middleware.RequestMiddleware.CurrentHttpContext.Request;
-                    string url;
-                    //if there is an original url header (sent from a reverse proxy), use that
-                    if (request.Headers.ContainsKey("X-ORIGINAL-URL"))
-                    {
-                        url = request.Headers["X-ORIGINAL-URL"];
-                    }
-                    else
-                    {
-                        url = $"{request.Scheme}://{request.Host}{request.Path}";
-                    }
-
-                    //remove anything after and including /api/
-                    var baseUrl = url.Substring(0, url.ToLowerInvariant().IndexOf("/api/") + 1);
-                    store["baseUrl"] = baseUrl;
-                }
-                return (string)store["baseUrl"];
+                throw new Exception("Unable to determine base url because current thread does not have an associated HttpContext");
             }
-        }
+            var ctx = HttpContextAccessor.HttpContext;
+            var store = ctx.Items;
+            if (store.ContainsKey("baseUrl") == false)
+            {
+                var request = ctx.Request;
+                string url;
+                //if there is an original url header (sent from a reverse proxy), use that
+                if (request.Headers.ContainsKey("X-ORIGINAL-URL"))
+                {
+                    url = request.Headers["X-ORIGINAL-URL"];
+                }
+                else
+                {
+                    url = $"{request.Scheme}://{request.Host}{request.Path}";
+                }
 
+                //remove anything after and including /api/
+                var baseUrl = url.Substring(0, url.ToLowerInvariant().IndexOf("/api/") + 1);
+                store["baseUrl"] = baseUrl;
+            }
+            return (string)store["baseUrl"];
+        }
     }
 }

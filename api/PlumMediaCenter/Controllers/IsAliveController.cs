@@ -10,7 +10,7 @@ namespace PlumMediaCenter.Controllers
 {
     [Route("api/[controller]")]
     [ExceptionHandlerFilter]
-    public class IsAliveController : BaseController
+    public class IsAliveController 
     {
         /// <summary>
         /// This is a quick way to find out if the server exists. If this method gets called and returns true, 

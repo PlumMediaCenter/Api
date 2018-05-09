@@ -1,13 +1,20 @@
 ﻿using System.Collections.Generic;
+using GraphQL.DataLoader;
 using GraphQL.Types;
 using PlumMediaCenter.Business;
+using PlumMediaCenter.Business.Models;
+using PlumMediaCenter.Business.Repositories;
 using PlumMediaCenter.Models;
 
-namespace PlumMediaCenter.Graphql
+namespace PlumMediaCenter.Graphql.GraphTypes
 {
-    public class MovieType : ObjectGraphType<Movie>
+    public class MovieGraphType : ObjectGraphType<Movie>
     {
-        public MovieType()
+        public MovieGraphType(
+             IDataLoaderContextAccessor dlca,
+             MediaRepository mediaRepository,
+             UserRepository userRepository
+        )
         {
             Field(x => x.Id).Description("The ID of the video.");
             Field(x => x.Title).Description("The formal title of the movie. This is also known as the movie's name.");
@@ -28,10 +35,9 @@ namespace PlumMediaCenter.Graphql
             Field(x => x.CompletionSeconds).Description("The number of seconds at which time this video would be considered fully watched (i.e. the number of seconds at which time the credits start rolling).");
             Field<ListGraphType<MediaHistoryRecordType>>("history", resolve: (context) =>
             {
-                var columnNames = Utility.GetColumnNames<Movie>(context);
-                var manager = (Manager)context.UserContext;
+                var columnNames = context.SubFields.Keys;
                 //manager.Media.PrefetchHistoryForMediaItem(manager.Users.CurrentProfileId, context.Source.Id);
-                return manager.Media.GetHistoryForMediaItem(manager.Users.CurrentProfileId, context.Source.Id).Result;
+                return mediaRepository.GetHistoryForMediaItem(userRepository.CurrentProfileId, context.Source.Id).Result;
             });
         }
     }

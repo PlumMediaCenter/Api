@@ -6,19 +6,37 @@ using Dapper;
 using PlumMediaCenter.Data;
 using PlumMediaCenter.Models;
 using PlumMediaCenter.Business.Enums;
+using PlumMediaCenter.Business.Data;
+using System.Data;
+using PlumMediaCenter.Business.Models;
 
-namespace PlumMediaCenter.Business.Managers
+namespace PlumMediaCenter.Business.Repositories
 {
-    public class MediaManager : BaseManager
+    public class MediaRepository
     {
-        public MediaManager(Manager manager) : base(manager)
+        public MediaRepository(
+            AppSettings appSettings,
+            Lazy<MovieRepository> lazyMovieRepository
+        )
         {
+            this.AppSettings = appSettings;
+            this.LazyMovieRepository = lazyMovieRepository;
+
+        }
+        AppSettings AppSettings;
+        Lazy<MovieRepository> LazyMovieRepository;
+        MovieRepository MovieRepository
+        {
+            get
+            {
+                return LazyMovieRepository.Value;
+            }
         }
 
         public async Task<MediaItemProgress> SetProgress(int profileId, int mediaItemId, int progressSeconds)
         {
             //get the last progress record for this user and item
-            var progress = (await this.QueryAsync<MediaItemProgress>(@"
+            var progress = (await ConnectionManager.QueryAsync<MediaItemProgress>(@"
                 select * from MediaItemProgress
                 where profileId = @profileId and mediaItemId = @mediaItemId
                 order by dateEnd desc
@@ -28,14 +46,13 @@ namespace PlumMediaCenter.Business.Managers
                 profileId = profileId,
                 mediaItemId = mediaItemId
             })).FirstOrDefault();
-
             //if we have a progress object, see if it's close enough to our new progress to be merged
             if (progress != null)
             {
                 var dateSecondsDifference = (DateTime.UtcNow - progress.DateEnd).TotalSeconds;
                 var progressSecondsDifference = (double)(progressSeconds - progress.ProgressSecondsEnd);
                 var diffBetweenThem = Math.Abs(dateSecondsDifference - progressSecondsDifference);
-                if (diffBetweenThem <= this.Manager.AppSettings.MaxMediaProgressGapSeconds)
+                if (diffBetweenThem <= this.AppSettings.MaxMediaProgressGapSeconds)
                 {
                     progress.ProgressSecondsEnd = progressSeconds;
                     progress.DateEnd = DateTime.UtcNow;
@@ -69,7 +86,7 @@ namespace PlumMediaCenter.Business.Managers
         /// <returns></returns>
         public async Task<MediaItemProgress> InsertMediaProgress(MediaItemProgress progress)
         {
-            progress.Id = (await this.QueryAsync<int>(@"
+            progress.Id = (await ConnectionManager.QueryAsync<int>(@"
                 insert into MediaItemProgress(profileId, mediaItemId, progressSecondsBegin,progressSecondsEnd, dateBegin, dateEnd)
                 values(@profileId, @mediaItemId, @progressSecondsBegin, @progressSecondsEnd, @dateBegin, @dateEnd);
                 select last_insert_id();
@@ -84,7 +101,7 @@ namespace PlumMediaCenter.Business.Managers
         /// <returns></returns>
         public async Task ReplaceMediaProgress(MediaItemProgress progress)
         {
-            await this.ExecuteAsync(@"
+            await ConnectionManager.ExecuteAsync(@"
                 update MediaItemProgress
                 set 
                     profileId=@profileId,
@@ -134,9 +151,9 @@ namespace PlumMediaCenter.Business.Managers
         public async Task<bool> SecondCountIsConsideredFinished(int mediaItemId, int secondCount)
         {
             var mediaItem = await this.GetMediaItem(mediaItemId);
-            if (mediaItem.GetType() == typeof(Models.Movie))
+            if (mediaItem.GetType() == typeof(Movie))
             {
-                var movie = (Models.Movie)mediaItem;
+                var movie = (Movie)mediaItem;
                 return secondCount >= movie.CompletionSeconds;
             }
             else
@@ -152,10 +169,10 @@ namespace PlumMediaCenter.Business.Managers
         /// <returns></returns>
         public async Task<IEnumerable<MediaHistoryRecord>> GetHistoryForMediaItem(int profileId, int mediaItemId, int limit = 50, int index = 0)
         {
-            var ids = (await this.QueryAsync<int>(@"
+            var ids = (await ConnectionManager.QueryAsync<int>(@"
                 select id from MediaItemProgress
                 where profileId = @profileId
-                  and mediaItemId = @mediaItemId
+                and mediaItemId = @mediaItemId
                 order by dateEnd desc
                 limit @limit offset @index
             ", new
@@ -170,7 +187,7 @@ namespace PlumMediaCenter.Business.Managers
 
         public async Task<IEnumerable<MediaHistoryRecord>> GetHistory(int profileId, int limit = 50, int index = 0)
         {
-            var ids = (await this.QueryAsync<int>(@"
+            var ids = (await ConnectionManager.QueryAsync<int>(@"
                 select id from MediaItemProgress
                 where profileId = @profileId
                 order by dateEnd desc
@@ -196,7 +213,7 @@ namespace PlumMediaCenter.Business.Managers
             {
                 return new List<MediaHistoryRecord>();
             }
-            var items = (await this.QueryAsync<MediaHistoryRecord>(@"
+            var items = (await ConnectionManager.QueryAsync<MediaHistoryRecord>(@"
                 select *, MediaItemProgress.id as id from MediaItemProgress, MediaItemIds
                 where MediaItemProgress.mediaItemId = MediaItemIds.id
                   and MediaItemProgress.id in @ids
@@ -207,7 +224,7 @@ namespace PlumMediaCenter.Business.Managers
             }));
             //get all of the movies for these media items
             var movieIds = items.Where(x => x.MediaTypeId == MediaTypeId.Movie).Select(x => x.MediaItemId);
-            var movies = await this.Manager.Movies.GetByIds(movieIds);
+            var movies = await this.MovieRepository.GetByIds(movieIds, new[] { "id", "posterUrl", "runtimeSeconds", "title" });
             foreach (var item in items)
             {
                 var movie = movies.Where(x => x.Id == item.MediaItemId).FirstOrDefault();
@@ -220,7 +237,7 @@ namespace PlumMediaCenter.Business.Managers
 
         public async Task DeleteHistoryRecord(int id)
         {
-            await this.ExecuteAsync(@"
+            await ConnectionManager.ExecuteAsync(@"
                 delete from MediaItemProgress
                 where id = @id
             ", new { id = id });
@@ -228,25 +245,22 @@ namespace PlumMediaCenter.Business.Managers
 
         public async Task<int> GetNewMediaId(MediaTypeId mediaTypeId)
         {
-            using (var connection = GetNewConnection())
+            var rows = await ConnectionManager.QueryAsync<int?>(@"
+                insert into MediaItemIds(mediaTypeId) values(@mediaTypeId);select last_insert_id();
+            ", new { mediaTypeId = (int)mediaTypeId });
+
+            var id = rows.FirstOrDefault();
+
+            if (id == null || id.Value == 0)
             {
-                var rows = await this.QueryAsync<int?>(@"
-                    insert into MediaItemIds(mediaTypeId) values(@mediaTypeId);select last_insert_id();
-                ", new { mediaTypeId = (int)mediaTypeId });
-
-                var id = rows.FirstOrDefault();
-
-                if (id == null || id.Value == 0)
-                {
-                    throw new Exception("id cannot be null");
-                }
-                return id.Value;
+                throw new Exception("id cannot be null");
             }
+            return id.Value;
         }
 
         public async Task<IEnumerable<MediaTypeObj>> GetAllMediaTypes()
         {
-            return await this.QueryAsync<MediaTypeObj>(@"
+            return await ConnectionManager.QueryAsync<MediaTypeObj>(@"
                 select * from MediaTypes
             ");
         }
@@ -259,7 +273,7 @@ namespace PlumMediaCenter.Business.Managers
         public async Task<object> GetMediaItem(int mediaItemId)
         {
             //get the media type id from the db.
-            var mediaTypeId = (await this.QueryAsync<MediaTypeId>(@"
+            var mediaTypeId = (await ConnectionManager.QueryAsync<MediaTypeId>(@"
                 select mediaTypeId 
                 from MediaItemIds
                 where id = @mediaItemId
@@ -270,7 +284,7 @@ namespace PlumMediaCenter.Business.Managers
             switch (mediaTypeId)
             {
                 case MediaTypeId.Movie:
-                    return await this.Manager.Movies.GetById(mediaItemId);
+                    return await this.MovieRepository.GetById(mediaItemId);
                 default:
                     throw new Exception("Not implemented");
             }
@@ -283,8 +297,10 @@ namespace PlumMediaCenter.Business.Managers
         /// <returns></returns>
         public async Task<IEnumerable<object>> GetSearchResults(string searchText)
         {
-            var movieResults = await this.Manager.Movies.GetSearchResults(searchText);
-            return movieResults;
+            // var movieResults = await this.MovieRepository.GetSearchResults(searchText);
+            // return movieResults;
+            var results = new object[] { };
+            return await Task.FromResult(results);
         }
     }
 }

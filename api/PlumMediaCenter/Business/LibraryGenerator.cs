@@ -7,19 +7,32 @@ using System;
 using System.Threading;
 using Newtonsoft.Json;
 using Amib.Threading;
-using PlumMediaCenter.Middleware;
 using Dapper;
 using PlumMediaCenter.Business.Enums;
+using PlumMediaCenter.Business.Data;
+using PlumMediaCenter.Business.Repositories;
+using PlumMediaCenter.Business.Factories;
 
-namespace PlumMediaCenter.Business.LibraryGeneration
+namespace PlumMediaCenter.Business
 {
     /// <summary>
     /// A singleton library generator 
     /// </summary>
     public class LibraryGenerator
     {
-        private LibraryGenerator()
+        public LibraryGenerator(
+            MovieRepository MovieRepository,
+            LibGenFactory LibGenFactory,
+            SourceRepository SourceRepository,
+            LibGenMovieRepository LibGenMovieRepository,
+            LibGenTvSerieRepository LibGenTvSerieRepository
+        )
         {
+            this.MovieRepository = MovieRepository;
+            this.LibGenFactory = LibGenFactory;
+            this.SourceRepository = SourceRepository;
+            this.LibGenMovieRepository = LibGenMovieRepository;
+            this.LibGenTvSerieRepository = LibGenTvSerieRepository;
             try
             {
                 if (File.Exists(LibraryGenerator.StatusFilePath))
@@ -33,6 +46,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             {
             }
         }
+        MovieRepository MovieRepository;
+        LibGenFactory LibGenFactory;
+        SourceRepository SourceRepository;
+        LibGenMovieRepository LibGenMovieRepository;
+        LibGenTvSerieRepository LibGenTvSerieRepository;
+
         private static string StatusFilePath
         {
             get
@@ -40,15 +59,6 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 //make sure the temp folder exists
                 var path = Utility.NormalizePath($"{AppSettings.TempPath}libraryStatus.json", true);
                 return path;
-            }
-        }
-
-        private static LibraryGenerator _Instance;
-        public static LibraryGenerator Instance
-        {
-            get
-            {
-                return _Instance = _Instance != null ? _Instance : new LibraryGenerator();
             }
         }
 
@@ -60,27 +70,24 @@ namespace PlumMediaCenter.Business.LibraryGeneration
 
         public async Task<IProcessable> GetMediaItem(int mediaItemId)
         {
-            using (var connection = ConnectionManager.GetNewConnection())
+            // var manager = new Manager(AppSettings.BaseUrlStatic);
+            var rows = await ConnectionManager.QueryAsync<MediaTypeId>(@"
+                select mediaTypeId
+                from MediaItemIds 
+                where id = @id
+            ", new
             {
-                var manager = new Manager(AppSettings.BaseUrlStatic);
-                var rows = await connection.QueryAsync<MediaTypeId>(@"
-                    select mediaTypeId
-                    from MediaItemIds 
-                    where id = @id
-                ", new
-                {
-                    id = mediaItemId
-                });
-                var mediaTypeId = rows.FirstOrDefault();
-                switch (mediaTypeId)
-                {
-                    case MediaTypeId.Movie:
-                        var movieModel = await manager.Movies.GetById(mediaItemId);
-                        var movie = new LibraryGeneration.Movie(manager, movieModel.GetFolderPath(), movieModel.SourceId);
-                        return movie;
-                    default:
-                        throw new Exception($"{mediaTypeId} Not implemented");
-                }
+                id = mediaItemId
+            });
+            var mediaTypeId = rows.FirstOrDefault();
+            switch (mediaTypeId)
+            {
+                case MediaTypeId.Movie:
+                    var movieModel = await this.MovieRepository.GetById(mediaItemId);
+                    var movie = this.LibGenFactory.BuildMovie(movieModel.GetFolderPath(), movieModel.SourceId);
+                    return movie;
+                default:
+                    throw new Exception($"{mediaTypeId} Not implemented");
             }
         }
 
@@ -93,7 +100,6 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 {
                     throw new Exception("Library generation is already in process");
                 }
-                var manager = new Manager(baseUrl);
                 IsGenerating = true;
                 var oldStatus = this.Status;
                 this.Status = new Status();
@@ -101,9 +107,9 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 this.Status.IsProcessing = true;
                 this.Status.LastGeneratedDate = oldStatus?.LastGeneratedDate;
                 this.Status.State = "processing movies";
-                await this.ProcessMovies(manager);
+                await this.ProcessMovies();
                 this.Status.State = "processing tv shows";
-                await this.ProcessSeries(manager);
+                await this.ProcessSeries();
                 this.Status.State = "completed";
                 this.Status.LastGeneratedDate = DateTime.UtcNow;
             }
@@ -132,11 +138,11 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             IsGenerating = false;
         }
 
-        private async Task ProcessMovies(Manager manager)
+        private async Task ProcessMovies()
         {
             var moviePaths = new List<MoviePath>();
 
-            var movieSources = await manager.LibraryGeneration.Sources.GetByType(MediaTypeId.Movie);
+            var movieSources = await this.SourceRepository.GetByType(MediaTypeId.Movie);
 
             //find all movie folders from each source
             foreach (var source in movieSources)
@@ -153,7 +159,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
 
             //find all movies from the db
-            var dbMovies = await manager.LibraryGeneration.Movies.GetDirectories();
+            var dbMovies = await this.LibGenMovieRepository.GetDirectories();
             foreach (var kvp in dbMovies)
             {
                 var source = movieSources.Where(x => x.Id == kvp.Key).First();
@@ -199,8 +205,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                     {
                         this.Status.ActiveFiles.Add(path);
                     }
-                    var managerForThread = new Manager(manager.BaseUrl);
-                    var movie = new Movie(managerForThread, moviePath.Path, moviePath.Source.Id.Value);
+                    var movie = this.LibGenFactory.BuildMovie(moviePath.Path, moviePath.Source.Id.Value);
                     try
                     {
                         this.Status.Log.Add($"Waiting for movie to process: {moviePath.Path}");
@@ -233,11 +238,11 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             //Wait for all work items to complete. equivalent to Thread.WaitAll()
             pool.WaitForIdle();
         }
-        private async Task ProcessSeries(Manager manager)
+        private async Task ProcessSeries()
         {
             var seriePaths = new List<string>();
 
-            var serieSources = await manager.LibraryGeneration.Sources.GetByType(MediaTypeId.TvShow);
+            var serieSources = await this.SourceRepository.GetByType(MediaTypeId.TvShow);
             //find all show folders from each source
             foreach (var source in serieSources)
             {
@@ -245,17 +250,21 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
 
             //find all shows from the db
-            seriePaths.AddRange(await manager.LibraryGeneration.TvSeries.GetDirectories());
+            seriePaths.AddRange(await this.LibGenTvSerieRepository.GetDirectories());
 
             //remove any duplicates
             seriePaths = seriePaths.Distinct().ToList();
 
-            //process each show. movie.Process will handle adding, updating, and deleting
-            Parallel.ForEach(seriePaths, moviePath =>
+            var pool = new SmartThreadPool();
+            foreach (var loopSeriePath in seriePaths)
             {
-                var show = new TvSerie(manager, moviePath, 0);
-                show.Process();
-            });
+                //process each show. movie.Process will handle adding, updating, and deleting
+                pool.QueueWorkItem((seriePath) =>
+               {
+                   var show = this.LibGenFactory.BuildTvSerie(seriePath, 0);
+                   show.Process();
+               }, loopSeriePath);
+            }
         }
 
     }

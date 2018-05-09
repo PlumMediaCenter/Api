@@ -4,21 +4,36 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using PlumMediaCenter.Business.LibraryGeneration.DotJson;
+using PlumMediaCenter.Business.DotJson;
 using PlumMediaCenter.Business.MetadataProcessing;
+using PlumMediaCenter.Business.Repositories;
 using PlumMediaCenter.Data;
+using PlumMediaCenter.Models;
 
-namespace PlumMediaCenter.Business.LibraryGeneration
+namespace PlumMediaCenter.Business.Models
 {
-    public class Movie : IProcessable
+    public class LibGenMovie : IProcessable
     {
-        public Movie(Manager manager, string moviePath, int sourceId)
+        public LibGenMovie(
+            LibGenMovieRepository LibGenMovieRepository,
+            MovieMetadataProcessor MovieMetadataProcessor,
+            AppSettings AppSettings,
+            Utility Utility,
+            string moviePath,
+            int sourceId
+         )
         {
-            this.Manager = manager;
+            this.LibGenMovieRepository = LibGenMovieRepository;
+            this.MovieMetadataProcessor = MovieMetadataProcessor;
+            this.AppSettings = AppSettings;
+            this.Utility = Utility;
             this.FolderPath = moviePath;
             this.SourceId = sourceId;
         }
-        private Manager Manager;
+        LibGenMovieRepository LibGenMovieRepository;
+        MovieMetadataProcessor MovieMetadataProcessor;
+        AppSettings AppSettings;
+        Utility Utility;
 
         /// <summary>
         /// The id for this video. This is only set during Process(), so don't depend on it unless you are calling a function from Process()
@@ -247,7 +262,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             }
             await this.DownloadMetadataIfPossible();
             //movie needs updated
-            if (await this.Manager.LibraryGeneration.Movies.Exists(this.FolderPath))
+            if (await this.LibGenMovieRepository.Exists(this.FolderPath))
             {
                 Console.WriteLine($"{this.FolderPath}: Update");
                 this.Id = await this.Update();
@@ -345,7 +360,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 string title = this.Title;
                 Console.WriteLine($"{FolderPath}: Searching for results");
                 //get search results
-                var results = await this.Manager.MovieMetadataProcessor.GetSearchResultsAsync(title);
+                var results = await this.MovieMetadataProcessor.GetSearchResultsAsync(title);
                 Console.WriteLine($"{FolderPath}: Found {results.Count} results");
                 var matches = results.Where(x => TitlesAreEquivalent(x.Title, title)).ToList();
                 Console.WriteLine($"{FolderPath}: Found {matches.Count()} where the title matches");
@@ -371,12 +386,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 else
                 {
                     Console.WriteLine($"{FolderPath}: Downloading TMDB metadata");
-                    metadata = await this.Manager.MovieMetadataProcessor.GetTmdbMetadataAsync(match.TmdbId);
+                    metadata = await this.MovieMetadataProcessor.GetTmdbMetadataAsync(match.TmdbId);
                 }
                 Console.WriteLine($"{FolderPath}: Saving metadata to disc");
-                await this.Manager.MovieMetadataProcessor.DownloadMetadataAsync(
+                await this.MovieMetadataProcessor.DownloadMetadataAsync(
                     this.FolderPath,
-                    Models.Movie.CalculateFolderUrl(this.SourceId, this.FolderName, this.Manager.BaseUrl),
+                    Movie.CalculateFolderUrl(this.SourceId, this.FolderName, this.AppSettings.GetBaseUrl()),
                     metadata
                 );
                 Console.WriteLine($"{FolderPath}: Clearing MovieDotJson");
@@ -415,12 +430,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
 
         public async Task<int> Update()
         {
-            return await this.Manager.LibraryGeneration.Movies.Update(this);
+            return await this.LibGenMovieRepository.Update(this);
         }
 
         public async Task<int> Create()
         {
-            return await this.Manager.LibraryGeneration.Movies.Insert(this);
+            return await this.LibGenMovieRepository.Insert(this);
         }
 
         public MovieDotJson MovieDotJson
@@ -461,21 +476,21 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         /// <returns></returns>
         public async Task Delete()
         {
-            this.Id = await this.Manager.LibraryGeneration.Movies.GetId(this.FolderPath);
+            this.Id = await this.LibGenMovieRepository.GetId(this.FolderPath);
             //delete from the database
-            await this.Manager.LibraryGeneration.Movies.Delete(this.FolderPath);
+            await this.LibGenMovieRepository.Delete(this.FolderPath);
 
             var imagePaths = new List<string>();
             //delete images from cache
             {
                 //poster
-                imagePaths.Add($"{this.Manager.AppSettings.PosterFolderPath}{this.Id}.jpg");
+                imagePaths.Add($"{this.AppSettings.PosterFolderPath}{this.Id}.jpg");
 
                 //backdrops
                 var guids = this.GetBackdropGuidsFromFilesystem();
                 foreach (var guid in guids)
                 {
-                    imagePaths.Add($"{this.Manager.AppSettings.BackdropFolderPath}{guid}.jpg");
+                    imagePaths.Add($"{this.AppSettings.BackdropFolderPath}{guid}.jpg");
                 }
 
                 //delete them
@@ -508,12 +523,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration
         {
             //poster
             var sourcePosterPath = $"{this.FolderPath}poster.jpg";
-            var destinationPosterPath = $"{this.Manager.AppSettings.PosterFolderPath}{this.Id}.jpg";
+            var destinationPosterPath = $"{this.AppSettings.PosterFolderPath}{this.Id}.jpg";
             var resizedPosterWidths = new int[] { 100, 200 };
             //the video doesn't have a poster. Create a text-based poster
             if (File.Exists(sourcePosterPath) == false)
             {
-                this.Manager.Utility.CreateTextPoster(this.Title, sourcePosterPath);
+                this.Utility.CreateTextPoster(this.Title, sourcePosterPath);
             }
 
             //copy the poster
@@ -522,13 +537,13 @@ namespace PlumMediaCenter.Business.LibraryGeneration
 
             foreach (var posterWidth in resizedPosterWidths)
             {
-                var path = $"{this.Manager.AppSettings.PosterFolderPath}{this.Id}w{posterWidth}.jpg";
-                this.Manager.Utility.ResizeImage(sourcePosterPath, path, posterWidth);
+                var path = $"{this.AppSettings.PosterFolderPath}{this.Id}w{posterWidth}.jpg";
+                this.Utility.ResizeImage(sourcePosterPath, path, posterWidth);
             }
 
             //backdrop
             var sourceBackdropPath = $"{this.FolderPath}backdrop.jpg";
-            var guidsFromDb = await this.Manager.LibraryGeneration.Movies.GetBackdropGuids(this.Id.Value);
+            var guidsFromDb = await this.LibGenMovieRepository.GetBackdropGuids(this.Id.Value);
             var guidsFromFilesystem = this.GetBackdropGuidsFromFilesystem();
 
             var backdropPaths = new List<string>();
@@ -536,7 +551,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             {
                 //throw out any backdrops that are already in the cache
                 var backdropPath = $"{this.BackdropFolderPath}{guid}.jpg";
-                var destinationPath = $"{this.Manager.AppSettings.BackdropFolderPath}{guid}.jpg";
+                var destinationPath = $"{this.AppSettings.BackdropFolderPath}{guid}.jpg";
                 if (File.Exists(destinationPath) == false)
                 {
                     backdropPaths.Add(backdropPath);
@@ -549,7 +564,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration
                 var textBackdropGuid = Guid.NewGuid().ToString();
                 var backdropPath = $"{this.BackdropFolderPath}{textBackdropGuid}.jpg";
                 //the video doesn't have a backdrop. Create a text-based image
-                this.Manager.Utility.CreateTextBackdrop(this.Title, backdropPath);
+                this.Utility.CreateTextBackdrop(this.Title, backdropPath);
                 backdropPaths.Add(backdropPath);
                 guidsFromFilesystem.Add(textBackdropGuid);
             }
@@ -557,11 +572,11 @@ namespace PlumMediaCenter.Business.LibraryGeneration
             foreach (var path in backdropPaths)
             {
                 var filename = Path.GetFileName(path);
-                var destinationPath = $"{this.Manager.AppSettings.BackdropFolderPath}{filename}";
+                var destinationPath = $"{this.AppSettings.BackdropFolderPath}{filename}";
                 Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
                 File.Copy(path, destinationPath);
             }
-            await this.Manager.LibraryGeneration.Movies.SetBackdropGuids(this.Id.Value, guidsFromFilesystem);
+            await this.LibGenMovieRepository.SetBackdropGuids(this.Id.Value, guidsFromFilesystem);
 
         }
     }

@@ -40,7 +40,7 @@
                 "watch",
                 "run",
                 "--urls",
-                "http://*:5105"
+                "http://*:7586"
             ],
             "options": {
                 "cwd": "${workspaceRoot}/PlumMediaCenter"

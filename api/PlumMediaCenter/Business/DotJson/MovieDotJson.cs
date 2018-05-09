@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace PlumMediaCenter.Business.LibraryGeneration.DotJson
+namespace PlumMediaCenter.Business.DotJson
 {
     public class MovieDotJson
     {

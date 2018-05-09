@@ -2,11 +2,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using PlumMediaCenter.Data;
 
-namespace PlumMediaCenter.Business.LibraryGeneration.Managers
+namespace PlumMediaCenter.Business.Repositories
 {
-    public class TvSerieManager : BaseManager
+    public class LibGenTvSerieRepository
     {
-        public TvSerieManager(Manager manager) : base(manager)
+        public LibGenTvSerieRepository()
         {
 
         }

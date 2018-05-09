@@ -4,14 +4,26 @@ using PlumMediaCenter.Data;
 using Dapper;
 using System.Linq;
 using PlumMediaCenter.Business.Enums;
+using PlumMediaCenter.Business.Data;
+using System;
 
-namespace PlumMediaCenter.Business.LibraryGeneration.Managers
+namespace PlumMediaCenter.Business.Repositories
 {
-    public class SourceManager : BaseManager
+    public class SourceRepository
     {
-        public SourceManager(Manager manager) : base(manager)
+        public SourceRepository(
+            Lazy<LibGenMovieRepository> lazyLibGenMovieRepository
+        )
         {
-
+            this.LazyLibGenMovieRepository = lazyLibGenMovieRepository;
+        }
+        Lazy<LibGenMovieRepository> LazyLibGenMovieRepository;
+        LibGenMovieRepository LibGenMovieRepository
+        {
+            get
+            {
+                return this.LazyLibGenMovieRepository.Value;
+            }
         }
 
         /// <summary>
@@ -21,7 +33,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<IEnumerable<Source>> GetByType(MediaTypeId mediaTypeId)
         {
-            var result = await this.QueryAsync<Source>(@"
+            var result = await ConnectionManager.QueryAsync<Source>(@"
                 select * 
                 from Sources
                 where mediaTypeId = @mediaTypeId
@@ -35,7 +47,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         public async Task<IEnumerable<Source>> GetAll()
         {
 
-            var result = await this.QueryAsync<Source>(@"
+            var result = await ConnectionManager.QueryAsync<Source>(@"
                 select * from Sources
             ");
             return result;
@@ -43,8 +55,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
 
         public async Task<int?> Insert(Source source)
         {
-
-            using (var connection = GetNewConnection())
+            using (var connection = ConnectionManager.CreateConnection())
             {
                 await connection.ExecuteAsync(@"
                     insert into Sources(folderPath, mediaTypeId)
@@ -61,7 +72,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
 
         public async Task<int?> Update(Source source)
         {
-            await this.ExecuteAsync(@"
+            await ConnectionManager.ExecuteAsync(@"
                 update Sources
                 set 
                     folderPath = @folderPath,
@@ -79,9 +90,9 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         public async Task Delete(int id, string baseUrl)
         {
             //delete all of the movies associated with this source
-            await this.Manager.LibraryGeneration.Movies.DeleteForSource(id, baseUrl);
+            await this.LibGenMovieRepository.DeleteForSource(id, baseUrl);
 
-            await this.ExecuteAsync(@"
+            await ConnectionManager.ExecuteAsync(@"
                 delete from Sources
                 where id = @id
             ", new

@@ -4,13 +4,19 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using GraphQL;
+using GraphQL.DataLoader;
+using GraphQL.Types;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,11 +24,13 @@ using Microsoft.Extensions.PlatformAbstractions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using PlumMediaCenter;
+using PlumMediaCenter.Business;
+using PlumMediaCenter.Business.Data;
+using PlumMediaCenter.Business.Repositories;
 using PlumMediaCenter.Controllers;
 using PlumMediaCenter.Data;
-using PlumMediaCenter.Middleware;
-using PlumMediaCenter.Middlewares;
-using Swashbuckle.AspNetCore.Swagger;
+using PlumMediaCenter.Graphql;
+using TMDbLib.Client;
 
 namespace PlumMediaCenter
 {
@@ -31,7 +39,6 @@ namespace PlumMediaCenter
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
-            Data.ConnectionManager.SetDbCredentials("pmc", "pmc");
         }
 
         public IConfiguration Configuration { get; }
@@ -39,6 +46,15 @@ namespace PlumMediaCenter
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            var httpContextAccessor = new HttpContextAccessor();
+            services.TryAddSingleton<IHttpContextAccessor>(httpContextAccessor);
+
+            AppSettings.HttpContextAccessor = httpContextAccessor;
+            
+            var appSettings = Configuration.GetSection("appSettings").Get<AppSettings>();
+            //register a singleton AppSettings
+            services.AddSingleton(appSettings);
+
             services.AddCors(options =>
             {
                 options.AddPolicy("CorsPolicy",
@@ -53,13 +69,78 @@ namespace PlumMediaCenter
             {
                 options.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
             });
-            services.AddSwaggerGen(c =>
+
+
+            //business services
+            services.AddSingleton<Utility>();
+
+            //create a new TmdbClient
+            var tmdbClient = new TMDbClient(appSettings.TmdbApiString);
+            //load default config
+            tmdbClient.GetConfig();
+            //retry a request 10 times.
+            tmdbClient.MaxRetryCount = 10;
+            services.AddSingleton(tmdbClient);
+
+            //GraphQL types
+            services.AddSingleton<PlumMediaCenter.Graphql.AppSchema>();
+            services.AddSingleton<RootQueryGraphType>();
+            services.AddSingleton<RootMutationGraphType>();
+            //Help GraphQL with DI
+            services.AddSingleton<FuncDependencyResolver>(s => new FuncDependencyResolver(type => (GraphType)s.GetService(type)));
+
+            //auto-register all repositories
+            foreach (var repoType in typeof(UserRepository).Assembly.GetTypes().Where(t => String.Equals(t.Namespace, "PlumMediaCenter.Business.Repositories", StringComparison.Ordinal)).ToArray())
             {
-                c.SwaggerDoc("v1", new Info { Title = "My API", Version = "v1" });
-                // var filePath = Path.Combine(PlatformServices.Default.Application.ApplicationBasePath, "pmc.xml");
-                // c.IncludeXmlComments(filePath);
-            });
+                //exclude base repo
+                if (repoType.Name.StartsWith("BaseRepository"))
+                {
+                    continue;
+                }
+                services.AddSingleton(repoType);
+            }
+
+            AddServices("PlumMediaCenter.Graphql.GraphTypes", services);
+            AddServices("PlumMediaCenter.Graphql.Mutations", services);
+            AddServices("PlumMediaCenter.Graphql.InputGraphTypes", services);
+            AddServices("PlumMediaCenter.Graphql.EnumGraphTypes", services);
+            AddServices("PlumMediaCenter.Business.Repositories", services);
+            AddServices("PlumMediaCenter.Business.Factories", services);
+            AddServices("PlumMediaCenter.Business.MetadataProcessing", services);
+
+
+            services.AddSingleton<UserAccessor>();
+
+            services.AddSingleton<IDataLoaderContextAccessor, DataLoaderContextAccessor>();
+
+            services.AddCors(o => o.AddPolicy("AnyOriginPolicy", builder =>
+            {
+                builder.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials();
+            }));
+            services.AddMvc(options => options.OutputFormatters.RemoveType<StringOutputFormatter>());
+
+            //support lazy services
+            services.AddTransient(typeof(Lazy<>), typeof(Lazier<>));
+
+            //replace the base url of the index page with the one from appSettings
+            ReplaceApiUrl(appSettings.ApiUrl);
+            ConnectionManager.SetDbConnectionInfo(appSettings.DbUsername, appSettings.DbPassword, appSettings.DbHost, appSettings.DbName);
         }
+
+
+        public void AddServices(string namespaceName, IServiceCollection services)
+        {
+
+            //auto-register all Query GraphTypes
+            foreach (var repoType in typeof(UserRepository).Assembly.GetTypes().Where(t => String.Equals(t.Namespace, namespaceName, StringComparison.Ordinal)).ToArray())
+            {
+                services.AddSingleton(repoType);
+            }
+        }
+
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
@@ -69,19 +150,11 @@ namespace PlumMediaCenter
             app.UseDefaultFiles();
             //serve the wwwroot folder (from the root web url)
             app.UseStaticFiles();
-            //register middleware to save the current request to thread storage
-            app.UseRequestMiddleware();
             //app.UseDeveloperExceptionPage();
 
             var injectorOptions = app.ApplicationServices.GetService<MiddlewareInjectorOptions>();
             app.UseMiddlewareInjector(injectorOptions);
-            app.UseGraphQl();
             app.UseMvc();
-            app.UseSwagger();
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-            });
 
         }
 
@@ -93,9 +166,10 @@ namespace PlumMediaCenter
         {
             try
             {
+                var sourceRepository = builder.ApplicationServices.GetService<SourceRepository>();
+
                 //since we are only using this to do a db request, we can pass null for the base url (since we don't have it right now anyway)
-                var manager = new PlumMediaCenter.Business.Manager(null);
-                var sources = manager.LibraryGeneration.Sources.GetAll().Result;
+                var sources = sourceRepository.GetAll().Result;
                 foreach (var source in sources)
                 {
                     builder.UseFileServer(new FileServerOptions()
@@ -112,6 +186,32 @@ namespace PlumMediaCenter
             {
                 //the database is probably not installed.
             }
+        }
+
+        public void ReplaceApiUrl(string apiUrl)
+        {
+            try
+            {
+                var indexFilePath = $"{Directory.GetCurrentDirectory()}/wwwroot/index.html";
+                if (File.Exists(indexFilePath))
+                {
+                    var fileContents = File.ReadAllText(indexFilePath);
+                    var regexp = new Regex("window.apiUrl\\s*=\\s*.*;");
+                    fileContents = regexp.Replace(fileContents, $"window.apiUrl = '{apiUrl}';");
+                    File.WriteAllText(indexFilePath, fileContents);
+                }
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+    }
+    internal class Lazier<T> : Lazy<T> where T : class
+    {
+        public Lazier(IServiceProvider provider)
+            : base(() => provider.GetRequiredService<T>())
+        {
         }
     }
 }

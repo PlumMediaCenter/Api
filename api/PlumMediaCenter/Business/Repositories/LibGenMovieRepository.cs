@@ -2,20 +2,32 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using PlumMediaCenter.Data;
 using Dapper;
-using PlumMediaCenter.Business.LibraryGeneration.DotJson;
+using PlumMediaCenter.Business.DotJson;
 using System.Linq;
 using System;
 using System.IO;
 using PlumMediaCenter.Business.Enums;
+using PlumMediaCenter.Business.Data;
+using PlumMediaCenter.Business.Factories;
+using PlumMediaCenter.Business.Models;
 
-namespace PlumMediaCenter.Business.LibraryGeneration.Managers
+namespace PlumMediaCenter.Business.Repositories
 {
-    public class MovieManager : BaseManager
+    public class LibGenMovieRepository
     {
-        public MovieManager(Manager manager) : base(manager)
+        public LibGenMovieRepository(
+            SourceRepository sourceRepository,
+            MediaRepository mediaRepository,
+            LibGenFactory libGenFactory
+        )
         {
-
+            this.SourceRepository = sourceRepository;
+            this.MediaRepository = mediaRepository;
+            this.LibGenFactory = libGenFactory;
         }
+        SourceRepository SourceRepository;
+        MediaRepository MediaRepository;
+        LibGenFactory LibGenFactory;
 
         /// <summary>
         /// Get a list of every movie directory
@@ -23,9 +35,9 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<Dictionary<int, IEnumerable<string>>> GetDirectories()
         {
-            using (var connection = GetNewConnection())
+            using (var connection = ConnectionManager.CreateConnection())
             {
-                var sources = await this.Manager.LibraryGeneration.Sources.GetAll();
+                var sources = await this.SourceRepository.GetAll();
                 var rows = await connection.QueryAsync<DbDirResult>(@"
                     select folderPath, sourceId 
                     from Movies
@@ -53,7 +65,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<int?> GetId(string folderPath)
         {
-            using (var connection = GetNewConnection())
+            using (var connection = ConnectionManager.CreateConnection())
             {
                 var rows = await connection.QueryAsync<int?>(@"
                     select id 
@@ -73,7 +85,7 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task Delete(string folderPath)
         {
-            using (var connection = GetNewConnection())
+            using (var connection = ConnectionManager.CreateConnection())
             {
                 await connection.ExecuteAsync(@"
                     delete from Movies
@@ -90,12 +102,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// Get a list of every movie directory
         /// </summary>
         /// <returns></returns>
-        public async Task<int> Insert(LibraryGeneration.Movie movie)
+        public async Task<int> Insert(LibGenMovie movie)
         {
             Console.WriteLine("Movie.Insert -> Movie folder path: " + movie.FolderPath);
             Console.WriteLine("Movie.Insert -> Movie VideoPath: " + movie.VideoPath);
-            var mediaItemId = await this.Manager.Media.GetNewMediaId(MediaTypeId.Movie);
-            await this.ExecuteAsync(@"
+            var mediaItemId = await this.MediaRepository.GetNewMediaId(MediaTypeId.Movie);
+            await ConnectionManager.ExecuteAsync(@"
                 insert into Movies(
                     id,
                     folderPath, 
@@ -145,9 +157,9 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
             return mediaItemId;
         }
 
-        public async Task<int> Update(LibraryGeneration.Movie movie)
+        public async Task<int> Update(LibGenMovie movie)
         {
-            using (var connection = GetNewConnection())
+            using (var connection = ConnectionManager.CreateConnection())
             {
                 var movieId = await connection.QueryFirstOrDefaultAsync<int?>(@"
                     select id from Movies where folderPath = @folderPath
@@ -199,16 +211,13 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<bool> Exists(string folderPath)
         {
-            using (var connection = GetNewConnection())
-            {
-                var result = await connection.QueryAsync<int>(@"
-                    select count(*) 
-                    from Movies
-                    where folderPath = @folderPath
-                ", new { folderPath = folderPath });
-                var count = result.ToList().First();
-                return count > 0;
-            }
+            var result = await ConnectionManager.QueryAsync<int>(@"
+                select count(*) 
+                from Movies
+                where folderPath = @folderPath
+            ", new { folderPath = folderPath });
+            var count = result.ToList().First();
+            return count > 0;
         }
 
         /// <summary>
@@ -218,22 +227,19 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task<List<string>> GetBackdropGuids(int movieId)
         {
-            using (var connection = GetNewConnection())
-            {
-                var rows = await connection.QueryAsync<string>(@"
-                    select backdropGuids from Movies
-                    where id = @movieId
-                ", new { movieId = movieId });
+            var rows = await ConnectionManager.QueryAsync<string>(@"
+                select backdropGuids from Movies
+                where id = @movieId
+            ", new { movieId = movieId });
 
-                var queryResult = rows.FirstOrDefault();
-                if (string.IsNullOrWhiteSpace(queryResult) == false)
-                {
-                    return queryResult.Split(',').ToList();
-                }
-                else
-                {
-                    return new List<string>();
-                }
+            var queryResult = rows.FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(queryResult) == false)
+            {
+                return queryResult.Split(',').ToList();
+            }
+            else
+            {
+                return new List<string>();
             }
         }
 
@@ -245,15 +251,12 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         /// <returns></returns>
         public async Task SetBackdropGuids(int movieId, List<string> backdropGuids)
         {
-            using (var connection = GetNewConnection())
-            {
-                var value = string.Join(",", backdropGuids);
-                await connection.ExecuteAsync(@"
-                    update Movies
-                    set backdropGuids = @value
-                    where id = @movieId
-                ", new { movieId = movieId, value = value });
-            }
+            var value = string.Join(",", backdropGuids);
+            await ConnectionManager.ExecuteAsync(@"
+                update Movies
+                set backdropGuids = @value
+                where id = @movieId
+            ", new { movieId = movieId, value = value });
         }
 
         /// <summary>
@@ -264,33 +267,30 @@ namespace PlumMediaCenter.Business.LibraryGeneration.Managers
         public async Task Process(string moviePath)
         {
             moviePath = Utility.NormalizePath(moviePath, false);
-            var sources = await this.Manager.LibraryGeneration.Sources.GetAll();
+            var sources = await this.SourceRepository.GetAll();
             //remove the movie folder name
             var parentPath = Utility.NormalizePath(Path.GetDirectoryName(Path.GetDirectoryName(moviePath)).ToLowerInvariant(), false);
             var source = sources.Where(x => Utility.NormalizePath(x.FolderPath.ToLowerInvariant(), false) == parentPath).FirstOrDefault();
-            var movie = new Movie(this.Manager, moviePath, source.Id.Value);
+            var movie = this.LibGenFactory.BuildMovie(moviePath, source.Id.Value);
             await movie.Process();
         }
 
         public async Task DeleteForSource(int sourceId, string baseUrl)
         {
-            using (var connection = GetNewConnection())
+            var folderPaths = await ConnectionManager.QueryAsync<string>(@"
+                select folderPath
+                from Movies
+                where sourceId = @sourceId
+            ", new
             {
-                var folderPaths = await connection.QueryAsync<string>(@"
-                    select folderPath
-                    from Movies
-                    where sourceId = @sourceId
-                ", new
-                {
-                    sourceId = sourceId
-                });
-                Parallel.ForEach(folderPaths, (folderPath) =>
-                {
-                    var manager = new Manager(this.BaseUrl);
-                    var movie = new Movie(manager, folderPath, sourceId);
-                    movie.Delete().Wait();
-                });
-            }
+                sourceId = sourceId
+            });
+            Parallel.ForEach(folderPaths, (folderPath) =>
+            {
+                // var manager = new Manager(this.BaseUrl);
+                var movie = this.LibGenFactory.BuildMovie(folderPath, sourceId);
+                movie.Delete().Wait();
+            });
         }
     }
 }

@@ -6,40 +6,45 @@ using System.Net;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using PlumMediaCenter.Business.LibraryGeneration.DotJson;
+using PlumMediaCenter.Business.DotJson;
+using PlumMediaCenter.Business.Factories;
+using PlumMediaCenter.Business.Models;
+using PlumMediaCenter.Business.Repositories;
 using TMDbLib.Client;
 using TMDbLib.Objects.General;
 using TMDbLib.Objects.Movies;
 
 namespace PlumMediaCenter.Business.MetadataProcessing
 {
-    public class MovieMetadataProcessor : BaseManager
+    public class MovieMetadataProcessor
     {
-        public MovieMetadataProcessor(Manager manager) : base(manager)
+        public MovieMetadataProcessor(
+            AppSettings AppSettings,
+            Lazy<MovieRepository> LazyMovieRepository,
+            LibGenFactory LibGenFactory,
+            LibGenMovieRepository LibGenMovieRepository,
+            TMDbClient TMDbClient
+        )
         {
+            this.AppSettings = AppSettings;
+            this.LazyMovieRepository = LazyMovieRepository;
+            this.LibGenFactory = LibGenFactory;
+            this.LibGenMovieRepository = LibGenMovieRepository;
+            this.Client = TMDbClient;
         }
-
-        private static TMDbClient Client
+        AppSettings AppSettings;
+        Lazy<MovieRepository> LazyMovieRepository;
+        MovieRepository MovieRepository
         {
             get
             {
-                lock (ClientLock)
-                {
-                    if (_Client == null)
-                    {
-
-                        _Client = new TMDbClient(new AppSettings().TmdbApiString);
-                        //load default config
-                        _Client.GetConfig();
-                        //retry a request 10 times.
-                        _Client.MaxRetryCount = 10;
-                    }
-                }
-                return _Client;
+                return this.LazyMovieRepository.Value;
             }
         }
-        private static object ClientLock = new object();
-        private static TMDbClient _Client;
+        LibGenFactory LibGenFactory;
+        LibGenMovieRepository LibGenMovieRepository;
+
+        TMDbClient Client;
 
         public async Task<List<MovieSearchResult>> GetSearchResultsAsync(string text)
         {
@@ -87,15 +92,15 @@ namespace PlumMediaCenter.Business.MetadataProcessing
 
         public async Task<MovieMetadata> GetTmdbMetadataAsync(int tmdbId)
         {
-            Movie movie = null;
-            Directory.CreateDirectory(this.Manager.AppSettings.TmdbCacheDirectoryPath);
-            var cacheFilePath = $"{this.Manager.AppSettings.TmdbCacheDirectoryPath}{tmdbId}.json";
+            TMDbLib.Objects.Movies.Movie movie = null;
+            Directory.CreateDirectory(this.AppSettings.TmdbCacheDirectoryPath);
+            var cacheFilePath = $"{this.AppSettings.TmdbCacheDirectoryPath}{tmdbId}.json";
             //if a cache file exists, and it's was updated less than a month ago, use it.
             if (File.Exists(cacheFilePath) && (DateTime.Now - File.GetLastWriteTime(cacheFilePath)).TotalDays < 30)
             {
                 try
                 {
-                    movie = Newtonsoft.Json.JsonConvert.DeserializeObject<Movie>(File.ReadAllText(cacheFilePath));
+                    movie = Newtonsoft.Json.JsonConvert.DeserializeObject<TMDbLib.Objects.Movies.Movie>(File.ReadAllText(cacheFilePath));
                 }
                 catch (Exception)
                 {
@@ -190,8 +195,8 @@ namespace PlumMediaCenter.Business.MetadataProcessing
 
         private async Task<MovieMetadata> GetCurrentMetadataAsync(int movieId, string baseUrl)
         {
-            var movieModel = await this.Manager.Movies.GetById(movieId);
-            var movie = new LibraryGeneration.Movie(this.Manager, movieModel.GetFolderPath(), movieModel.SourceId);
+            var movieModel = await this.MovieRepository.GetById(movieId);
+            var movie = this.LibGenFactory.BuildMovie(movieModel.GetFolderPath(), movieModel.SourceId);
             //throw new Exception(Newtonsoft.Json.JsonConvert.SerializeObject(movie.MovieDotJson));
             var metadata = new MovieMetadata(movie.MovieDotJson);
 
@@ -246,10 +251,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
 
         public async Task SaveAsync(int movieId, MovieMetadata metadata)
         {
-            var movie = await this.Manager.Movies.GetById(movieId);
+            var movie = await this.MovieRepository.GetById(movieId);
             await DownloadMetadataAsync(movie.GetFolderPath(), movie.GetFolderUrl(), metadata);
             //reprocess this movie so the library is updated with its info
-            await this.Manager.LibraryGeneration.Movies.Process(movie.GetFolderPath());
+            await this.LibGenMovieRepository.Process(movie.GetFolderPath());
         }
 
         public async Task DownloadMetadataAsync(string movieFolderPath, string movieFolderUrl, MovieMetadata metadata)
@@ -314,8 +319,8 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 var image = originalBackdrops.Where(x => x.SourceUrl == imageUrl).FirstOrDefault();
                 var imagePath = image?.Path == null ? null : Utility.NormalizePath($"{moviePath}{image.Path}", true);
                 //if this image originated from this url, store a basic image record in the json
-                if (string.IsNullOrWhiteSpace(this.Manager.BaseUrl) == false &&
-                    imageUrl.ToLowerInvariant().Contains(this.Manager.BaseUrl.ToLowerInvariant()))
+                if (string.IsNullOrWhiteSpace(this.AppSettings.GetBaseUrl()) == false &&
+                    imageUrl.ToLowerInvariant().Contains(this.AppSettings.GetBaseUrl().ToLowerInvariant()))
                 {
                     var len = imageUrl.Length - imageUrl.ToLowerInvariant().Replace(movieFolderUrl.ToLowerInvariant(), "").Length;
                     var relativePath = imageUrl.Substring(len);
