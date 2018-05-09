@@ -1,0 +1,78 @@
+{
+    "version": "2.0.0",
+    "args": [],
+    "tasks": [
+        {
+            "command": "dotnet",
+            "label": "build",
+            "type": "shell",
+            "args": [
+                "build",
+                "${workspaceRoot}/PlumMediaCenter/PlumMediaCenter.csproj"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "test",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "watch",
+                "test",
+                "PlumMediaCenter.Tests"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "echo": true,
+                "focus": true
+            },
+            "isBackground": false,
+            "problemMatcher": []
+        },
+        {
+            "command": "dotnet",
+            "label": "watch",
+            "args": [
+                "watch",
+                "run",
+                "--urls",
+                "http://*:5105"
+            ],
+            "options": {
+                "cwd": "${workspaceRoot}/PlumMediaCenter"
+            },
+            "isBackground": true,
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "new"
+            },
+            "problemMatcher":[]
+        },
+        {
+            "command": "dotnet",
+            "label": "publish",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "type": "shell",
+            "args": [
+                "publish",
+                "${workspaceRoot}/PlumMediaCenter/PlumMediaCenter.csproj",
+                "-r",
+                "linux-arm",
+                "-o",
+                "\\\\pi3.lan\\dotnet\\pmc"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}

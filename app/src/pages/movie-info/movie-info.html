@@ -1,0 +1,33 @@
+<ion-header>
+    <ion-navbar>
+        <button ion-button menuToggle>
+            <ion-icon name="menu"></ion-icon>
+        </button>
+        <ion-title>Movie Info</ion-title>
+    </ion-navbar>
+</ion-header>
+
+<ion-content relative>
+    <ng-container *ngIf="movie">
+        <h1 class="title">{{movie.title}}</h1>
+        <div class="various-info" text-center>
+            <ng-container inline-block v-center *ngIf="movie.releaseDate">{{movie.releaseDate | date:'y'}} </ng-container>
+            <ng-container inline-block v-center *ngIf="!movie.releaseDate">Release date unknown</ng-container>
+            <ion-badge v-center>{{movie.rating ? movie.rating : 'Rating unknown'}}</ion-badge>
+            {{movie.runtimeSeconds ? Math.ceil(movie.runtimeSeconds/60) + ' minutes' : 'Runtime unknown'}}
+        </div>
+        <div class="backdrop-container">
+            <div class="vignette-left"></div>
+            <img class="backdrop" [imageSwapper]="movie.backdropUrls" />
+            <div class="vignette-right"></div>
+            <button class="play-button" ion-button [moviePlayClick]="movie">
+                <ion-icon name="play"></ion-icon>
+            </button>
+        </div>
+        <div text-center>
+        </div>
+        <p>{{movie.description? movie.description: 'No description available'}}</p>
+        <button ion-button [movieMetadataClick]="movie">Manage Metadata</button>
+        <button ion-button [mediaItemProcessClick]="movie">Process Movie</button>
+    </ng-container>
+</ion-content>

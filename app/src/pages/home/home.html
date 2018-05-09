@@ -1,0 +1,17 @@
+<ion-header>
+    <ion-navbar>
+        <button ion-button menuToggle>
+            <ion-icon name="menu"></ion-icon>
+        </button>
+        <ion-title>Home</ion-title>
+    </ion-navbar>
+</ion-header>
+
+<ion-content padding text-center>
+    <movie-card *ngFor="let movie of movies" [movie]="movie"></movie-card>
+    <p *ngIf="movies?.length === 0">Oh snap! There are no movies in your library.
+        <br/>
+        <br/>
+        <button ion-button (click)="navigateToAddMediaSource()">Manage media sources</button>
+    </p>
+</ion-content>

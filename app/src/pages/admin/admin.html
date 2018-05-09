@@ -1,0 +1,75 @@
+<ion-header>
+    <ion-navbar>
+        <button ion-button menuToggle>
+            <ion-icon name="menu"></ion-icon>
+        </button>
+        <ion-title>Admin</ion-title>
+    </ion-navbar>
+</ion-header>
+
+<ion-content padding>
+    <ion-card>
+        <ion-card-header>
+            <h1>Library</h1>
+        </ion-card-header>
+        <ion-card-content *ngIf="!isCheckingStatus">
+            Last generated on {{libraryStatus?.lastGeneratedDate|date:"EEEE MMMM d 'at' hh:mm a"}}{{!libraryStatus?'"unknown"':''}}
+            <ng-container *ngIf="lastGeneratedDateDifference">
+                ({{lastGeneratedDateDifference}} ago)
+            </ng-container>
+        </ion-card-content>
+        <div padding *ngIf="isCheckingStatus && percentage">
+            processed {{libraryStatus.countCompleted}} of {{libraryStatus.countTotal}}
+            <progress-bar [percentage]="percentage"></progress-bar>
+        </div>
+        <ion-card-content>
+            <button *ngIf="generateLibraryButtonIsVisible" (click)="generateLibrary()" ion-button>Generate Library</button>
+            <ng-container *ngIf="isLibGenRequestProcessing">
+                <ion-spinner></ion-spinner>Generating library
+            </ng-container>
+            <ng-container *ngIf="isCheckingStatus">
+                <ion-spinner></ion-spinner>{{libraryStatus && libraryStatus.state? libraryStatus.state: 'Checking library generator status'}}
+                <ng-container *ngIf="getTimeRemaining() && libraryStatus">
+                    ({{getTimeRemaining()}} remaining)
+                </ng-container>
+            </ng-container>
+            <ng-container *ngIf="libraryStatus && libraryStatus?.isProcessing">
+                <div *ngFor=" let file of libraryStatus.activeFiles; index as i; ">
+                    <ng-container *ngIf="i < 5 ">
+                        {{file}}
+                    </ng-container>
+                    <ng-container *ngIf="i==5 ">
+                        ...{{libraryStatus.activeFiles.length}} more
+                    </ng-container>
+                </div>
+            </ng-container>
+            <div style="color:red" *ngIf="libraryStatus?.error">
+                Library generation failed.
+                <br/> {{libraryStatus?.error.Message}}
+            </div>
+        </ion-card-content>
+
+    </ion-card>
+    <ion-card>
+        <ion-card-header>
+            <h1>Shared folders</h1>
+        </ion-card-header>
+        <ion-card-content>
+            <table *ngIf="sources">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Path</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let source of sources">
+                        <td>{{source.sourceType}}</td>
+                        <td>{{source.folderPath}}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <button ion-button goToPageClick="Sources">Manage shared folders</button>
+        </ion-card-content>
+    </ion-card>
+</ion-content>

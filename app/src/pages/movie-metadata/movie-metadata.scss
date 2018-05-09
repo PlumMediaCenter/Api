@@ -1,0 +1,24 @@
+page-movie-metadata {
+    .backdrop {
+        width: 50%;
+        margin-right: 0px;
+        display: block;
+    }
+    .search-result:hover {
+        background-color: blue;
+    }
+    .scroll-content {
+        padding-bottom: 50px;
+    }
+    .save {
+        position: fixed;
+        bottom: 20px;
+        right: 50px;
+        save-icon {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            margin-top: 0px;
+        }
+    }
+}

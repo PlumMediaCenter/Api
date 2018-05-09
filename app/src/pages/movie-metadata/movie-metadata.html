@@ -1,0 +1,97 @@
+<ion-header>
+    <ion-navbar>
+        <button ion-button menuToggle>
+            <ion-icon name="menu"></ion-icon>
+        </button>
+        <ion-title>Movie Metadata</ion-title>
+    </ion-navbar>
+</ion-header>
+
+<ion-content>
+    <h1 text-center *ngIf="movie">{{movieFolderAndFile}}</h1>
+    <ng-container *ngIf="idPickerIsVisible">
+        <form #searchForm="ngForm" (ngSubmit)="search()">
+            <ion-item>
+                <ion-label color="primary">Search Text: </ion-label>
+                <ion-input placeholder="Text Input" [(ngModel)]="searchText" name="searchText"></ion-input>
+                <button type="submit" ion-button item-content clear>Search</button>
+            </ion-item>
+        </form>
+        <ng-container *ngIf="searchResults">
+            <i *ngIf="searchResults.length === 0">
+                No results found
+            </i>
+            <ion-card *ngFor="let result of searchResults">
+                <ion-card-content>
+                    <ion-grid>
+                        <ion-row>
+                            <ion-col col-2>
+                                <img [src]="result.posterUrl" />
+                            </ion-col>
+                            <ion-col>
+                                <div>
+                                    <h1 class="inline-block">{{result.title}}
+                                        <i>({{result.releaseDate|date:"y"}})</i>
+                                        <a href="https://www.themoviedb.org/movie/{{result.tmdbId}}" target="_blank">
+                                            <ion-badge class="v-center">
+                                                <ion-icon name="link"></ion-icon>
+                                                TMDB
+                                            </ion-badge>
+                                        </a>
+                                    </h1>
+                                </div>
+                                {{result.overview}}
+                            </ion-col>
+                        </ion-row>
+                    </ion-grid>
+                    <div text-center>
+                        <button ion-button (click)="tmdbId=result.tmdbId">Use this movie</button>
+                    </div>
+                </ion-card-content>
+            </ion-card>
+        </ng-container>
+    </ng-container>
+    <ng-container *ngIf="comparisonEditorIsVisible">
+        <ion-grid>
+            <ion-row>
+                <ion-col>
+                    <h1 text-center>Incoming Metadata </h1>
+                    <div text-center>
+                        <div inline-block v-center>Selected TMDB ID: <a href="https://www.themoviedb.org/movie/{{tmdbId}}" target="_blank">{{tmdbId}}</a></div>
+                        <button ion-button v-center (click)="changeIncoming()">Change</button>
+                    </div>
+                </ion-col>
+                <ion-col col-2 text-center>
+                    <h1>
+                        <button ion-button title="Use all incoming" (click)="useAllIncoming()">
+                            <ion-icon name="arrow-round-forward"></ion-icon>&nbsp;&nbsp;
+                            <ion-icon name="arrow-round-forward"></ion-icon>
+                        </button>
+                    </h1>
+                </ion-col>
+                <ion-col>
+                    <h1 text-center> Current Metadata</h1>
+                </ion-col>
+            </ion-row>
+        </ion-grid>
+        <ion-grid>
+            <metadata-compare-row [comparison]="comparison" property="title" type="text"></metadata-compare-row>
+            <metadata-compare-row [comparison]="comparison" property="sortTitle" type="text"></metadata-compare-row>
+            <metadata-compare-row [comparison]="comparison" property="summary" type="textarea"></metadata-compare-row>
+            <metadata-compare-row [comparison]="comparison" property="description" type="textarea"></metadata-compare-row>
+            <metadata-compare-row [comparison]="comparison" property="collection" type="text"></metadata-compare-row>
+            <metadata-compare-row [comparison]="comparison" property="collectionOrder" type="text"></metadata-compare-row>
+            <metadata-compare-row [comparison]="comparison" property="rating" type="text"></metadata-compare-row>
+            <metadata-compare-row [comparison]="comparison" property="releaseDate" type="date"></metadata-compare-row>
+            <metadata-compare-row [comparison]="comparison" property="runtime" label="Runtime (minutes)" type="text"></metadata-compare-row>
+            <metadata-compare-row [comparison]="comparison" property="genres" type="stringlist"></metadata-compare-row>
+            <metadata-compare-row [comparison]="comparison" property="keywords" type="stringlist"></metadata-compare-row>
+            <metadata-compare-row [comparison]="comparison" property="searchText" type="stringlist"></metadata-compare-row>
+            <metadata-compare-row [comparison]="comparison" property="posterUrls" label="Poster" type="poster"></metadata-compare-row>
+            <metadata-compare-row [comparison]="comparison" property="backdropUrls" label="Backdrops" type="imagelist"></metadata-compare-row>
+        </ion-grid>
+        <button ion-fab class="save" color="primary" (click)="save()">
+            <save-icon></save-icon>
+        </button>
+    </ng-container>
+</ion-content>

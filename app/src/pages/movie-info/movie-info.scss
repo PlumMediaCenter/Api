@@ -1,0 +1,77 @@
+page-movie-info {
+    .title {
+        text-align: center;
+        padding: 10px;
+        margin: 0;
+        font-size: 3em;
+        text-shadow: 3px 3px #313131;
+    }
+    .various-info {
+        margin-bottom: 10px;
+    }
+    .backdrop {
+        width: 75%;
+        margin: auto;
+        display: block;
+    }
+    .backdrop-container {
+        position: relative;
+        width: 100%;
+    }
+    .play-button {
+        position: absolute;
+        left: calc(50% - 50px);
+        top: calc(50% - 50px);
+        border-radius: 50%;
+        width: 100px;
+        height: 110px;
+        background: rgba(100, 100, 100, 0.5);
+        border: 7px solid white;
+        font-size: 40px;
+        box-shadow: 5px 5px 10px 3px rgba(0, 0, 0, 0.63);
+        transition: box-shadow .3s ease-in-out;
+    }
+    .vignette-left,
+    .vignette-right {
+        position: absolute;
+        top: 0px;
+        bottom: 0px;
+        width: 15%;
+        background: black;
+    }
+    .vignette-left {
+        left: 0px;
+    }
+    .vignette-right {
+        right: 0px;
+    }
+    .vignette-left:before,
+    .vignette-right:before {
+        content: '';
+        position: absolute;
+        z-index: 10;
+        background-image: linear-gradient(to right, #000, transparent);
+        top: 0;
+        bottom: 0;
+        width: 100px;
+    }
+    .vignette-left:before {
+        background-image: linear-gradient(to right, #000, transparent);
+        left: 100%;
+    }
+    .vignette-right:before {
+        background-image: linear-gradient(to left, #000, transparent);
+        right: 100%;
+    }
+    .backdrop-right-cover {
+        position: absolute;
+        right: 0px;
+        top: 0px;
+        bottom: 0px;
+        width: 25%;
+        background: -webkit-linear-gradient( right, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 0) 100%);
+    }
+    .play-button.button-md {
+        padding-left: 53px;
+    }
+}

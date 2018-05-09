@@ -1,0 +1,9 @@
+<ion-badge class="inline-block" *ngFor="let str of items" [ngClass]="{'disabled': isInUse(str)}">
+    <button (click)="click(str)" *ngIf="!isInUse(str)">
+        <ion-icon name="{{buttonType}}"></ion-icon>
+    </button>
+    {{str}}
+</ion-badge>
+<button *ngIf="showAdd" ion-button color="secondary" (click)="addNewItem()">
+    <ion-icon name="add"></ion-icon>
+</button>

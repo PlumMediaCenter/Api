@@ -1,0 +1,14 @@
+<div class="image-container" *ngFor="let url of urls; index as i;">
+    <img [ngClass]="{'poster': imageType === 'poster', 'backdrop-card': imageType === 'backdrop'}" [src]="url" />
+
+    <button color="{{buttonType === 'add'?'secondary': 'danger'}}" ion-button class="add-remove-button" (click)="addRemoveClick(url)">
+        <ion-icon name="{{buttonType === 'add'?'add': 'remove'}}"></ion-icon>
+    </button>
+    <button class="left-button" *ngIf="allowReorder && i > 0" (click)="reorder(url, false)">
+        <ion-icon name="arrow-back"></ion-icon>
+    </button>
+    <button class="right-button" *ngIf="allowReorder && i != urls.length-1" (click)="reorder(url, true)">
+        <ion-icon name="arrow-forward"></ion-icon>
+    </button>
+    <div class="disabled-cover" *ngIf="isDisabled(url)"></div>
+</div>

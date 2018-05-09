@@ -1,0 +1,28 @@
+//xs
+@media (max-width: 575px) {
+    [hide-xs] {
+        display: none !important;
+    }
+}
+
+//sm
+@media (min-width: 576px) and (max-width: 767px) {
+    [hide-sm] {
+        display: none !important;
+    }
+} //md
+@media (min-width: 768px) and (max-width: 991px) {
+    [hide-md] {
+        display: none !important;
+    }
+} //lg
+@media (min-width: 992px) and (max-width: 1200px) {
+    [hide-lg] {
+        display: none !important;
+    }
+} //xl
+@media (min-width: 1200px) {
+    [hide-xl] {
+        display: none !important;
+    }
+}

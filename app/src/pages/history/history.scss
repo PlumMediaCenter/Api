@@ -1,0 +1,26 @@
+page-history {
+    progress-sparse {
+        margin: auto;
+    }
+    ion-card img {
+        width: initial;
+    }
+    img {
+        height: 100px;
+        float: left;
+    }
+    .right-area {
+        overflow: hidden;
+        padding: 10px;
+        text-align: left;
+        position: relative;
+    }
+    .card-md h2 {
+        color: white;
+    }
+    .delete-button {
+        position: absolute;
+        top: 0px;
+        right: 0px;
+    }
+}

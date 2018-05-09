@@ -1,0 +1,8 @@
+<div class="min">{{min}}</div>
+<div class="max">{{max}}{{unit}}</div>
+<div class="baseline-bar" (mouseover)="showLowerUpper=false" (mouseout)="showLowerUpper=false">
+    <div class="inner-bar" [ngStyle]="getInnerBarCss()">
+        <div *ngIf="!showLowerUpper" class="lower">{{lower}}</div>
+        <div *ngIf="!showLowerUpper" class="upper">{{upper}}</div>
+    </div>
+</div>

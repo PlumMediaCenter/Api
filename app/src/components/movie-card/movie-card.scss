@@ -1,0 +1,14 @@
+movie-card {
+    border: 1px solid #313131;;
+    display: inline-block;
+    padding: 0px;
+    margin: 5px;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+movie-card {
+    img {
+        border: 0px;
+    }
+}

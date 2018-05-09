@@ -1,0 +1,40 @@
+page-admin {
+    $spinner-color: white;
+    ion-spinner {
+        * {
+            stroke: $spinner-color;
+        }
+        &.spinner-circles circle,
+        &.spinner-bubbles circle,
+        &.spinner-dots circle {
+            fill: $spinner-color;
+        }
+    }
+    ion-spinner {
+        * {
+            stroke: $spinner-color !important;
+        }
+        &.spinner-circles circle,
+        &.spinner-bubbles circle,
+        &.spinner-dots circle {
+            fill: $spinner-color !important;
+        }
+    }
+    table {
+        thead {
+            th {
+                font-weight: bold;
+                vertical-align: bottom;
+                border-bottom: 2px solid #e9ecef;
+            }
+        }
+        tbody {
+            td,
+            {
+                padding: .75rem;
+                vertical-align: top;
+                border-top: 1px solid #e9ecef;
+            }
+        }
+    }
+}
