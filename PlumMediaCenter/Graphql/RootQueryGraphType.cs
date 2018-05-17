@@ -15,7 +15,8 @@ namespace PlumMediaCenter.Graphql
     public class RootQueryGraphType : ObjectGraphType
     {
         public RootQueryGraphType(
-            MovieRepository movieRepository
+            MovieRepository movieRepository,
+            SourceRepository sourceRepository
         )
         {
             Field<ListGraphType<MovieGraphType>, IEnumerable<Movie>>()
@@ -28,6 +29,15 @@ namespace PlumMediaCenter.Graphql
                 {
                     var filters = movieRepository.GetArgumentFilters(ctx);
                     var results = await movieRepository.Query(filters, ctx.SubFields.Keys);
+                    return results;
+                });
+
+            Field<ListGraphType<SourceGraphType>>()
+                .Name("sources")
+                .Description("The sources of media for this library")
+                .ResolveAsync(async (ctx) =>
+                {
+                    var results = await sourceRepository.GetAll();
                     return results;
                 });
         }

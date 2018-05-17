@@ -2,7 +2,7 @@
 using GraphQL.Types;
 using PlumMediaCenter.Models;
 
-namespace PlumMediaCenter.Graphql
+namespace PlumMediaCenter.Graphql.GraphTypes
 {
     public class MediaHistoryRecordType : ObjectGraphType<MediaHistoryRecord>
     {

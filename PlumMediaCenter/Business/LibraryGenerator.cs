@@ -12,6 +12,7 @@ using PlumMediaCenter.Business.Enums;
 using PlumMediaCenter.Business.Data;
 using PlumMediaCenter.Business.Repositories;
 using PlumMediaCenter.Business.Factories;
+using PlumMediaCenter.Models;
 
 namespace PlumMediaCenter.Business
 {
@@ -205,7 +206,7 @@ namespace PlumMediaCenter.Business
                     {
                         this.Status.ActiveFiles.Add(path);
                     }
-                    var movie = this.LibGenFactory.BuildMovie(moviePath.Path, moviePath.Source.Id.Value);
+                    var movie = this.LibGenFactory.BuildMovie(moviePath.Path, moviePath.Source.Id);
                     try
                     {
                         this.Status.Log.Add($"Waiting for movie to process: {moviePath.Path}");

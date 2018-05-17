@@ -115,8 +115,6 @@ namespace PlumMediaCenter.Business.Models
             return CalculateFolderUrl(this.SourceId, this.FolderName, this.BaseUrl);
         }
 
-        public int Duration { get; set; }
-
         private string _VideoPath;
         public string VideoPath
         {

@@ -55,14 +55,13 @@ namespace PlumMediaCenter.Business.Repositories
                 whereFilters.Add("Movies.id in @ids");
                 parameters.Add("ids", filters.MovieIds);
             }
-
-            //if no filters were found, hard fail
-            if (whereFilters.Count == 0)
+            var sql = "";
+            if (whereFilters.Count > 0)
             {
-                throw new Exception("No filters found");
+                //append the where clause
+                sql = $@"where {string.Join(" and ", whereFilters)}";
             }
-            //append the where clause 
-            var sql = $@"where {string.Join(" and ", whereFilters)}";
+
             // sql = ApplyOrderToQuery(sql, filters.SortField, filters.SortDirection);
             sql = ApplyLimitersToQuery(sql, filters.Top, filters.Skip);
             return await this.Query(sql, parameters, columnNames);

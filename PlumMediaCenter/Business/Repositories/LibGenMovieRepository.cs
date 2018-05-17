@@ -271,7 +271,7 @@ namespace PlumMediaCenter.Business.Repositories
             //remove the movie folder name
             var parentPath = Utility.NormalizePath(Path.GetDirectoryName(Path.GetDirectoryName(moviePath)).ToLowerInvariant(), false);
             var source = sources.Where(x => Utility.NormalizePath(x.FolderPath.ToLowerInvariant(), false) == parentPath).FirstOrDefault();
-            var movie = this.LibGenFactory.BuildMovie(moviePath, source.Id.Value);
+            var movie = this.LibGenFactory.BuildMovie(moviePath, source.Id);
             await movie.Process();
         }
 

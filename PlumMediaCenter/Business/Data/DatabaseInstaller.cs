@@ -12,6 +12,10 @@ namespace PlumMediaCenter.Data
     {
         public DatabaseInstaller(string rootUsername, string rootPassword)
         {
+            if (string.IsNullOrWhiteSpace(rootUsername) || string.IsNullOrWhiteSpace(rootPassword))
+            {
+                throw new Exception("root username and password cannot be null");
+            }
             this.RootUsername = rootUsername;
             this.RootPassword = rootPassword;
         }

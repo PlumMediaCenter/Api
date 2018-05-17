@@ -1,10 +1,10 @@
 using PlumMediaCenter.Business.Enums;
 
-namespace PlumMediaCenter.Data
+namespace PlumMediaCenter.Models
 {
     public class Source
     {
-        public int? Id;
+        public int Id;
         public string FolderPath;
         /// <summary>
         /// The type of media this source contains (movies, series)

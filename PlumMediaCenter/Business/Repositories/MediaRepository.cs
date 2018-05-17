@@ -258,13 +258,6 @@ namespace PlumMediaCenter.Business.Repositories
             return id.Value;
         }
 
-        public async Task<IEnumerable<MediaTypeObj>> GetAllMediaTypes()
-        {
-            return await ConnectionManager.QueryAsync<MediaTypeObj>(@"
-                select * from MediaTypes
-            ");
-        }
-
         /// <summary>
         /// Get the specific model by its media id
         /// </summary>

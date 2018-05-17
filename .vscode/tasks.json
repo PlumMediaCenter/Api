@@ -34,6 +34,21 @@
             "problemMatcher": []
         },
         {
+            "label": "clean",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "clean"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "echo": true,
+                "focus": true
+            },
+            "isBackground": false,
+            "problemMatcher": []
+        },
+        {
             "command": "dotnet",
             "label": "watch",
             "args": [
@@ -52,7 +67,7 @@
                 "focus": true,
                 "panel": "new"
             },
-            "problemMatcher":[]
+            "problemMatcher": []
         },
         {
             "command": "dotnet",

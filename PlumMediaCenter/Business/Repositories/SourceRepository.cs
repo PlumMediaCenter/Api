@@ -6,6 +6,7 @@ using System.Linq;
 using PlumMediaCenter.Business.Enums;
 using PlumMediaCenter.Business.Data;
 using System;
+using PlumMediaCenter.Models;
 
 namespace PlumMediaCenter.Business.Repositories
 {
@@ -128,7 +129,7 @@ namespace PlumMediaCenter.Business.Repositories
             //delete no longer existant items
             foreach (var id in deleteCandidateIds)
             {
-                await this.Delete(id.Value, baseUrl);
+                await this.Delete(id, baseUrl);
             }
 
             foreach (var source in sources)
