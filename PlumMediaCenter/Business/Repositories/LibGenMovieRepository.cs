@@ -106,7 +106,7 @@ namespace PlumMediaCenter.Business.Repositories
         {
             Console.WriteLine("Movie.Insert -> Movie folder path: " + movie.FolderPath);
             Console.WriteLine("Movie.Insert -> Movie VideoPath: " + movie.VideoPath);
-            var mediaItemId = await this.MediaRepository.GetNewMediaId(MediaTypeId.Movie);
+            var mediaItemId = await this.MediaRepository.GetNewMediaId(MediaType.MOVIE);
             await ConnectionManager.ExecuteAsync(@"
                 insert into Movies(
                     id,
@@ -275,7 +275,7 @@ namespace PlumMediaCenter.Business.Repositories
             await movie.Process();
         }
 
-        public async Task DeleteForSource(int sourceId, string baseUrl)
+        public async Task DeleteForSource(int sourceId)
         {
             var folderPaths = await ConnectionManager.QueryAsync<string>(@"
                 select folderPath

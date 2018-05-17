@@ -38,9 +38,9 @@ namespace PlumMediaCenter.Data
                 connection.Execute($@"
                     insert into MediaTypes(id,name)
                     values 
-                        ({(int)MediaTypeId.Movie}, 'Movie'),
-                        ({(int)MediaTypeId.TvShow}, 'TvShow'),
-                        ({(int)MediaTypeId.TvEpisode}, 'TvEpisode')
+                        ({(int)MediaType.MOVIE}, 'MOVIE'),
+                        ({(int)MediaType.TV_SHOW}, 'TV_SHOW'),
+                        ({(int)MediaType.TV_EPISODE}, 'TV_EPISODE')
                 ");
 
                 connection.Execute(@"

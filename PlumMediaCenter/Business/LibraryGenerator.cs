@@ -72,23 +72,23 @@ namespace PlumMediaCenter.Business
         public async Task<IProcessable> GetMediaItem(int mediaItemId)
         {
             // var manager = new Manager(AppSettings.BaseUrlStatic);
-            var rows = await ConnectionManager.QueryAsync<MediaTypeId>(@"
-                select mediaTypeId
+            var rows = await ConnectionManager.QueryAsync<MediaType>(@"
+                select mediaType
                 from MediaItemIds 
                 where id = @id
             ", new
             {
                 id = mediaItemId
             });
-            var mediaTypeId = rows.FirstOrDefault();
-            switch (mediaTypeId)
+            var mediaType = rows.FirstOrDefault();
+            switch (mediaType)
             {
-                case MediaTypeId.Movie:
+                case MediaType.MOVIE:
                     var movieModel = await this.MovieRepository.GetById(mediaItemId);
                     var movie = this.LibGenFactory.BuildMovie(movieModel.GetFolderPath(), movieModel.SourceId);
                     return movie;
                 default:
-                    throw new Exception($"{mediaTypeId} Not implemented");
+                    throw new Exception($"{mediaType} Not implemented");
             }
         }
 
@@ -143,7 +143,7 @@ namespace PlumMediaCenter.Business
         {
             var moviePaths = new List<MoviePath>();
 
-            var movieSources = await this.SourceRepository.GetByType(MediaTypeId.Movie);
+            var movieSources = await this.SourceRepository.GetByType(MediaType.MOVIE);
 
             //find all movie folders from each source
             foreach (var source in movieSources)
@@ -243,7 +243,7 @@ namespace PlumMediaCenter.Business
         {
             var seriePaths = new List<string>();
 
-            var serieSources = await this.SourceRepository.GetByType(MediaTypeId.TvShow);
+            var serieSources = await this.SourceRepository.GetByType(MediaType.TV_SHOW);
             //find all show folders from each source
             foreach (var source in serieSources)
             {

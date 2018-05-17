@@ -43,7 +43,8 @@
             "presentation": {
                 "reveal": "always",
                 "echo": true,
-                "focus": true
+                "focus": true,
+                "panel": "shared"
             },
             "isBackground": false,
             "problemMatcher": []

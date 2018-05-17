@@ -19,6 +19,7 @@ namespace PlumMediaCenter.Graphql
             SourceRepository sourceRepository
         )
         {
+            this.Name = "Query";
             Field<ListGraphType<MovieGraphType>, IEnumerable<Movie>>()
                 .Name("movies")
                 .Description("A list of movies")

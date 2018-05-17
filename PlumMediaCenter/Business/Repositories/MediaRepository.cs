@@ -223,7 +223,7 @@ namespace PlumMediaCenter.Business.Repositories
                 ids = ids
             }));
             //get all of the movies for these media items
-            var movieIds = items.Where(x => x.MediaTypeId == MediaTypeId.Movie).Select(x => x.MediaItemId);
+            var movieIds = items.Where(x => x.MediaType == MediaType.MOVIE).Select(x => x.MediaItemId);
             var movies = await this.MovieRepository.GetByIds(movieIds, new[] { "id", "posterUrl", "runtimeSeconds", "title" });
             foreach (var item in items)
             {
@@ -243,11 +243,11 @@ namespace PlumMediaCenter.Business.Repositories
             ", new { id = id });
         }
 
-        public async Task<int> GetNewMediaId(MediaTypeId mediaTypeId)
+        public async Task<int> GetNewMediaId(MediaType mediaType)
         {
             var rows = await ConnectionManager.QueryAsync<int?>(@"
                 insert into MediaItemIds(mediaTypeId) values(@mediaTypeId);select last_insert_id();
-            ", new { mediaTypeId = (int)mediaTypeId });
+            ", new { mediaTypeId = (int)mediaType });
 
             var id = rows.FirstOrDefault();
 
@@ -266,7 +266,7 @@ namespace PlumMediaCenter.Business.Repositories
         public async Task<object> GetMediaItem(int mediaItemId)
         {
             //get the media type id from the db.
-            var mediaTypeId = (await ConnectionManager.QueryAsync<MediaTypeId>(@"
+            var mediaType = (await ConnectionManager.QueryAsync<MediaType>(@"
                 select mediaTypeId 
                 from MediaItemIds
                 where id = @mediaItemId
@@ -274,9 +274,9 @@ namespace PlumMediaCenter.Business.Repositories
             {
                 mediaItemId = mediaItemId
             })).FirstOrDefault();
-            switch (mediaTypeId)
+            switch (mediaType)
             {
-                case MediaTypeId.Movie:
+                case MediaType.MOVIE:
                     return await this.MovieRepository.GetById(mediaItemId);
                 default:
                     throw new Exception("Not implemented");

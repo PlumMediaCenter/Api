@@ -6,7 +6,7 @@ namespace PlumMediaCenter.Models
 {
     public class MediaHistoryRecord : MediaItemProgress
     {
-        public MediaTypeId MediaTypeId;
+        public MediaType MediaType;
         public string PosterUrl;
         public string Title;
         public int RuntimeSeconds;

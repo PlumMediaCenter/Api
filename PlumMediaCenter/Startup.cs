@@ -105,8 +105,8 @@ namespace PlumMediaCenter
             AddServices("PlumMediaCenter.Graphql.InputGraphTypes", services);
             AddServices("PlumMediaCenter.Graphql.EnumGraphTypes", services);
             AddServices("PlumMediaCenter.Business.Repositories", services);
-            AddServices("PlumMediaCenter.Business.Factories", services);
             AddServices("PlumMediaCenter.Business.MetadataProcessing", services);
+            AddServices("PlumMediaCenter.Business.Factories", services);
 
 
             services.AddSingleton<UserAccessor>();

@@ -3,7 +3,7 @@ using PlumMediaCenter.Business.Enums;
 
 namespace PlumMediaCenter.Graphql.GraphTypes
 {
-    public class MediaTypeEnumGraphType : EnumerationGraphType<MediaTypeId>
+    public class MediaTypeEnumGraphType : EnumerationGraphType<MediaType>
     {
         public MediaTypeEnumGraphType()
         {

@@ -32,15 +32,18 @@ namespace PlumMediaCenter.Business.Repositories
         /// </summary>
         /// <param name="sourceType"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<Source>> GetByType(MediaTypeId mediaTypeId)
+        public async Task<IEnumerable<Source>> GetByType(MediaType mediaType)
         {
             var result = await ConnectionManager.QueryAsync<Source>(@"
-                select * 
+                select 
+                    id,
+                    folderPath,
+                    mediaTypeId as mediaType
                 from Sources
                 where mediaTypeId = @mediaTypeId
             ", new
             {
-                mediaTypeId = (int)mediaTypeId
+                mediaTypeId = (int)mediaType
             });
             return result;
         }
@@ -49,7 +52,11 @@ namespace PlumMediaCenter.Business.Repositories
         {
 
             var result = await ConnectionManager.QueryAsync<Source>(@"
-                select * from Sources
+                select  
+                    id,
+                    folderPath,
+                    mediaTypeId as mediaType
+                from Sources
             ");
             return result;
         }
@@ -64,7 +71,7 @@ namespace PlumMediaCenter.Business.Repositories
                 ", new
                 {
                     folderPath = source.FolderPath,
-                    mediaTypeId = (int)source.MediaTypeId
+                    mediaTypeId = (int)source.MediaType
                 });
                 return await connection.GetLastInsertIdAsync();
             }
@@ -82,16 +89,16 @@ namespace PlumMediaCenter.Business.Repositories
             ", new
             {
                 folderPath = source.FolderPath,
-                mediaTypeId = (int)source.MediaTypeId,
+                mediaTypeId = (int)source.MediaType,
                 id = source.Id
             });
             return source.Id;
         }
 
-        public async Task Delete(int id, string baseUrl)
+        public async Task Delete(int id)
         {
             //delete all of the movies associated with this source
-            await this.LibGenMovieRepository.DeleteForSource(id, baseUrl);
+            await this.LibGenMovieRepository.DeleteForSource(id);
 
             await ConnectionManager.ExecuteAsync(@"
                 delete from Sources
@@ -104,7 +111,7 @@ namespace PlumMediaCenter.Business.Repositories
 
         public async Task<int?> Save(Source source)
         {
-            if (source.Id == null)
+            if (source.Id == 0)
             {
                 return await this.Insert(source);
             }
@@ -119,7 +126,7 @@ namespace PlumMediaCenter.Business.Repositories
         /// </summary>
         /// <param name="sources"></param>
         /// <returns></returns>
-        public async Task SetAll(IEnumerable<Source> sources, string baseUrl)
+        public async Task SetAll(IEnumerable<Source> sources)
         {
             var existingSources = await this.GetAll();
             var existingIds = existingSources.Select(x => x.Id);
@@ -129,7 +136,7 @@ namespace PlumMediaCenter.Business.Repositories
             //delete no longer existant items
             foreach (var id in deleteCandidateIds)
             {
-                await this.Delete(id, baseUrl);
+                await this.Delete(id);
             }
 
             foreach (var source in sources)

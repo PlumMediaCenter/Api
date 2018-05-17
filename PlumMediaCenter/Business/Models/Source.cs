@@ -4,13 +4,10 @@ namespace PlumMediaCenter.Models
 {
     public class Source
     {
-        public int Id;
-        public string FolderPath;
-        /// <summary>
-        /// The type of media this source contains (movies, series)
-        /// </summary>
-        public MediaTypeId MediaTypeId;
-
+        public int Id { get; set; }
+        public string FolderPath { get; set; }
+        //setter for mutations
+        public MediaType MediaType { get; set; }
     }
 
 }

@@ -159,7 +159,7 @@ namespace PlumMediaCenter.Business.Models
             }
         }
 
-        public MediaTypeId MediaTypeId = MediaTypeId.Movie;
+        public MediaType MediaType = MediaType.MOVIE;
 
         /// <summary>
         /// The MPAA rating of the movie
