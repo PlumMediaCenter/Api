@@ -9,11 +9,13 @@ namespace PlumMediaCenter.Graphql
     public class RootMutationGraphType : ObjectGraphType
     {
         public RootMutationGraphType(
-            SourceMutations sourceMutations
+            SourceMutations sourceMutations,
+            LibraryMutations libraryMutations
         )
         {
             this.Name = "Mutation";
             sourceMutations.Register(this);
+            libraryMutations.Register(this);
         }
     }
 }

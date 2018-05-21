@@ -30,7 +30,7 @@ namespace PlumMediaCenter.Business
         /// The list of column names that will always be retrieved from the database, regardless of what columns are requested
         /// </summary>
         /// <returns></returns>
-        public List<string> AlwaysIncludedColumnNames = new List<string>();
+        public IEnumerable<string> AlwaysIncludedColumnNames = new List<string>();
 
         /// <summary>
         /// A set of not-physical columns that are derived based on subqueries. 

@@ -17,7 +17,7 @@ using PlumMediaCenter.Models;
 namespace PlumMediaCenter.Business
 {
     /// <summary>
-    /// A singleton library generator 
+    /// A singleton library generator. This should only be initialized by the .net DI, and as a singleton
     /// </summary>
     public class LibraryGenerator
     {
@@ -40,7 +40,7 @@ namespace PlumMediaCenter.Business
                 {
                     //load any old status saved in cache
                     var statusJson = File.ReadAllText(LibraryGenerator.StatusFilePath);
-                    this.Status = Newtonsoft.Json.JsonConvert.DeserializeObject<Status>(statusJson);
+                    this.Status = Newtonsoft.Json.JsonConvert.DeserializeObject<LibraryGeneratorStatus>(statusJson);
                 }
             }
             catch (Exception)
@@ -63,33 +63,49 @@ namespace PlumMediaCenter.Business
             }
         }
 
-        private Status Status;
-        public Status GetStatus()
+        private LibraryGeneratorStatus Status;
+        public LibraryGeneratorStatus GetStatus()
         {
-            return this.Status?.Clone();
+            if (this.Status == null)
+            {
+                return new LibraryGeneratorStatus();
+            }
+            else
+            {
+                return this.Status.Clone();
+            }
         }
 
-        public async Task<IProcessable> GetMediaItem(int mediaItemId)
+        public async Task ProcessItems(IEnumerable<int> mediaItemIds)
         {
-            // var manager = new Manager(AppSettings.BaseUrlStatic);
-            var rows = await ConnectionManager.QueryAsync<MediaType>(@"
-                select mediaType
-                from MediaItemIds 
-                where id = @id
-            ", new
+            var mediaItems = await this.GetMediaItems(mediaItemIds);
+            foreach (var mediaItem in mediaItems)
             {
-                id = mediaItemId
-            });
-            var mediaType = rows.FirstOrDefault();
-            switch (mediaType)
-            {
-                case MediaType.MOVIE:
-                    var movieModel = await this.MovieRepository.GetById(mediaItemId);
-                    var movie = this.LibGenFactory.BuildMovie(movieModel.GetFolderPath(), movieModel.SourceId);
-                    return movie;
-                default:
-                    throw new Exception($"{mediaType} Not implemented");
+                await mediaItem.Process();
             }
+        }
+
+        public async Task<IEnumerable<IProcessable>> GetMediaItems(IEnumerable<int> mediaItemIds)
+        {
+            var results = new List<IProcessable>();
+            //get all the movies
+            {
+                var models = await this.MovieRepository.GetByIds(mediaItemIds, new[] { "id", "sourceId", "folderPath"});
+                foreach (var model in models)
+                {
+                    var libGenMovie = this.LibGenFactory.BuildMovie(model.GetFolderPath(), model.SourceId);
+                    libGenMovie.Id = model.Id;
+                    results.Add(libGenMovie);
+                }
+            }
+            var resultIds = results.Select(x => x.Id);
+            //fail if there were any items we couldn't find
+            var missingItems = mediaItemIds.Where(x => resultIds.Contains(x) == false);
+            if (missingItems.Count() > 0)
+            {
+                throw new Exception($"Could not find items with ids ({string.Join(",", missingItems)})");
+            }
+            return results;
         }
 
         private bool IsGenerating = false;
@@ -103,7 +119,7 @@ namespace PlumMediaCenter.Business
                 }
                 IsGenerating = true;
                 var oldStatus = this.Status;
-                this.Status = new Status();
+                this.Status = new LibraryGeneratorStatus();
                 this.Status.StartTime = DateTime.UtcNow;
                 this.Status.IsProcessing = true;
                 this.Status.LastGeneratedDate = oldStatus?.LastGeneratedDate;
@@ -186,7 +202,7 @@ namespace PlumMediaCenter.Business
             moviePaths = distinctList;
 
             //update Status
-            this.Status.MovieCountTotal = moviePaths.Count;
+            this.Status.SetMediaTypeCountTotal(MediaType.MOVIE, moviePaths.Count);
             var random = new Random();
 
             //process each movie. movie.Process will handle adding, updating, and deleting
@@ -226,7 +242,7 @@ namespace PlumMediaCenter.Business
                         this.Status.FailedItems.Add(JsonConvert.SerializeObject(movie) + " " + JsonConvert.SerializeObject(e));
                     }
                     Thread.Sleep(5000);
-                    this.Status.MovieCountCompleted++;
+                    this.Status.IncrementMediaTypeCount(MediaType.MOVIE);
                     //remove the movie from the list of currently processing movies
                     lock (this.Status.ActiveFiles)
                     {
@@ -275,8 +291,13 @@ namespace PlumMediaCenter.Business
         public Source Source;
     }
 
-    public class Status
+    public class LibraryGeneratorStatus
     {
+        public LibraryGeneratorStatus()
+        {
+            this.MediaTypeCounts.Add(new MediaTypeCount { MediaType = MediaType.MOVIE });
+            this.MediaTypeCounts.Add(new MediaTypeCount { MediaType = MediaType.TV_SHOW });
+        }
         /// <summary>
         /// The current state ("generating", "generated")
         /// </summary>
@@ -290,38 +311,30 @@ namespace PlumMediaCenter.Business
         public DateTime? LastGeneratedDate { get; set; }
         public DateTime? StartTime { get; set; }
         /// <summary>
-        /// The total number of movie entries to process
-        /// </summary>
-        public int MovieCountTotal { get; set; }
-        /// <summary>
-        /// The current number of movie entries that have been processed
-        /// </summary>
-        public int MovieCountCompleted { get; set; }
-
-        public int TvSerieCountTotal { get; set; }
-        public int TvSerieCountCompleted { get; set; }
-
-        /// <summary>
-        /// The total number of items that have already been processed
+        /// The list of counts (one for each media type)
         /// </summary>
         /// <returns></returns>
-        public int CountCompleted
+        public List<MediaTypeCount> MediaTypeCounts { get; set; } = new List<MediaTypeCount>();
+
+        public void IncrementMediaTypeCount(MediaType mediaType)
         {
-            get
-            {
-                return this.MovieCountCompleted + this.TvSerieCountCompleted;
-            }
+            this.MediaTypeCounts.First(x => x.MediaType == mediaType).Completed++;
+        }
+
+        public void SetMediaTypeCountTotal(MediaType mediaType, int total)
+        {
+            this.MediaTypeCounts.First(x => x.MediaType == mediaType).Total = total;
         }
 
         /// <summary>
-        /// Get the number of items that still need to be processed
+        /// Get the number of items that have not yet been processed
         /// </summary>
         /// <returns></returns>
         public int CountRemaining
         {
             get
             {
-                return this.CountTotal - this.CountCompleted;
+                return this.MediaTypeCounts.Sum(x => x.Remaining);
             }
         }
 
@@ -333,16 +346,28 @@ namespace PlumMediaCenter.Business
         {
             get
             {
-                return this.MovieCountTotal + this.TvSerieCountTotal;
+                return this.MediaTypeCounts.Sum(x => x.Total);
             }
         }
-        public int? SecondsRemaining
+
+        /// <summary>
+        /// The number of completed items
+        /// </summary>
+        /// <returns></returns>
+        public int CountCompleted
+        {
+            get
+            {
+                return this.MediaTypeCounts.Sum(x => x.Completed);
+            }
+        }
+        public int SecondsRemaining
         {
             get
             {
                 if (this.CountCompleted == 0 || this.CountTotal == 0)
                 {
-                    return null;
+                    return 0;
                 }
                 else
                 {
@@ -362,11 +387,25 @@ namespace PlumMediaCenter.Business
         /// <returns></returns>
         public List<string> ActiveFiles { get; set; } = new List<string>();
 
-        public Status Clone()
+        public LibraryGeneratorStatus Clone()
         {
-            var clone = (Status)this.MemberwiseClone();
+            var clone = (LibraryGeneratorStatus)this.MemberwiseClone();
             clone.ActiveFiles = clone.ActiveFiles.ToList();
             return clone;
+        }
+    }
+
+    public class MediaTypeCount
+    {
+        public MediaType MediaType;
+        public int Total { get; set; } = 0;
+        public int Completed { get; set; } = 0;
+        public int Remaining
+        {
+            get
+            {
+                return Total - Completed;
+            }
         }
     }
 }

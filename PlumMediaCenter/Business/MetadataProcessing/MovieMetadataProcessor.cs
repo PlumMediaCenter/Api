@@ -46,7 +46,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
 
         TMDbClient Client;
 
-        public async Task<List<MovieSearchResult>> GetSearchResultsAsync(string text)
+        public async Task<List<MovieMetadataSearchResult>> GetSearchResultsAsync(string searchText)
         {
             SearchContainer<TMDbLib.Objects.Search.SearchMovie> r;
             try
@@ -54,7 +54,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 //only allow one tmdb request at a time
                 lock (Client)
                 {
-                    r = Client.SearchMovieAsync(text).Result;
+                    r = Client.SearchMovieAsync(searchText).Result;
                 }
             }
             catch (Exception e)
@@ -62,10 +62,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 throw new Exception("TMDB Client was supposed to try again", e);
             }
             var searchResults = r.Results;
-            var result = new List<MovieSearchResult>();
+            var result = new List<MovieMetadataSearchResult>();
             foreach (var searchResult in searchResults)
             {
-                result.Add(new MovieSearchResult
+                result.Add(new MovieMetadataSearchResult
                 {
                     Title = searchResult.Title,
                     PosterUrl = Client.GetImageUrl("original", searchResult.PosterPath).ToString(),
@@ -77,10 +77,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return await Task.FromResult(result);
         }
 
-        public async Task<MovieMetadataComparison> GetComparisonAsync(int tmdbId, int movieId, string baseUrl)
+        public async Task<MovieMetadataComparison> GetComparisonAsync(int tmdbId, int movieId)
         {
             var result = new MovieMetadataComparison();
-            var tcurrent = GetCurrentMetadataAsync(movieId, baseUrl);
+            var tcurrent = GetCurrentMetadataAsync(movieId);
             var tTmdb = GetTmdbMetadataAsync(tmdbId);
 
             //convert current posters into tmdb poster urls
@@ -193,9 +193,9 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             return metadata;
         }
 
-        private async Task<MovieMetadata> GetCurrentMetadataAsync(int movieId, string baseUrl)
+        private async Task<MovieMetadata> GetCurrentMetadataAsync(int movieId)
         {
-            var movieModel = await this.MovieRepository.GetById(movieId);
+            var movieModel = await this.MovieRepository.GetById(movieId, this.MovieRepository.AllColumnNames);
             var movie = this.LibGenFactory.BuildMovie(movieModel.GetFolderPath(), movieModel.SourceId);
             //throw new Exception(Newtonsoft.Json.JsonConvert.SerializeObject(movie.MovieDotJson));
             var metadata = new MovieMetadata(movie.MovieDotJson);
@@ -439,7 +439,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         }
     }
 
-    public class MovieSearchResult
+    public class MovieMetadataSearchResult
     {
         public string Title;
         public string PosterUrl;

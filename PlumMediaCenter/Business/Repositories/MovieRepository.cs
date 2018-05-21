@@ -36,6 +36,10 @@ namespace PlumMediaCenter.Business.Repositories
                 "backdropGuids",
                 "completionSeconds",
             };
+            this.AlwaysIncludedColumnNames = new[] {
+                "id",
+                "videoPath"
+            };
         }
         LibGenMovieRepository LibGenMovieRepository;
 

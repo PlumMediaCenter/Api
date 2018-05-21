@@ -27,7 +27,9 @@ namespace PlumMediaCenter.Graphql.GraphTypes
             Field(x => x.TmdbId, nullable: true).Description("TMDB (The Movie DataBase) ID for this movie.");
             Field(x => x.SourceId, nullable: true).Description("The Source ID for this movie.");
             Field(x => x.VideoUrl).Description("The full url to the video file. This is the file that will be used when streaming");
-            Field<MediaTypeEnumGraphType>().Name("mediaType").Description("The media type for this movie. Will always be the same value since all movies have the same media type");
+            Field<MediaTypeEnumGraphType>().Name("mediaType")
+                .Description("The media type for this movie. Will always be the same value since all movies have the same media type")
+                .Resolve(x => x.Source.MediaType);
 
             Field<ListGraphType<StringGraphType>>("backdropUrls", resolve: (context) =>
             {

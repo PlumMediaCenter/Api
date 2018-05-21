@@ -110,6 +110,7 @@ namespace PlumMediaCenter
 
 
             services.AddSingleton<UserAccessor>();
+            services.AddSingleton<LibraryGenerator>();
 
             services.AddSingleton<IDataLoaderContextAccessor, DataLoaderContextAccessor>();
 

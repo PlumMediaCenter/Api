@@ -38,7 +38,7 @@ namespace PlumMediaCenter.Business.Models
         /// <summary>
         /// The id for this video. This is only set during Process(), so don't depend on it unless you are calling a function from Process()
         /// </summary>
-        private int? Id;
+        public int? Id { get; set; }
         public int? GetId()
         {
             return this.Id;

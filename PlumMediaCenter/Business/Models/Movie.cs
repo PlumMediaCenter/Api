@@ -100,8 +100,6 @@ namespace PlumMediaCenter.Business.Models
             {
                 //get just the filename from the videopath
                 var filename = Path.GetFileName(VideoPath);
-
-
                 return $"{GetFolderUrl()}{filename}";
             }
         }

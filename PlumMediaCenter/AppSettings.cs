@@ -117,8 +117,13 @@ namespace PlumMediaCenter
                     url = $"{request.Scheme}://{request.Host}{request.Path}";
                 }
 
-                //remove anything after and including /api/
-                var baseUrl = url.Substring(0, url.ToLowerInvariant().IndexOf("/api/") + 1);
+
+                //remove anything after and including /graphql
+                var baseUrl = url.Substring(0, url.ToLowerInvariant().IndexOf("/graphql") + 1);
+                if (string.IsNullOrWhiteSpace(baseUrl))
+                {
+                    throw new Exception("Unable to calculate base url");
+                }
                 store["baseUrl"] = baseUrl;
             }
             return (string)store["baseUrl"];
