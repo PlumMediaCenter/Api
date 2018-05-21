@@ -251,7 +251,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
 
         public async Task SaveAsync(int movieId, MovieMetadata metadata)
         {
-            var movie = await this.MovieRepository.GetById(movieId);
+            var movie = await this.MovieRepository.GetById(movieId, this.MovieRepository.AllColumnNames);
             await DownloadMetadataAsync(movie.GetFolderPath(), movie.GetFolderUrl(), metadata);
             //reprocess this movie so the library is updated with its info
             await this.LibGenMovieRepository.Process(movie.GetFolderPath());
@@ -403,8 +403,8 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 myType.GetProperty(prop.Name).SetValue(this, value);
             }
         }
-        public List<string> PosterUrls = new List<string>();
-        public List<string> BackdropUrls = new List<string>();
+        public List<string> PosterUrls { get; set; } = new List<string>();
+        public List<string> BackdropUrls { get; set; } = new List<string>();
         public void AddCast(List<Cast> cast)
         {
             if (cast == null)

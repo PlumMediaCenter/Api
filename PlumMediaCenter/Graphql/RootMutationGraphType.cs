@@ -10,12 +10,14 @@ namespace PlumMediaCenter.Graphql
     {
         public RootMutationGraphType(
             SourceMutations sourceMutations,
-            LibraryMutations libraryMutations
+            LibraryMutations libraryMutations,
+            MovieMetadataMutations movieMetadataMutations
         )
         {
             this.Name = "Mutation";
             sourceMutations.Register(this);
             libraryMutations.Register(this);
+            movieMetadataMutations.Register(this);
         }
     }
 }

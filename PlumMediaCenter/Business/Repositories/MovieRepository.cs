@@ -40,6 +40,7 @@ namespace PlumMediaCenter.Business.Repositories
                 "id",
                 "videoPath"
             };
+            this.Aliases.Add("backdropUrls", "backdropGuids");
         }
         LibGenMovieRepository LibGenMovieRepository;
 
