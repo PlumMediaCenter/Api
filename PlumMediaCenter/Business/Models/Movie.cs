@@ -192,5 +192,62 @@ namespace PlumMediaCenter.Business.Models
             }
         }
         private int? _CompletionSeconds;
+
+        /// <summary>
+        /// The number of seconds that the user last watched this movie until. This must be set externally and will not be 
+        /// retrieved 
+        /// </summary>
+        /// <returns></returns>
+        public int ProgressSeconds
+        {
+            get
+            {
+                if (this._ProgressSeconds == null)
+                {
+                    throw new Exception("_ProgressSeconds must be explicitly set on this object, but was found to be null");
+                }
+                else
+                {
+                    return this._ProgressSeconds.Value;
+                }
+            }
+            set
+            {
+                this._ProgressSeconds = value;
+            }
+        }
+        private int? _ProgressSeconds;
+
+        /// <summary>
+        /// The number of seconds where the user should resume watching the movie (if they want to pick up where they last left off)
+        /// COMPUTED -- not present in the database
+        /// </summary>
+        /// <returns></returns>
+        public int ResumeSeconds
+        {
+            get
+            {
+                if (this.ProgressSeconds > this.CompletionSeconds)
+                {
+                    return 0;
+                }
+                else
+                {
+                    return this.ProgressSeconds;
+                }
+            }
+        }
+
+        /// <summary>
+        /// The percentage of the movie that the current user has watched
+        /// </summary>
+        /// <returns></returns>
+        public int ProgressPercentage
+        {
+            get
+            {
+                return this.ProgressSeconds / this.CompletionSeconds;
+            }
+        }
     }
 }

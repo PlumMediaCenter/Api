@@ -40,10 +40,23 @@ namespace PlumMediaCenter.Business
 
         /// <summary>
         /// Column names can be called other things sometimes from outside, so map those names back to real column names.
-        /// Key is the alias, value is the actual column name
+        /// Key is the alias, value is the actual column names
         /// </summary>
         /// <returns></returns>
         public Dictionary<string, string> Aliases = new Dictionary<string, string>();
+
+        /// <summary>
+        /// A computed column may depend on other fields being present
+        /// Key is the alias, value is the list of actual column names (1-1 when used for aliases, possibly 1-many when used for computed columns)
+        /// </summary>
+        /// <returns></returns>
+        public Dictionary<string, IEnumerable<string>> ComputedColumnDependencies = new Dictionary<string, IEnumerable<string>>();
+
+        /// <summary>
+        /// A set of functions that are executed once a query is finished. This can be used to run bulk loads of certain computed properties.
+        /// </summary>
+        /// <returns></returns>
+        public List<PostQueryProcessor<ModelType>> PostQueryProcessors = new List<PostQueryProcessor<ModelType>>();
 
         /// <summary>
         /// Perform a query to retrieve a set of results
@@ -52,16 +65,16 @@ namespace PlumMediaCenter.Business
         /// <param name="bindings"></param>
         /// <param name="columnNames"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<ModelType>> Query(string sql = null, object bindings = null, IEnumerable<string> columnNames = null)
+        public async Task<IEnumerable<ModelType>> Query(string sql = null, object bindings = null, IEnumerable<string> initialColumnNames = null)
         {
             var dynamicParams = bindings != null ? new DynamicParameters(bindings) : new DynamicParameters();
 
-            columnNames = this.SanitizeColumnNames(columnNames).ToList();
+            var columnNames = this.SanitizeColumnNames(initialColumnNames).ToList();
             //ensure that every query includes the ID column
-            columnNames = columnNames.AddIfMissing("id");
+            columnNames.AddIfMissing("id");
 
             //prepend the table name to each column
-            columnNames = columnNames.Select(columnName => $"{this.TableName}.{columnName}");
+            columnNames = columnNames.Select(columnName => $"{this.TableName}.{columnName}").ToList();
 
             //add derived columns
             {
@@ -79,6 +92,7 @@ namespace PlumMediaCenter.Business
                 columnNames = columns;
             }
 
+            IEnumerable<ModelType> records;
             using (var connection = ConnectionManager.CreateConnection())
             {
                 var fullSql = $@"
@@ -86,9 +100,16 @@ namespace PlumMediaCenter.Business
                     from {this.TableName}
                     {sql}
                 ";
-                var records = await connection.QueryAsync<ModelType>(fullSql, dynamicParams);
-                return records;
+                records = await connection.QueryAsync<ModelType>(fullSql, dynamicParams);
             }
+            foreach (var processor in PostQueryProcessors)
+            {
+                if (processor.PropertyNames.Where(x => initialColumnNames.Contains(x)).Count() > 0)
+                {
+                    records = await processor.Callback(records);
+                }
+            }
+            return records;
         }
 
         /// <summary>
@@ -106,24 +127,39 @@ namespace PlumMediaCenter.Business
         protected virtual IEnumerable<string> SanitizeColumnNames(IEnumerable<string> columnNames)
         {
             //default to an empty list if null
-            columnNames = columnNames ?? new List<string>();
-
-            columnNames = columnNames.ToList();
+            var cols = columnNames != null ? columnNames.ToList() : new List<string>();
 
             //exchange any aliases with the actual column names
             foreach (var aliasKvp in this.Aliases)
             {
-                var idx = ((List<string>)columnNames).IndexOf(aliasKvp.Key);
+                var idx = cols.IndexOf(aliasKvp.Key);
                 if (idx > -1)
                 {
-                    ((List<string>)columnNames)[idx] = aliasKvp.Value;
+                    cols[idx] = aliasKvp.Value;
+                }
+            }
+            //exchange any computed columns with their dependencies
+            foreach (var computedColumnKvp in this.ComputedColumnDependencies)
+            {
+                var idx = cols.IndexOf(computedColumnKvp.Key);
+                if (idx > -1)
+                {
+                    //remove the computed column name
+                    cols.RemoveAt(idx);
+                    //add the columns the computed column depends on
+                    cols.AddRange(computedColumnKvp.Value);
                 }
             }
             //include the AlwaysIncluded columns 
-            ((List<string>)columnNames).AddRange(this.AlwaysIncludedColumnNames);
+            cols.AddRange(this.AlwaysIncludedColumnNames);
+
+            //remove post processor column names
+            cols.RemoveIfPresent(this.PostQueryProcessors.SelectMany(x => x.PropertyNames));
+            //add columns required for post processors
+            cols.AddIfMissing(this.PostQueryProcessors.SelectMany(x => x.RequiredColumns));
 
             //throw away anything that is not a known column name
-            var result = columnNames.Where(x => this.AllColumnNames.Contains(x)).Distinct().ToList();
+            var result = cols.Where(x => this.AllColumnNames.Contains(x)).Distinct().ToList();
             return result;
         }
 
@@ -428,6 +464,25 @@ namespace PlumMediaCenter.Business
                 return $"{sql} order by {sortField} {sortDirection}";
             }
         }
+    }
+    public class PostQueryProcessor<ModelType>
+    {
+        public PostQueryProcessor(string propertyName, IEnumerable<string> requiredColumns, Func<IEnumerable<ModelType>, Task<IEnumerable<ModelType>>> callback)
+        {
+            this.PropertyNames = new[] { propertyName };
+            this.RequiredColumns = requiredColumns;
+            this.Callback = callback;
+        }
+
+        public PostQueryProcessor(IEnumerable<string> propertyNames, IEnumerable<string> requiredColumns, Func<IEnumerable<ModelType>, Task<IEnumerable<ModelType>>> callback)
+        {
+            this.PropertyNames = propertyNames;
+            this.RequiredColumns = requiredColumns;
+            this.Callback = callback;
+        }
+        public IEnumerable<string> PropertyNames;
+        public IEnumerable<string> RequiredColumns;
+        public Func<IEnumerable<ModelType>, Task<IEnumerable<ModelType>>> Callback;
     }
 
 }

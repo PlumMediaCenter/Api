@@ -61,7 +61,7 @@ namespace PlumMediaCenter.Business.Repositories
                 }
                 else
                 {
-                    //the gap is outside of the acceptable limit, then we need to start a new progress
+                    //the gap is outside of the acceptable limit, we need to start a new progress
                     progress = null;
                 }
             }
@@ -115,51 +115,52 @@ namespace PlumMediaCenter.Business.Repositories
         }
 
         /// <summary>
-        /// Get the number of seconds at which a media item should resume.
-        /// If this item has never been interacted with, will return 0.
+        /// Compute the progressSeconds for each specified media item.
+        /// The results will be set on the media items directly.
         /// </summary>
         /// <param name="profileId"></param>
-        /// <param name="mediaItemId"></param>
+        /// <param name="mediaItems"></param>
         /// <returns></returns>
-        public async Task<int> GetMediaItemResumeSeconds(int profileId, int mediaItemId)
+        public async Task<IEnumerable<Movie>> FetchProgressSeconds(int profileId, IEnumerable<Movie> mediaItems)
         {
-            var historyRecord = (await this.GetHistoryForMediaItem(profileId, mediaItemId, 1)).FirstOrDefault();
-            //if there is no history for this movie, return zero
-            if (historyRecord == null)
+            var mediaItemIds = mediaItems.Select(x => x.Id);
+            IEnumerable<MediaItemProgress> latestProgressRecords;
+            using (var connection = ConnectionManager.CreateConnection())
             {
-                return 0;
+                //get the latest progress record for each media item
+                latestProgressRecords = await connection.QueryAsync<MediaItemProgress>(@"
+                    select outside.mediaItemId, outside.progressSecondsEnd 
+                    from MediaItemProgress outside
+                    where outside.id in (
+                        select id from (
+                            select id, max(dateEnd)
+                            from MediaItemProgress
+                            where profileId = 1
+                            and mediaItemId in (1,2,3,4,5)
+                            group by mediaItemId
+                        ) as grouper
+                    );
+                "
+                 , new { profileId = profileId, mediaItemIds = mediaItemIds });
             }
-            //if the progress is within the threshold of "finished the show", then return zero
-            else if (await this.SecondCountIsConsideredFinished(mediaItemId, historyRecord.ProgressSecondsEnd))
-            {
-                return 0;
-            }
-            //return the progress
-            else
-            {
-                return historyRecord.ProgressSecondsEnd;
-            }
-        }
 
-        /// <summary>
-        /// Determine if the given number of seconds is close enough to the end the media item to consider it finished.
-        /// The common use case for this is when a tv episode  gets to the end credits, there may be several minutes remaining in the video.
-        /// The next time the user tries to watch the tv show, that episode should be considered 'watched', and the next episode should be picked.
-        /// </summary>
-        /// <param name="mediaItemId"></param>
-        /// <returns></returns>
-        public async Task<bool> SecondCountIsConsideredFinished(int mediaItemId, int secondCount)
-        {
-            var mediaItem = await this.GetMediaItem(mediaItemId);
-            if (mediaItem.GetType() == typeof(Movie))
+            //set progress for each media item (either by the record or by zeroing it out)
+            foreach (var mediaItem in mediaItems)
             {
-                var movie = (Movie)mediaItem;
-                return secondCount >= movie.CompletionSeconds;
+                //get the movie with this progress's id
+                var progressRecord = latestProgressRecords.Where(x => x.MediaItemId == mediaItem.Id).FirstOrDefault();
+                if (progressRecord != null)
+                {
+                    //set the progress on the movie
+                    mediaItem.ProgressSeconds = progressRecord.ProgressSecondsEnd;
+                }
+                else
+                {
+                    //zero out the progress seconds since there is no progress record
+                    mediaItem.ProgressSeconds = 0;
+                }
             }
-            else
-            {
-                throw new Exception("Unknown media item type");
-            }
+            return mediaItems;
         }
 
         /// <summary>
@@ -214,7 +215,8 @@ namespace PlumMediaCenter.Business.Repositories
                 return new List<MediaHistoryRecord>();
             }
             var items = (await ConnectionManager.QueryAsync<MediaHistoryRecord>(@"
-                select *, MediaItemProgress.id as id from MediaItemProgress, MediaItemIds
+                select *, MediaItemProgress.id as id, MediaItemIds.mediaTypeId as mediaType
+                from MediaItemProgress, MediaItemIds
                 where MediaItemProgress.mediaItemId = MediaItemIds.id
                   and MediaItemProgress.id in @ids
                 order by dateEnd desc
@@ -225,9 +227,13 @@ namespace PlumMediaCenter.Business.Repositories
             //get all of the movies for these media items
             var movieIds = items.Where(x => x.MediaType == MediaType.MOVIE).Select(x => x.MediaItemId);
             var movies = await this.MovieRepository.GetByIds(movieIds, new[] { "id", "posterUrl", "runtimeSeconds", "title" });
-            foreach (var item in items)
+            foreach (var item in items.Where(x => x.MediaType == MediaType.MOVIE))
             {
                 var movie = movies.Where(x => x.Id == item.MediaItemId).FirstOrDefault();
+                if (movie == null)
+                {
+                    throw new Exception($"Unable to find media item with id {item.MediaItemId}");
+                }
                 item.PosterUrl = movie.PosterUrl;
                 item.RuntimeSeconds = movie.RuntimeSeconds;
                 item.Title = movie.Title;
@@ -258,29 +264,40 @@ namespace PlumMediaCenter.Business.Repositories
             return id.Value;
         }
 
+        public class GetMediaItemRow
+        {
+            public int Id { get; set; }
+            public MediaType MediaType { get; set; }
+
+        }
+
         /// <summary>
         /// Get the specific model by its media id
         /// </summary>
         /// <param name="mediaItemId"></param>
         /// <returns></returns>
-        public async Task<object> GetMediaItem(int mediaItemId)
+        public async Task<object> GetMediaItems(IEnumerable<int> mediaItemIds)
         {
+            mediaItemIds = mediaItemIds.Distinct();
+
             //get the media type id from the db.
-            var mediaType = (await ConnectionManager.QueryAsync<MediaType>(@"
-                select mediaTypeId 
+            var mediaTypes = await ConnectionManager.QueryAsync<GetMediaItemRow>(@"
+                select id, mediaTypeId as mediaType
                 from MediaItemIds
-                where id = @mediaItemId
+                where id in @mediaItemIds
             ", new
             {
-                mediaItemId = mediaItemId
-            })).FirstOrDefault();
-            switch (mediaType)
-            {
-                case MediaType.MOVIE:
-                    return await this.MovieRepository.GetById(mediaItemId);
-                default:
-                    throw new Exception("Not implemented");
-            }
+                mediaItemIds = mediaItemIds
+            });
+
+            var results = new List<IHasId>();
+
+            //get all movies
+            var movieIds = mediaTypes.Where(x => x.MediaType == MediaType.MOVIE).Select(x => x.Id);
+            //TODO - update to filter by only queried column names
+            var movies = await this.MovieRepository.GetByIds(movieIds, this.MovieRepository.AllColumnNames);
+            results.AddRange(movies);
+            return results;
         }
 
         /// <summary>

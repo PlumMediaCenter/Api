@@ -1,5 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using GraphQL.Execution;
+using GraphQL.Language.AST;
 using GraphQL.Types;
 
 namespace PlumMediaCenter.Business
@@ -7,6 +10,17 @@ namespace PlumMediaCenter.Business
     public static class Extensions
     {
 
+        public static IEnumerable<string> AddIfMissing(this IEnumerable<string> items, IEnumerable<string> values)
+        {
+            foreach (var value in values)
+            {
+                if (items.Contains(value) == false)
+                {
+                    items = items.Append(value);
+                }
+            }
+            return items;
+        }
         /// <summary>
         /// Add a column to the ienumerable if it is missing
         /// </summary>
@@ -14,38 +28,60 @@ namespace PlumMediaCenter.Business
         /// <returns></returns>
         public static IEnumerable<string> AddIfMissing(this IEnumerable<string> items, string value)
         {
-            if (items.Contains(value) == false)
+            return items.AddIfMissing(new[] { value });
+        }
+
+        public static List<string> AddIfMissing(this List<string> items, IEnumerable<string> values)
+        {
+            foreach (var value in values)
             {
-                items = items.Append(value);
+                if (items.Contains(value) == false)
+                {
+                    items.Add(value);
+                }
             }
             return items;
         }
 
+
         public static List<string> AddIfMissing(this List<string> items, string value)
         {
-            if (items.Contains(value) == false)
+            return items.AddIfMissing(new[] { value });
+        }
+
+
+        public static IEnumerable<string> RemoveIfPresent(this IEnumerable<string> items, IEnumerable<string> values)
+        {
+            foreach (var value in values)
             {
-                items.Add(value);
+                if (items.Contains(value))
+                {
+                    items = items.Where(x => x != value);
+                }
             }
             return items;
         }
 
         public static IEnumerable<string> RemoveIfPresent(this IEnumerable<string> items, string value)
         {
-            if (items.Contains(value))
+            return items.RemoveIfPresent(new[] { value });
+        }
+
+        public static List<string> RemoveIfPresent(this List<string> items, IEnumerable<string> values)
+        {
+            foreach (var value in values)
             {
-                items = items.Where(x => x != value);
+                if (items.Contains(value))
+                {
+                    items.Remove(value);
+                }
             }
             return items;
         }
 
         public static List<string> RemoveIfPresent(this List<string> items, string value)
         {
-            if (items.Contains(value))
-            {
-                items.Remove(value);
-            }
-            return items;
+            return items.RemoveIfPresent(new[] { value });
         }
 
         public static Dictionary<TKey, TValue> AddIfMissing<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key, TValue value)
@@ -95,5 +131,20 @@ namespace PlumMediaCenter.Business
                 return defaultValue;
             }
         }
+
+        // public static IDictionary<string, Field> GetSubFields<ContextType>(this ResolveFieldContext<ContextType> context, IGraphType graphType)
+        // {
+        //     //  public static Dictionary<string, Field> CollectFields(
+        //     //             ExecutionContext context,
+        //     //             IGraphType specificType,
+        //     //             SelectionSet selectionSet,
+        //     //             Dictionary<string, Field> fields,
+        //     //             List<string> visitedFragmentNames)
+        //     //         {
+        //     var fields = new Dictionary<string, Field>();
+        //     // return ExecutionHelper.CollectFields(context, graphType, context.FieldAst.SelectionSet, fields, new List<string>());
+        //     return new Dictionary<string, Field>();
+        // }
+
     }
 }

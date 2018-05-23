@@ -11,11 +11,13 @@ namespace PlumMediaCenter.Graphql.GraphTypes
     public class MovieGraphType : ObjectGraphType<Movie>
     {
         public MovieGraphType(
-             IDataLoaderContextAccessor dlca,
-             MediaRepository mediaRepository,
-             UserRepository userRepository
+            IDataLoaderContextAccessor dlca,
+            MediaRepository mediaRepository,
+            UserRepository userRepository,
+            IDataLoaderContextAccessor dla
         )
         {
+            this.Name = "Movie";
             Field(x => x.Id).Description("The ID of the video.");
             Field(x => x.Title).Description("The formal title of the movie. This is also known as the movie's name.");
             Field(x => x.SortTitle).Description("The title used to sort this movie.");
@@ -38,12 +40,17 @@ namespace PlumMediaCenter.Graphql.GraphTypes
 
             Field(x => x.PosterUrl).Description("The url to the poster for this movie");
             Field(x => x.CompletionSeconds).Description("The number of seconds at which time this video would be considered fully watched (i.e. the number of seconds at which time the credits start rolling).");
-            Field<ListGraphType<MediaHistoryRecordType>>("history", resolve: (context) =>
-            {
-                var columnNames = context.SubFields.Keys;
-                //manager.Media.PrefetchHistoryForMediaItem(manager.Users.CurrentProfileId, context.Source.Id);
-                return mediaRepository.GetHistoryForMediaItem(userRepository.CurrentProfileId, context.Source.Id).Result;
-            });
+            Field<ListGraphType<MediaHistoryRecordGraphType>>().Name("history")
+                .Description("The viewing history for this movie")
+                .ResolveAsync(async (ctx) =>
+                {
+                    var columnNames = ctx.SubFields.Keys;
+                    //manager.Media.PrefetchHistoryForMediaItem(manager.Users.CurrentProfileId, context.Source.Id);
+                    return await mediaRepository.GetHistoryForMediaItem(userRepository.CurrentProfileId, ctx.Source.Id);
+                });
+
+            Field(x => x.ResumeSeconds).Description("If the user stopped in the middle of watching this video, resumeSeconds will be the number of seconds where playback should start back up. If the user has never watched this movie, or if they have already completely watched the movie, this field will be set to 0");
+            Field(x => x.ProgressPercentage).Description("The percentage of the movie that the user watched");
         }
     }
 }

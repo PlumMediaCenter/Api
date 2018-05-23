@@ -19,7 +19,10 @@ namespace PlumMediaCenter.Graphql
             MovieRepository movieRepository,
             SourceRepository sourceRepository,
             LibraryGenerator libraryGenerator,
-            MovieMetadataProcessor movieMetadataProcessor
+            MovieMetadataProcessor movieMetadataProcessor,
+            MediaRepository mediaRepository,
+            UserRepository userRepository,
+            MovieGraphType movieGraphType
         )
         {
             this.Name = "Query";
@@ -73,6 +76,22 @@ namespace PlumMediaCenter.Graphql
                     var tmdbId = ctx.GetArgument<int>("tmdbId");
                     var movieId = ctx.GetArgument<int>("movieId");
                     return await movieMetadataProcessor.GetComparisonAsync(tmdbId, movieId);
+                });
+
+            Field<ListGraphType<MediaHistoryRecordGraphType>>().Name("mediaHistory")
+                .Description("A list of media items consumed and their current progress and duration of viewing")
+                .ResolveAsync(async (ctx) =>
+                {
+                    return await mediaRepository.GetHistory(userRepository.CurrentProfileId);
+                });
+
+            Field<ListGraphType<MediaItemGraphType>>().Name("mediaItems")
+                .Description("A list of media items. This is a union graph type, so you must specify inline fragments ")
+                .Argument<ListGraphType<IntGraphType>>("mediaItemIds", "A list of mediaItem IDs")
+                .ResolveAsync(async (ctx) =>
+                {
+                    var mediaItemIds = ctx.GetArgument<IEnumerable<int>>("mediaItemIds");
+                    return await mediaRepository.GetMediaItems(mediaItemIds);
                 });
         }
 

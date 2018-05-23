@@ -15,10 +15,12 @@ namespace PlumMediaCenter.Business.Repositories
     public class MovieRepository : BaseRepository<Movie>
     {
         public MovieRepository(
-            LibGenMovieRepository LibGenMovieRepository
+            LibGenMovieRepository libGenMovieRepository,
+            MediaRepository mediaRepository,
+            UserRepository userRepository
         ) : base()
         {
-            this.LibGenMovieRepository = LibGenMovieRepository;
+            this.LibGenMovieRepository = libGenMovieRepository;
             this.TableName = "Movies";
             this.AllColumnNames = new[]{
                 "id",
@@ -31,16 +33,26 @@ namespace PlumMediaCenter.Business.Repositories
                 "rating",
                 "releaseDate",
                 "runtimeSeconds",
-                "tmdbId",
                 "sourceId",
+                "tmdbId",
                 "backdropGuids",
                 "completionSeconds",
+                "resumeSeconds",
+                "progressPercentage"
             };
             this.AlwaysIncludedColumnNames = new[] {
                 "id",
                 "videoPath"
             };
             this.Aliases.Add("backdropUrls", "backdropGuids");
+
+            this.PostQueryProcessors.Add(new PostQueryProcessor<Movie>(new[] { "resumeSeconds", "progressPercentage" }, new[] { "runtimeSeconds" }, async (models) =>
+              {
+                  await mediaRepository.FetchProgressSeconds(userRepository.CurrentProfileId, models);
+                  return models;
+              }));
+
+
         }
         LibGenMovieRepository LibGenMovieRepository;
 
