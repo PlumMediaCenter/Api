@@ -8,23 +8,16 @@ using PlumMediaCenter.Business.Data;
 
 namespace PlumMediaCenter.Data
 {
-    class DatabaseInstaller
+    public class DatabaseInstaller
     {
-        public DatabaseInstaller(string rootUsername, string rootPassword)
+        public DatabaseInstaller()
         {
-            if (string.IsNullOrWhiteSpace(rootUsername) || string.IsNullOrWhiteSpace(rootPassword))
-            {
-                throw new Exception("root username and password cannot be null");
-            }
-            this.RootUsername = rootUsername;
-            this.RootPassword = rootPassword;
+
         }
 
-        private string RootUsername;
-        private string RootPassword;
-        public void Install()
+        public void Install(string rootUsername, string rootPassword)
         {
-            CreateDbIfNotExist();
+            CreateDbIfNotExist(rootUsername, rootPassword);
             var connection = ConnectionManager.CreateConnection();
             VersionRun("0.1.0", connection, () =>
             {
@@ -135,7 +128,7 @@ namespace PlumMediaCenter.Data
                 return null;
             }
         }
-        public void CreateDbIfNotExist()
+        public void CreateDbIfNotExist(string rootUsername, string rootPassword)
         {
             var version = GetVersion();
             if (version != null)
@@ -143,7 +136,7 @@ namespace PlumMediaCenter.Data
                 return;
             }
             //the db has not yet been created. create it
-            using (var connection = ConnectionManager.CreateConnection(this.RootUsername, this.RootPassword, false))
+            using (var connection = ConnectionManager.CreateConnection(rootUsername, rootPassword, false))
             {
                 connection.Execute(@"
                     create database `pmc`;
@@ -166,7 +159,7 @@ namespace PlumMediaCenter.Data
         /// It only validates that there is a pmc db created
         /// </summary>
         /// <returns></returns>
-        public static async Task<bool> IsInstalled()
+        public async Task<bool> GetIsInstalled()
         {
             try
             {

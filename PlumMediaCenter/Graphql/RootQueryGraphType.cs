@@ -22,10 +22,13 @@ namespace PlumMediaCenter.Graphql
             MovieMetadataProcessor movieMetadataProcessor,
             MediaRepository mediaRepository,
             UserRepository userRepository,
-            MovieGraphType movieGraphType
+            MovieGraphType movieGraphType,
+            DatabaseGraphType databaseGraphType
         )
         {
             this.Name = "Query";
+            databaseGraphType.Register(this);
+
             Field<ListGraphType<MovieGraphType>, IEnumerable<Movie>>()
                 .Name("movies")
                 .Description("A list of movies")
@@ -93,6 +96,7 @@ namespace PlumMediaCenter.Graphql
                     var mediaItemIds = ctx.GetArgument<IEnumerable<int>>("mediaItemIds");
                     return await mediaRepository.GetMediaItems(mediaItemIds);
                 });
+
         }
 
     }

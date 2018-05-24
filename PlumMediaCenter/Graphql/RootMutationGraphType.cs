@@ -12,7 +12,9 @@ namespace PlumMediaCenter.Graphql
             SourceMutations sourceMutations,
             LibraryMutations libraryMutations,
             MovieMetadataMutations movieMetadataMutations,
-            MediaItemMutations mediaItemMutations
+            MediaItemMutations mediaItemMutations,
+            MediaHistoryRecordMutations mediaHistoryRecordMutations,
+            DatabaseMutations databaseMutations
         )
         {
             this.Name = "Mutation";
@@ -20,6 +22,8 @@ namespace PlumMediaCenter.Graphql
             libraryMutations.Register(this);
             movieMetadataMutations.Register(this);
             mediaItemMutations.Register(this);
+            mediaHistoryRecordMutations.Register(this);
+            databaseMutations.Register(this);
         }
     }
 }
