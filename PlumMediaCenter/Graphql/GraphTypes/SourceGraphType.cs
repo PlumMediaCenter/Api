@@ -16,7 +16,7 @@ namespace PlumMediaCenter.Graphql.GraphTypes
              UserRepository userRepository
         )
         {
-            Field(x => x.Id).Description("The ID of the source");
+            Field(x=> x.Id).Description("The ID of the source");
             Field(x => x.FolderPath).Description("The full path to the folder for this source");
 
             Field<MediaTypeEnumGraphType>()

@@ -61,7 +61,7 @@ namespace PlumMediaCenter.Business.Repositories
             return result;
         }
 
-        public async Task<int?> Insert(Source source)
+        public async Task<int> Insert(Source source)
         {
             using (var connection = ConnectionManager.CreateConnection())
             {
@@ -73,12 +73,13 @@ namespace PlumMediaCenter.Business.Repositories
                     folderPath = source.FolderPath,
                     mediaTypeId = (int)source.MediaType
                 });
-                return await connection.GetLastInsertIdAsync();
+                source.Id = (await connection.GetLastInsertIdAsync()).Value;
+                return source.Id;
             }
         }
 
 
-        public async Task<int?> Update(Source source)
+        public async Task<int> Update(Source source)
         {
             await ConnectionManager.ExecuteAsync(@"
                 update Sources
@@ -109,7 +110,7 @@ namespace PlumMediaCenter.Business.Repositories
             });
         }
 
-        public async Task<int?> Save(Source source)
+        public async Task<int> Save(Source source)
         {
             if (source.Id == 0)
             {
