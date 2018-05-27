@@ -8,12 +8,12 @@ namespace PlumMediaCenter.Graphql.Mutations
     {
 
         public MediaHistoryRecordMutations(
-            MediaRepository mediaRepository
+            MediaItemRepository mediaItemRepository
         )
         {
-            this.MediaRepository = mediaRepository;
+            this.MediaItemRepository = mediaItemRepository;
         }
-        MediaRepository MediaRepository;
+        MediaItemRepository MediaItemRepository;
 
         public void Register(RootMutationGraphType mutation)
         {
@@ -23,7 +23,7 @@ namespace PlumMediaCenter.Graphql.Mutations
                 .ResolveAsync(async (ctx) =>
                 {
                     var id = ctx.GetArgument<int>("id");
-                    await this.MediaRepository.DeleteHistoryRecord(id);
+                    await this.MediaItemRepository.DeleteHistoryRecord(id);
                     return true;
                 });
         }

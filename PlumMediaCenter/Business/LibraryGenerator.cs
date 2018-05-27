@@ -26,7 +26,8 @@ namespace PlumMediaCenter.Business
             LibGenFactory LibGenFactory,
             SourceRepository SourceRepository,
             LibGenMovieRepository LibGenMovieRepository,
-            LibGenTvSerieRepository LibGenTvSerieRepository
+            LibGenTvSerieRepository LibGenTvSerieRepository,
+            SearchCatalog searchCatalog
         )
         {
             this.MovieRepository = MovieRepository;
@@ -34,6 +35,7 @@ namespace PlumMediaCenter.Business
             this.SourceRepository = SourceRepository;
             this.LibGenMovieRepository = LibGenMovieRepository;
             this.LibGenTvSerieRepository = LibGenTvSerieRepository;
+            this.SearchCatalog = searchCatalog;
             try
             {
                 if (File.Exists(LibraryGenerator.StatusFilePath))
@@ -52,6 +54,7 @@ namespace PlumMediaCenter.Business
         SourceRepository SourceRepository;
         LibGenMovieRepository LibGenMovieRepository;
         LibGenTvSerieRepository LibGenTvSerieRepository;
+        SearchCatalog SearchCatalog;
 
         private static string StatusFilePath
         {
@@ -83,6 +86,10 @@ namespace PlumMediaCenter.Business
             {
                 await mediaItem.Process();
             }
+
+            //rebuild the search index
+            //TODO - update the indexer to do partial updates instead of a full regen
+            this.SearchCatalog.GenerateIndexes();
         }
 
         public async Task<IEnumerable<IProcessable>> GetMediaItems(IEnumerable<int> mediaItemIds)
@@ -90,7 +97,7 @@ namespace PlumMediaCenter.Business
             var results = new List<IProcessable>();
             //get all the movies
             {
-                var models = await this.MovieRepository.GetByIds(mediaItemIds, new[] { "id", "sourceId", "folderPath"});
+                var models = await this.MovieRepository.GetByIds(mediaItemIds, new[] { "id", "sourceId", "folderPath" });
                 foreach (var model in models)
                 {
                     var libGenMovie = this.LibGenFactory.BuildMovie(model.GetFolderPath(), model.SourceId);
@@ -125,10 +132,16 @@ namespace PlumMediaCenter.Business
                 this.Status.LastGeneratedDate = oldStatus?.LastGeneratedDate;
                 this.Status.State = "processing movies";
                 await this.ProcessMovies();
+
                 this.Status.State = "processing tv shows";
                 await this.ProcessSeries();
+
+                this.Status.State = "generating search indexes";
+                this.SearchCatalog.GenerateIndexes();
+
                 this.Status.State = "completed";
                 this.Status.LastGeneratedDate = DateTime.UtcNow;
+
             }
             catch (Exception e)
             {
@@ -283,7 +296,6 @@ namespace PlumMediaCenter.Business
                }, loopSeriePath);
             }
         }
-
     }
     class MoviePath
     {

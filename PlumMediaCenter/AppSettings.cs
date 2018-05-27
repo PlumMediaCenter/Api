@@ -19,6 +19,14 @@ namespace PlumMediaCenter
         public string DbName { get; set; }
         public string DbUsername { get; set; }
         public string DbPassword { get; set; }
+
+        public string SearchIndexesDirectoryPath
+        {
+            get
+            {
+                return $"{Directory.GetCurrentDirectory()}/search-indexes/";
+            }
+        }
         public string TmdbCacheDirectoryPath
         {
             get

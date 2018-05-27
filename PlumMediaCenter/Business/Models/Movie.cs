@@ -162,7 +162,19 @@ namespace PlumMediaCenter.Business.Models
         /// <summary>
         /// The MPAA rating of the movie
         /// </summary>
-        public string Rating { get; set; }
+        public string Rating
+        {
+            get
+            {
+                return _Rating != null ? _Rating : "Unknown";
+            }
+            set
+            {
+                this._Rating = value;
+            }
+        }
+        private string _Rating;
+
         /// <summary>
         /// The date that the movie was first released
         /// </summary>

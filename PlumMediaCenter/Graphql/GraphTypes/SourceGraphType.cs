@@ -11,9 +11,6 @@ namespace PlumMediaCenter.Graphql.GraphTypes
     public class SourceGraphType : ObjectGraphType<Source>
     {
         public SourceGraphType(
-             IDataLoaderContextAccessor dlca,
-             MediaRepository mediaRepository,
-             UserRepository userRepository
         )
         {
             Field(x=> x.Id).Description("The ID of the source");

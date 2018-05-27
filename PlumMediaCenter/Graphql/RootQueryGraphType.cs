@@ -20,7 +20,7 @@ namespace PlumMediaCenter.Graphql
             SourceRepository sourceRepository,
             LibraryGenerator libraryGenerator,
             MovieMetadataProcessor movieMetadataProcessor,
-            MediaRepository mediaRepository,
+            MediaItemRepository mediaItemRepository,
             UserRepository userRepository,
             MovieGraphType movieGraphType,
             DatabaseGraphType databaseGraphType
@@ -85,18 +85,29 @@ namespace PlumMediaCenter.Graphql
                 .Description("A list of media items consumed and their current progress and duration of viewing")
                 .ResolveAsync(async (ctx) =>
                 {
-                    return await mediaRepository.GetHistory(userRepository.CurrentProfileId);
+                    return await mediaItemRepository.GetHistory(userRepository.CurrentProfileId);
                 });
 
             Field<ListGraphType<MediaItemGraphType>>().Name("mediaItems")
-                .Description("A list of media items. This is a union graph type, so you must specify inline fragments ")
+                .Description("A list of media items (i.e. movies, shows, episodes, etc). This is a union graph type, so you must specify inline fragments ")
                 .Argument<ListGraphType<IntGraphType>>("mediaItemIds", "A list of mediaItem IDs")
+                .Argument<StringGraphType>("searchText", "A string to use to search for media items")
                 .ResolveAsync(async (ctx) =>
                 {
-                    var mediaItemIds = ctx.GetArgument<IEnumerable<int>>("mediaItemIds");
-                    return await mediaRepository.GetMediaItems(mediaItemIds);
+                    var arguments = ctx.GetArguments(new MediaItemArguments());
+                    if (arguments.MediaItemIds != null)
+                    {
+                        return await mediaItemRepository.GetByIds(arguments.MediaItemIds);
+                    }
+                    else if (arguments.SearchText != null)
+                    {
+                        return await mediaItemRepository.GetSearchResults(arguments.SearchText);
+                    }
+                    else
+                    {
+                        throw new Exception("No valid arguments provided");
+                    }
                 });
-
         }
 
     }

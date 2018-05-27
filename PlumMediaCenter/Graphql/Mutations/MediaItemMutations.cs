@@ -14,14 +14,14 @@ namespace PlumMediaCenter.Graphql.Mutations
     public class MediaItemMutations
     {
         public MediaItemMutations(
-            MediaRepository mediaRepository,
+            MediaItemRepository mediaItemRepository,
             UserRepository userRepository
         )
         {
-            this.MediaRepository = mediaRepository;
+            this.MediaItemRepository = mediaItemRepository;
             this.UserRepository = userRepository;
         }
-        MediaRepository MediaRepository;
+        MediaItemRepository MediaItemRepository;
         UserRepository UserRepository;
 
         public void Register(RootMutationGraphType mutation)
@@ -34,7 +34,7 @@ namespace PlumMediaCenter.Graphql.Mutations
                 {
                     var mediaItemId = ctx.GetArgument<int>("mediaItemId");
                     var seconds = ctx.GetArgument<int>("seconds");
-                    await this.MediaRepository.SetProgress(this.UserRepository.CurrentProfileId, mediaItemId, seconds);
+                    await this.MediaItemRepository.SetProgress(this.UserRepository.CurrentProfileId, mediaItemId, seconds);
                     return true;
                 }
             );

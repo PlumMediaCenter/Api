@@ -13,7 +13,6 @@ namespace PlumMediaCenter.Graphql.GraphTypes
     {
         public LibraryGeneratorStatusGraphType(
              IDataLoaderContextAccessor dlca,
-             MediaRepository mediaRepository,
              UserRepository userRepository
         )
         {

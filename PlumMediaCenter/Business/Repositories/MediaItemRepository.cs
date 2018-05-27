@@ -12,15 +12,17 @@ using PlumMediaCenter.Business.Models;
 
 namespace PlumMediaCenter.Business.Repositories
 {
-    public class MediaRepository
+    public class MediaItemRepository
     {
-        public MediaRepository(
+        public MediaItemRepository(
             AppSettings appSettings,
-            Lazy<MovieRepository> lazyMovieRepository
+            Lazy<MovieRepository> lazyMovieRepository,
+            SearchCatalog searchCatalog
         )
         {
             this.AppSettings = appSettings;
             this.LazyMovieRepository = lazyMovieRepository;
+            this.SearchCatalog = searchCatalog;
 
         }
         AppSettings AppSettings;
@@ -32,6 +34,7 @@ namespace PlumMediaCenter.Business.Repositories
                 return LazyMovieRepository.Value;
             }
         }
+        SearchCatalog SearchCatalog;
 
         public async Task<MediaItemProgress> SetProgress(int profileId, int mediaItemId, int progressSeconds)
         {
@@ -276,9 +279,9 @@ namespace PlumMediaCenter.Business.Repositories
         /// </summary>
         /// <param name="mediaItemId"></param>
         /// <returns></returns>
-        public async Task<object> GetMediaItems(IEnumerable<int> mediaItemIds)
+        public async Task<IEnumerable<object>> GetByIds(IEnumerable<int> mediaItemIds)
         {
-            mediaItemIds = mediaItemIds.Distinct();
+            var ids = mediaItemIds.Distinct().ToList();
 
             //get the media type id from the db.
             var mediaTypes = await ConnectionManager.QueryAsync<GetMediaItemRow>(@"
@@ -287,7 +290,7 @@ namespace PlumMediaCenter.Business.Repositories
                 where id in @mediaItemIds
             ", new
             {
-                mediaItemIds = mediaItemIds
+                mediaItemIds = ids
             });
 
             var results = new List<IHasId>();
@@ -297,7 +300,11 @@ namespace PlumMediaCenter.Business.Repositories
             //TODO - update to filter by only queried column names
             var movies = await this.MovieRepository.GetByIds(movieIds, this.MovieRepository.AllColumnNames);
             results.AddRange(movies);
-            return results;
+
+            //return the results in the order of the ids specified
+            var orderedResults = results.OrderBy(x => ids.IndexOf(x.Id));
+
+            return orderedResults;
         }
 
         /// <summary>
@@ -307,10 +314,16 @@ namespace PlumMediaCenter.Business.Repositories
         /// <returns></returns>
         public async Task<IEnumerable<object>> GetSearchResults(string searchText)
         {
-            // var movieResults = await this.MovieRepository.GetSearchResults(searchText);
-            // return movieResults;
-            var results = new object[] { };
-            return await Task.FromResult(results);
+            var searchResults = this.SearchCatalog.GetSearchResults(searchText);
+            var ids = searchResults.Select(x => x.MediaItemId);
+            var items = await this.GetByIds(ids);
+            return items;
         }
+    }
+
+    public class MediaItemArguments
+    {
+        public IEnumerable<int> MediaItemIds { get; set; }
+        public string SearchText { get; set; }
     }
 }

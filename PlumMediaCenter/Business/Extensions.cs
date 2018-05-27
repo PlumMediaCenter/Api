@@ -132,6 +132,38 @@ namespace PlumMediaCenter.Business
             }
         }
 
+        /// <summary>
+        /// Get all available arguments as an object
+        /// </summary>
+        /// <param name="context"></param>
+        /// <typeparam name="ContextType"></typeparam>
+        /// <typeparam name="ArgumentsType"></typeparam>
+        /// <returns></returns>
+        public static ArgumentsType GetArguments<ContextType, ArgumentsType>(this ResolveFieldContext<ContextType> context, ArgumentsType result) where ArgumentsType : new()
+        {
+            var argumentsProperties = typeof(ArgumentsType).GetProperties();
+
+            var argumentNameLookup = context.Arguments.Keys.ToDictionary(x => x.ToLower(), x => x);
+
+            foreach (var argumentsProperty in argumentsProperties)
+            {
+                var lowerPropertyName = argumentsProperty.Name.ToLower();
+
+                //get the actual argument name in its proper case
+                var argumentName = argumentNameLookup.ContainsKey(lowerPropertyName) ?
+                    argumentNameLookup[lowerPropertyName] :
+                    null;
+
+                //if the context has this argument defined and available, get it
+                if (argumentName != null && context.Arguments.ContainsKey(argumentName) && context.Arguments[argumentName] != null)
+                {
+                    var value = context.Arguments[argumentName];
+                    argumentsProperty.SetValue(result, value);
+                }
+            }
+            return result;
+        }
+
         // public static IDictionary<string, Field> GetSubFields<ContextType>(this ResolveFieldContext<ContextType> context, IGraphType graphType)
         // {
         //     //  public static Dictionary<string, Field> CollectFields(

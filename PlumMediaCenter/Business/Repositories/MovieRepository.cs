@@ -16,7 +16,7 @@ namespace PlumMediaCenter.Business.Repositories
     {
         public MovieRepository(
             LibGenMovieRepository libGenMovieRepository,
-            MediaRepository mediaRepository,
+            MediaItemRepository mediaItemRepository,
             UserRepository userRepository
         ) : base()
         {
@@ -48,7 +48,7 @@ namespace PlumMediaCenter.Business.Repositories
 
             this.PostQueryProcessors.Add(new PostQueryProcessor<Movie>(new[] { "resumeSeconds", "progressPercentage" }, new[] { "runtimeSeconds" }, async (models) =>
               {
-                  await mediaRepository.FetchProgressSeconds(userRepository.CurrentProfileId, models);
+                  await mediaItemRepository.FetchProgressSeconds(userRepository.CurrentProfileId, models);
                   return models;
               }));
 

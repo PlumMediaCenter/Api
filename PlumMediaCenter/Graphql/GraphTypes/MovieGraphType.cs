@@ -12,7 +12,7 @@ namespace PlumMediaCenter.Graphql.GraphTypes
     {
         public MovieGraphType(
             IDataLoaderContextAccessor dlca,
-            MediaRepository mediaRepository,
+            MediaItemRepository mediaItemRepository,
             UserRepository userRepository,
             IDataLoaderContextAccessor dla
         )
@@ -46,7 +46,7 @@ namespace PlumMediaCenter.Graphql.GraphTypes
                 {
                     var columnNames = ctx.SubFields.Keys;
                     //manager.Media.PrefetchHistoryForMediaItem(manager.Users.CurrentProfileId, context.Source.Id);
-                    return await mediaRepository.GetHistoryForMediaItem(userRepository.CurrentProfileId, ctx.Source.Id);
+                    return await mediaItemRepository.GetHistoryForMediaItem(userRepository.CurrentProfileId, ctx.Source.Id);
                 });
 
             Field(x => x.ResumeSeconds).Description("If the user stopped in the middle of watching this video, resumeSeconds will be the number of seconds where playback should start back up. If the user has never watched this movie, or if they have already completely watched the movie, this field will be set to 0");

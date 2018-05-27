@@ -50,7 +50,7 @@ namespace PlumMediaCenter
             services.TryAddSingleton<IHttpContextAccessor>(httpContextAccessor);
 
             AppSettings.HttpContextAccessor = httpContextAccessor;
-            
+
             var appSettings = Configuration.GetSection("appSettings").Get<AppSettings>();
             //register a singleton AppSettings
             services.AddSingleton(appSettings);
@@ -112,6 +112,7 @@ namespace PlumMediaCenter
             services.AddSingleton<UserAccessor>();
             services.AddSingleton<LibraryGenerator>();
             services.AddSingleton<DatabaseInstaller>();
+            services.AddSingleton<SearchCatalog>();
 
             services.AddSingleton<IDataLoaderContextAccessor, DataLoaderContextAccessor>();
 

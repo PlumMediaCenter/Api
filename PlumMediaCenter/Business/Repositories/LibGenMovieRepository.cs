@@ -17,16 +17,16 @@ namespace PlumMediaCenter.Business.Repositories
     {
         public LibGenMovieRepository(
             SourceRepository sourceRepository,
-            MediaRepository mediaRepository,
+            MediaItemRepository mediaItemRepository,
             LibGenFactory libGenFactory
         )
         {
             this.SourceRepository = sourceRepository;
-            this.MediaRepository = mediaRepository;
+            this.MediaItemRepository = mediaItemRepository;
             this.LibGenFactory = libGenFactory;
         }
         SourceRepository SourceRepository;
-        MediaRepository MediaRepository;
+        MediaItemRepository MediaItemRepository;
         LibGenFactory LibGenFactory;
 
         /// <summary>
@@ -106,7 +106,7 @@ namespace PlumMediaCenter.Business.Repositories
         {
             Console.WriteLine("Movie.Insert -> Movie folder path: " + movie.FolderPath);
             Console.WriteLine("Movie.Insert -> Movie VideoPath: " + movie.VideoPath);
-            var mediaItemId = await this.MediaRepository.GetNewMediaId(MediaType.MOVIE);
+            var mediaItemId = await this.MediaItemRepository.GetNewMediaId(MediaType.MOVIE);
             await ConnectionManager.ExecuteAsync(@"
                 insert into Movies(
                     id,
