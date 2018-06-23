@@ -11,15 +11,30 @@ namespace PlumMediaCenter.Business.Factories
             Lazy<LibGenMovieRepository> LazyLibGenMovieRepository,
             Lazy<MovieMetadataProcessor> LazyMovieMetadataProcessor,
             AppSettings AppSettings,
-            Utility Utility
+            Utility Utility,
+            Lazy<LibGenTvShowRepository> lazyLibGenTvShowRepository,
+            Lazy<TvShowMetadataProcessor> LazyTvShowMetadataProcessor
         )
         {
             this.LazyLibGenMovieRepository = LazyLibGenMovieRepository;
             this.LazyMovieMetadataProcessor = LazyMovieMetadataProcessor;
             this.AppSettings = AppSettings;
             this.Utility = Utility;
+            this.LazyLibGenTvShowRepository = lazyLibGenTvShowRepository;
+            this.LazyTvShowMetadataProcessor = LazyTvShowMetadataProcessor;
         }
         Lazy<LibGenMovieRepository> LazyLibGenMovieRepository;
+
+        Lazy<TvShowMetadataProcessor> LazyTvShowMetadataProcessor;
+
+        TvShowMetadataProcessor TvShowMetadataProcessor
+        {
+            get
+            {
+                return this.LazyTvShowMetadataProcessor.Value;
+            }
+        }
+
         LibGenMovieRepository LibGenMovieRepository
         {
             get
@@ -35,23 +50,41 @@ namespace PlumMediaCenter.Business.Factories
                 return LazyMovieMetadataProcessor.Value;
             }
         }
+
+        Lazy<LibGenTvShowRepository> LazyLibGenTvShowRepository;
+        LibGenTvShowRepository LibGenTvShowRepository
+        {
+            get
+            {
+                return LazyLibGenTvShowRepository.Value;
+            }
+        }
+
+
         AppSettings AppSettings;
         Utility Utility;
         public LibGenMovie BuildMovie(string folderPath, int sourceId)
         {
             return new LibGenMovie(
+                folderPath,
+                sourceId,
                 LibGenMovieRepository,
                 MovieMetadataProcessor,
                 AppSettings,
-                Utility,
-                folderPath,
-                sourceId
+                Utility
             );
         }
 
-        public LibGenTvSerie BuildTvSerie(string folderPath, int sourceId)
+        public LibGenTvShow BuildTvShow(string folderPath, int sourceId)
         {
-            return new LibGenTvSerie(folderPath, sourceId);
+            return new LibGenTvShow(
+                folderPath,
+                sourceId,
+                LibGenTvShowRepository,
+                AppSettings,
+                Utility,
+                TvShowMetadataProcessor
+            );
         }
     }
 }

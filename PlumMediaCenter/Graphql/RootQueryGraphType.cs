@@ -19,7 +19,7 @@ namespace PlumMediaCenter.Graphql
             MovieRepository movieRepository,
             SourceRepository sourceRepository,
             LibraryGenerator libraryGenerator,
-            MovieMetadataProcessor movieMetadataProcessor,
+            MovieMetadataProcessor MovieMetadataProcessor,
             MediaItemRepository mediaItemRepository,
             UserRepository userRepository,
             MovieGraphType movieGraphType,
@@ -56,7 +56,8 @@ namespace PlumMediaCenter.Graphql
                 .Description("The status of the library generator")
                 .Resolve((ResolveFieldContext<object> ctx) =>
                 {
-                    return libraryGenerator.GetStatus();
+                    var status = libraryGenerator.GetStatus();
+                    return status;
                 });
 
             Field<ListGraphType<MovieMetadataSearchResultGraphType>>()
@@ -66,7 +67,7 @@ namespace PlumMediaCenter.Graphql
                 .ResolveAsync(async (ctx) =>
                 {
                     var searchText = ctx.GetArgument<string>("searchText");
-                    return await movieMetadataProcessor.GetSearchResultsAsync(searchText);
+                    return await MovieMetadataProcessor.GetSearchResultsAsync(searchText);
                 });
 
             Field<MovieMetadataComparisonGraphType>()
@@ -78,14 +79,15 @@ namespace PlumMediaCenter.Graphql
                 {
                     var tmdbId = ctx.GetArgument<int>("tmdbId");
                     var movieId = ctx.GetArgument<int>("movieId");
-                    return await movieMetadataProcessor.GetComparisonAsync(tmdbId, movieId);
+                    return await MovieMetadataProcessor.GetComparisonAsync(tmdbId, movieId);
                 });
 
             Field<ListGraphType<MediaHistoryRecordGraphType>>().Name("mediaHistory")
                 .Description("A list of media items consumed and their current progress and duration of viewing")
                 .ResolveAsync(async (ctx) =>
                 {
-                    return await mediaItemRepository.GetHistory(userRepository.CurrentProfileId);
+                    var results = await mediaItemRepository.GetHistory(userRepository.CurrentProfileId);
+                    return results;
                 });
 
             Field<ListGraphType<MediaItemGraphType>>().Name("mediaItems")

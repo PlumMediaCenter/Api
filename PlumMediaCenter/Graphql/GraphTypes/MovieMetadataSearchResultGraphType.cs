@@ -15,7 +15,7 @@ namespace PlumMediaCenter.Graphql.GraphTypes
         )
         {
             Field(x => x.Title).Description("The formal title of the movie. This is also known as the movie's name.");
-            Field(x => x.ReleaseDate, nullable: true).Description("The date this movie was first released.");
+            Field(x => x.ReleaseYear, nullable: true).Description("The year this movie was first released.");
             Field(x => x.TmdbId, nullable: true).Description("TMDB (The Movie DataBase) ID for this movie.");
             Field(x => x.PosterUrl).Description("The full url to the poster for this movie.");
             Field(x => x.Overview).Description("The overview (or summary) of the movie");

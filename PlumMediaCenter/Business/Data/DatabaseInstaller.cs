@@ -61,14 +61,33 @@ namespace PlumMediaCenter.Data
                         title varchar(200) not null comment 'title of movie',
                         sortTitle varchar(200) not null comment 'title to use for sorting movies',
                         summary varchar(100) comment 'short explanation of movie plot',
-                        description varchar(4000) comment 'int explanation of movie plot',
+                        description varchar(4000) comment 'longer explanation of movie plot',
                         rating varchar(10) comment 'MPAA rating for movie',
-                        releaseDate date comment 'Date the movie was first released',
+                        releaseYear int(4) comment 'Year the movie was first released',
                         runtimeSeconds int comment 'Runtime of movie in seconds',
                         tmdbId int comment 'The tmdb id for this movie, if one exists',
                         sourceId int not null comment 'fk for Sources table',
-                        backdropGuids varchar(4000) not null comment 'comma separated list of backdrop guids',
                         completionSeconds int comment 'the number of seconds at which time the movie would be considered watched',
+                        posterCount int comment 'The number of posters this movie has',
+                        backdropCount int comment 'The number of backdrops this movie has',
+                        foreign key(sourceId) references Sources(id),
+                        foreign key(id) references MediaItemIds(id)
+                    );
+                ");
+
+                connection.Execute(@"
+                    create table TvShows(
+                        id int not null primary key comment 'mediaItemId of tv show',
+                        folderPath varchar(4000) not null comment 'full path to folder for tv show',
+                        title varchar(200) not null comment 'title of tv show',
+                        sortTitle varchar(200) not null comment 'title to use for sorting',
+                        summary varchar(100) comment 'short explanation of tv show',
+                        description varchar(4000) comment 'longer explanation of tv show',
+                        rating varchar(10) comment 'MPAA rating for tv show',
+                        releaseYear int(4) comment 'Year the tv show was first released',
+                        runtimeSeconds int comment 'Average runtime of the episodes in the tv show',
+                        tmdbId int comment 'The tmdb id for this tv show, if one exists',
+                        sourceId int not null comment 'fk for Sources table',
                         foreign key(sourceId) references Sources(id),
                         foreign key(id) references MediaItemIds(id)
                     );
@@ -84,6 +103,14 @@ namespace PlumMediaCenter.Data
                         dateBegin datetime not null,
                         dateEnd datetime not null,
                         foreign key(mediaItemId) references MediaItemIds(id)
+                    );
+                ");
+
+                connection.Execute(@"
+                    create table Image(
+                        id int not null AUTO_INCREMENT primary key comment 'Unique identifier for this table',
+                        sourceUrl varchar(2048) comment 'The url where the image originated from. Will be null if a user manually uploaded an image',
+                        data blob not null
                     );
                 ");
             });

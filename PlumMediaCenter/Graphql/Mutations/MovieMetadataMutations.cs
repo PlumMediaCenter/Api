@@ -8,16 +8,17 @@ using PlumMediaCenter.Business.Repositories;
 using PlumMediaCenter.Models;
 using System.Collections.Generic;
 using PlumMediaCenter.Business.MetadataProcessing;
+using PlumMediaCenter.Business.Metadata;
 
 namespace PlumMediaCenter.Graphql.Mutations
 {
     public class MovieMetadataMutations
     {
         public MovieMetadataMutations(
-            MovieMetadataProcessor movieMetadataProcessor
+            MovieMetadataProcessor MovieMetadataProcessor
         )
         {
-            this.MovieMetadataProcessor = movieMetadataProcessor;
+            this.MovieMetadataProcessor = MovieMetadataProcessor;
         }
         MovieMetadataProcessor MovieMetadataProcessor;
 

@@ -132,14 +132,14 @@ namespace PlumMediaCenter.Business.Repositories
             {
                 //get the latest progress record for each media item
                 latestProgressRecords = await connection.QueryAsync<MediaItemProgress>(@"
-                    select outside.mediaItemId, outside.progressSecondsEnd 
+                    select outside.*, outside.mediaItemId, outside.progressSecondsEnd 
                     from MediaItemProgress outside
                     where outside.id in (
                         select id from (
-                            select id, max(dateEnd)
+                            select max(id) as id, max(dateEnd)
                             from MediaItemProgress
-                            where profileId = 1
-                            and mediaItemId in (1,2,3,4,5)
+                            where profileId = @profileId
+                            and mediaItemId in @mediaItemIds
                             group by mediaItemId
                         ) as grouper
                     );
@@ -229,7 +229,7 @@ namespace PlumMediaCenter.Business.Repositories
             }));
             //get all of the movies for these media items
             var movieIds = items.Where(x => x.MediaType == MediaType.MOVIE).Select(x => x.MediaItemId);
-            var movies = await this.MovieRepository.GetByIds(movieIds, new[] { "id", "posterUrl", "runtimeSeconds", "title" });
+            var movies = await this.MovieRepository.GetByIds(movieIds, new[] { "id", "posterUrls", "runtimeSeconds", "title" });
             foreach (var item in items.Where(x => x.MediaType == MediaType.MOVIE))
             {
                 var movie = movies.Where(x => x.Id == item.MediaItemId).FirstOrDefault();
@@ -237,7 +237,7 @@ namespace PlumMediaCenter.Business.Repositories
                 {
                     throw new Exception($"Unable to find media item with id {item.MediaItemId}");
                 }
-                item.PosterUrl = movie.PosterUrl;
+                item.PosterUrl = movie.PosterUrls.First();
                 item.RuntimeSeconds = movie.RuntimeSeconds;
                 item.Title = movie.Title;
             }

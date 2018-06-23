@@ -1,5 +1,6 @@
 
 using GraphQL.Types;
+using PlumMediaCenter.Business.Metadata;
 using PlumMediaCenter.Business.MetadataProcessing;
 using PlumMediaCenter.Graphql.GraphTypes;
 
@@ -22,7 +23,7 @@ namespace PlumMediaCenter.Graphql.InputGraphTypes
             Field(x => x.Keywords);
             Field(x => x.PosterUrls);
             Field(x => x.Rating);
-            Field(x => x.ReleaseDate, nullable: true);
+            Field(x => x.ReleaseYear, nullable: true);
             Field(x => x.RuntimeSeconds, nullable: true);
             Field(x => x.SortTitle);
             Field(x => x.Summary);

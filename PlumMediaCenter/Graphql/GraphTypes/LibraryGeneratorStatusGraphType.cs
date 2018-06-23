@@ -3,6 +3,7 @@ using GraphQL.DataLoader;
 using GraphQL.Types;
 using PlumMediaCenter.Attributues;
 using PlumMediaCenter.Business;
+using PlumMediaCenter.Business.Enums;
 using PlumMediaCenter.Business.Models;
 using PlumMediaCenter.Business.Repositories;
 using PlumMediaCenter.Models;
@@ -25,20 +26,20 @@ namespace PlumMediaCenter.Graphql.GraphTypes
             Field(x => x.CountCompleted).Description("The number of items that have already been processed during the current library generation cycle");
             Field(x => x.CountRemaining).Description("The number of items that have not yet been fully processed during the current library generation cycle");
             Field(x => x.CountTotal).Description("The total number of items to be processed during the current library generation cycle");
-            Field<PrettyErrorGraphType>().Name("error")
-                .Description("The error encountered during the current library generation cycle. This will be null if no errors were encountered")
+            Field<PrettyErrorGraphType>().Name("exception")
+                .Description("The exception encountered during the current library generation cycle. This will be null if no errors were encountered")
                 .Resolve((ctx) =>
                 {
-                    if (ctx.Source.Error != null)
+                    if (ctx.Source.Exception != null)
                     {
-                        return new PrettyError(ctx.Source.Error);
+                        return new PrettyError(ctx.Source.Exception);
                     }
                     else
                     {
                         return null;
                     }
                 });
-            Field<ListGraphType<StringGraphType>>().Name("failedItems")
+            Field<ListGraphType<FailedItemGraphType>>().Name("failedItems")
                 .Description("The list of failed items encountered during the current library generation cycle")
                 .Resolve((ctx) =>
                 {
@@ -61,6 +62,17 @@ namespace PlumMediaCenter.Graphql.GraphTypes
                 {
                     return ctx.Source.MediaTypeCounts;
                 });
+        }
+    }
+
+    public class FailedItemGraphType : ObjectGraphType<FailedItem>
+    {
+        public FailedItemGraphType()
+        {
+            Field(x => x.Id, nullable: true);
+            Field<MediaTypeEnumGraphType>().Name("mediaType").Resolve(x => x.Source.MediaType);
+            Field(x => x.Path);
+            Field<PrettyErrorGraphType>().Name("exception").Resolve(x => new PrettyError(x.Source.Exception));
         }
     }
 }

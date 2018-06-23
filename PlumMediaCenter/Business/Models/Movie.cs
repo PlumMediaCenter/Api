@@ -16,13 +16,28 @@ namespace PlumMediaCenter.Business.Models
         public int SourceId { get; set; }
         public string Summary { get; set; }
         public string Description { get; set; }
-        public string PosterUrl
+        public IEnumerable<string> PosterUrls
         {
             get
             {
-                return $"{AppSettings.GetBaseUrlStatic()}posters/{this.Id}.jpg";
+                if (_PosterUrls == null)
+                {
+                    var urls = new List<string>();
+                    for (var i = 0; i < PosterCount; i++)
+                    {
+                        urls.Add($"{this.PosterFolderUrl}/{i}.jpg");
+                    }
+                    _PosterUrls = urls;
+                }
+                return _PosterUrls;
+            }
+            set
+            {
+                _PosterUrls = value;
             }
         }
+        private IEnumerable<string> _PosterUrls;
+        public int PosterCount;
         public static string CalculateFolderUrl(int sourceId, string folderName, string baseUrl)
         {
             return $"{baseUrl}source{sourceId}/{folderName}/";
@@ -46,53 +61,52 @@ namespace PlumMediaCenter.Business.Models
         }
         private string _BaseUrl;
 
+        public string CacheUrl
+        {
+            get
+            {
+                return $"{AppSettings.GetImageFolderUrlStatic()}/{this.Id}";
+            }
+        }
+        public string PosterFolderUrl
+        {
+            get
+            {
+                return $"{CacheUrl}/posters";
+            }
+        }
+
+        public string BackdropFolderUrl
+        {
+            get
+            {
+                return $"{CacheUrl}/backdrops";
+            }
+        }
+
         public IEnumerable<string> BackdropUrls
         {
-            //split the BackdropGuids string on first read.
             get
             {
                 if (_BackdropUrls == null)
                 {
-                    if (string.IsNullOrEmpty(BackdropGuids))
+                    var urls = new List<string>();
+                    for (var i = 0; i < BackdropCount; i++)
                     {
-                        _BackdropUrls = new List<string>();
+                        urls.Add($"{this.BackdropFolderUrl}/{i}.jpg");
                     }
-                    else
-                    {
-                        _BackdropUrls = BackdropGuids.Split(",").Select((backdropGuid) =>
-                        {
-                            return $"{AppSettings.GetBaseUrlStatic()}backdrops/{backdropGuid}.jpg";
-                        }).ToList();
-                    }
+                    _BackdropUrls = urls;
                 }
                 return _BackdropUrls;
             }
             set
             {
                 _BackdropUrls = value;
-                _BackdropGuids = string.Join(",", value);
             }
         }
         private IEnumerable<string> _BackdropUrls;
 
-        /// <summary>
-        /// DON'T USE. Set from database. Don't use this externally
-        /// </summary>
-        /// <returns></returns>
-        public string BackdropGuids
-        {
-            get
-            {
-                return _BackdropGuids;
-            }
-            set
-            {
-                _BackdropUrls = null;
-                _BackdropGuids = value;
-            }
-        }
-        private string _BackdropGuids;
-
+        public int BackdropCount;
 
         public string VideoUrl
         {
@@ -178,7 +192,7 @@ namespace PlumMediaCenter.Business.Models
         /// <summary>
         /// The date that the movie was first released
         /// </summary>
-        public DateTime? ReleaseDate { get; set; }
+        public int? ReleaseYear { get; set; }
         /// <summary>
         /// The runtime of the movie in seconds
         /// </summary>

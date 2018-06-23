@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using PlumMediaCenter.Data;
 using Dapper;
-using PlumMediaCenter.Business.DotJson;
 using System.Linq;
 using System;
 using System.IO;
@@ -99,117 +98,51 @@ namespace PlumMediaCenter.Business.Repositories
 
 
         /// <summary>
-        /// Get a list of every movie directory
+        /// Create a basic movie record. The rest of the info will be set in the update proc
         /// </summary>
         /// <returns></returns>
-        public async Task<int> Insert(LibGenMovie movie)
+        public async Task<int> Insert(string folderPath, string videoPath, int sourceId)
         {
-            Console.WriteLine("Movie.Insert -> Movie folder path: " + movie.FolderPath);
-            Console.WriteLine("Movie.Insert -> Movie VideoPath: " + movie.VideoPath);
+            Console.WriteLine("Movie.Insert -> Movie VideoPath: " + videoPath);
             var mediaItemId = await this.MediaItemRepository.GetNewMediaId(MediaType.MOVIE);
             await ConnectionManager.ExecuteAsync(@"
                 insert into Movies(
                     id,
                     folderPath, 
                     videoPath, 
-                    title, 
-                    sortTitle,
-                    summary, 
-                    description, 
-                    rating,
-                    releaseDate,
-                    runtimeSeconds,
-                    tmdbId,
-                    sourceId,
-                    completionSeconds
+                    sourceId
                 )
                 values(
                     @id,
                     @folderPath,
                     @videoPath, 
-                    @title, 
-                    @sortTitle,
-                    @summary,
-                    @description, 
-                    @rating,
-                    @releaseDate,
-                    @runtimeSeconds,
-                    @tmdbId,
-                    @sourceId,
-                    @completionSeconds
+                    @sourceId
                 )
             ", new
             {
                 id = mediaItemId,
-                folderPath = movie.FolderPath,
-                videoPath = movie.VideoPath,
-                title = movie.Title,
-                sortTitle = movie.SortTitle,
-                summary = movie.Summary,
-                description = movie.Description,
-                rating = movie.Rating,
-                releaseDate = movie.ReleaseDate,
-                runtimeSeconds = movie.RuntimeSeconds,
-                tmdbId = movie.TmdbId,
-                sourceId = movie.SourceId,
-                completionSeconds = movie.CompletionSeconds
+                folderPath = folderPath,
+                videoPath = videoPath,
+                sourceId = sourceId
             });
             return mediaItemId;
         }
 
-        public async Task<int> Update(LibGenMovie movie)
+        public async Task Update(DynamicParameters record)
         {
-            using (var connection = ConnectionManager.CreateConnection())
-            {
-                var movieId = await connection.QueryFirstOrDefaultAsync<int?>(@"
-                    select id from Movies where folderPath = @folderPath
-                ", new { folderPath = movie.FolderPath });
-                if (movieId == null)
-                {
-                    throw new Exception($"Movie not found in database with path {movie.FolderPath}");
-                }
-                await connection.ExecuteAsync(@"
-                    update Movies
-                    set
-                        folderPath = @folderPath,
-                        videoPath = @videoPath, 
-                        title = @title, 
-                        sortTitle = @sortTitle,
-                        summary = @summary,
-                        description = @description, 
-                        rating = @rating,
-                        releaseDate = @releaseDate,
-                        runtimeSeconds = @runtimeSeconds,
-                        tmdbId = @tmdbId,
-                        sourceId = @sourceId
-                    where id = @movieId
-                ", new
-
-                {
-                    folderPath = movie.FolderPath,
-                    videoPath = movie.VideoPath,
-                    title = movie.Title,
-                    sortTitle = movie.SortTitle,
-                    summary = movie.Summary,
-                    description = movie.Description,
-                    rating = movie.Rating,
-                    releaseDate = movie.ReleaseDate,
-                    runtimeSeconds = movie.RuntimeSeconds,
-                    tmdbId = movie.TmdbId,
-                    sourceId = movie.SourceId,
-                    movieId = movieId
-                });
-                return movieId.Value;
-            }
+            var sql = $@"
+                update movies 
+                set {string.Join(",", record.ParameterNames.Select(x => $"{x}=@{x}"))}
+                where id = @id";
+            await ConnectionManager.ExecuteAsync(sql, record);
         }
-
 
         /// <summary>
         /// Determine if a movie with this folder already exists in the database
         /// </summary>
         /// <param name="folderPath"></param>
         /// <returns></returns>
-        public async Task<bool> Exists(string folderPath)
+        public async Task<bool> ExistsInDb(string folderPath)
         {
             var result = await ConnectionManager.QueryAsync<int>(@"
                 select count(*) 

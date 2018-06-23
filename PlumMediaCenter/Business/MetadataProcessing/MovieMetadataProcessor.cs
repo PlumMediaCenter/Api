@@ -6,8 +6,8 @@ using System.Net;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using PlumMediaCenter.Business.DotJson;
 using PlumMediaCenter.Business.Factories;
+using PlumMediaCenter.Business.Metadata;
 using PlumMediaCenter.Business.Models;
 using PlumMediaCenter.Business.Repositories;
 using TMDbLib.Client;
@@ -71,7 +71,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                     PosterUrl = Client.GetImageUrl("original", searchResult.PosterPath).ToString(),
                     TmdbId = searchResult.Id,
                     Overview = searchResult.Overview,
-                    ReleaseDate = searchResult.ReleaseDate,
+                    ReleaseYear = searchResult.ReleaseDate?.Year
                 });
             }
             return await Task.FromResult(result);
@@ -94,7 +94,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         {
             TMDbLib.Objects.Movies.Movie movie = null;
             Directory.CreateDirectory(this.AppSettings.TmdbCacheDirectoryPath);
-            var cacheFilePath = $"{this.AppSettings.TmdbCacheDirectoryPath}{tmdbId}.json";
+            var cacheFilePath = $"{this.AppSettings.TmdbCacheDirectoryPath}/{tmdbId}.json";
             //if a cache file exists, and it's was updated less than a month ago, use it.
             if (File.Exists(cacheFilePath) && (DateTime.Now - File.GetLastWriteTime(cacheFilePath)).TotalDays < 30)
             {
@@ -145,7 +145,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
                 ?.First();
             //get the oldest US rating
             metadata.Rating = release?.Certification;
-            metadata.ReleaseDate = release?.ReleaseDate;
+            metadata.ReleaseYear = release?.ReleaseDate?.Year;
             //conver the runtime to seconds
             metadata.RuntimeSeconds = movie.Runtime * 60;
             metadata.Summary = movie.Overview;
@@ -197,8 +197,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         {
             var movieModel = await this.MovieRepository.GetById(movieId, this.MovieRepository.AllColumnNames);
             var movie = this.LibGenFactory.BuildMovie(movieModel.GetFolderPath(), movieModel.SourceId);
-            //throw new Exception(Newtonsoft.Json.JsonConvert.SerializeObject(movie.MovieDotJson));
-            var metadata = new MovieMetadata(movie.MovieDotJson);
+            var metadata = await movie.GetMetadataFromTmdb();
 
             //if the movie has a poster, add its local url
             var posterPath = $"{movie.FolderPath}/poster.jpg";
@@ -209,43 +208,43 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             }
 
             //get all backdrops listed in movie.json
-            var backdrops = movie.MovieDotJson?.Backdrops ?? new List<Image>();
+            // var backdrops = metadata?.Backdrops ?? new List<Image>();
 
-            //get all backdrops from filesystem, and include only those not already listed in the movie.json
-            var backdropsFromFs = Directory.Exists(movie.BackdropFolderPath) ? Directory.GetFiles(movie.BackdropFolderPath) : new string[0];
-            foreach (var backdropPath in backdropsFromFs)
-            {
-                var backdropFilename = Path.GetFileName(backdropPath);
-                var backdropAlreadyListed = backdrops.Where(x =>
-                {
-                    return Path.GetFileName(x.Path) == backdropFilename;
-                }).Count() > 0;
+            // //get all backdrops from filesystem, and include only those not already listed in the movie.json
+            // var backdropsFromFs = Directory.Exists(movie.BackdropFolderPath) ? Directory.GetFiles(movie.BackdropFolderPath) : new string[0];
+            // foreach (var backdropPath in backdropsFromFs)
+            // {
+            //     var backdropFilename = Path.GetFileName(backdropPath);
+            //     var backdropAlreadyListed = backdrops.Where(x =>
+            //     {
+            //         return Path.GetFileName(x.Path) == backdropFilename;
+            //     }).Count() > 0;
 
-                if (backdropAlreadyListed == false)
-                {
-                    var relativeBackdropPath = $"backdrops/{backdropFilename}";
-                    backdrops.Add(new Image { Path = relativeBackdropPath });
-                }
-            }
+            //     if (backdropAlreadyListed == false)
+            //     {
+            //         var relativeBackdropPath = $"backdrops/{backdropFilename}";
+            //         backdrops.Add(new Image { Path = relativeBackdropPath });
+            //     }
+            // }
 
-            foreach (var backdrop in backdrops)
-            {
-                //add the source url as is
-                if (backdrop.SourceUrl != null)
-                {
-                    metadata.BackdropUrls.Add(backdrop.SourceUrl);
-                }
-                else
-                {
-                    //the backdrop doesn't have a source url...so assume it's a locally added image. add the local url
-                    var path = $"{movie.FolderPath}/{backdrop.Path}";
-                    if (File.Exists(path))
-                    {
-                        var name = Path.GetFileName(path);
-                        metadata.BackdropUrls.Add($"{movieModel.GetFolderUrl()}{backdrop.Path}");
-                    }
-                }
-            }
+            // foreach (var backdrop in backdrops)
+            // {
+            //     //add the source url as is
+            //     if (backdrop.SourceUrl != null)
+            //     {
+            //         metadata.BackdropUrls.Add(backdrop.SourceUrl);
+            //     }
+            //     else
+            //     {
+            //         //the backdrop doesn't have a source url...so assume it's a locally added image. add the local url
+            //         var path = $"{movie.FolderPath}/{backdrop.Path}";
+            //         if (File.Exists(path))
+            //         {
+            //             var name = Path.GetFileName(path);
+            //             metadata.BackdropUrls.Add($"{movieModel.GetFolderUrl()}{backdrop.Path}");
+            //         }
+            //     }
+            // }
             return metadata;
         }
 
@@ -281,7 +280,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             CopyBackdrops(metadata, movieFolderUrl, movieFolderPath);
 
             var movieDotJsonPath = $"{movieFolderPath}movie.json";
-            var movieDotJson = new MovieDotJson(metadata);
+            var movieDotJson = new MovieMetadata(metadata);
 
             var camelCaseFormatter = new JsonSerializerSettings();
             camelCaseFormatter.ContractResolver = new CamelCasePropertyNamesContractResolver();
@@ -305,74 +304,75 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         /// <returns></returns>
         public List<string> CopyBackdrops(MovieMetadata metadata, string movieFolderUrl, string moviePath)
         {
-            var destinationPath = Utility.NormalizePath($"{moviePath}backdrops/", false);
-            var tempPaths = new List<string>();
-            Directory.CreateDirectory(AppSettings.TempPath);
-            var backdropUrlsToProcess = new List<string>();
+            return new List<string>();
+            // var destinationPath = Utility.NormalizePath($"{moviePath}backdrops/", false);
+            // var tempPaths = new List<string>();
+            // Directory.CreateDirectory(AppSettings.TempPath);
+            // var backdropUrlsToProcess = new List<string>();
 
-            var originalBackdrops = metadata.Backdrops;
-            metadata.Backdrops = new List<Image>();
+            // var originalBackdropUrls = metadata.BackdropUrls;
+            // metadata.BackdropUrls = new List<string>();
 
-            //exclude any backdrops that we already have
-            foreach (var imageUrl in metadata.BackdropUrls)
-            {
-                var image = originalBackdrops.Where(x => x.SourceUrl == imageUrl).FirstOrDefault();
-                var imagePath = image?.Path == null ? null : Utility.NormalizePath($"{moviePath}{image.Path}", true);
-                //if this image originated from this url, store a basic image record in the json
-                if (string.IsNullOrWhiteSpace(this.AppSettings.GetBaseUrl()) == false &&
-                    imageUrl.ToLowerInvariant().Contains(this.AppSettings.GetBaseUrl().ToLowerInvariant()))
-                {
-                    var len = imageUrl.Length - imageUrl.ToLowerInvariant().Replace(movieFolderUrl.ToLowerInvariant(), "").Length;
-                    var relativePath = imageUrl.Substring(len);
+            // //exclude any backdrops that we already have
+            // foreach (var imageUrl in metadata.BackdropUrls)
+            // {
+            //     var image = originalBackdropUrls.Where(x => x.SourceUrl == imageUrl).FirstOrDefault();
+            //     var imagePath = image?.Path == null ? null : Utility.NormalizePath($"{moviePath}{image.Path}", true);
+            //     //if this image originated from this url, store a basic image record in the json
+            //     if (string.IsNullOrWhiteSpace(this.AppSettings.GetBaseUrl()) == false &&
+            //         imageUrl.ToLowerInvariant().Contains(this.AppSettings.GetBaseUrl().ToLowerInvariant()))
+            //     {
+            //         var len = imageUrl.Length - imageUrl.ToLowerInvariant().Replace(movieFolderUrl.ToLowerInvariant(), "").Length;
+            //         var relativePath = imageUrl.Substring(len);
 
-                    metadata.Backdrops.Add(new Image { Path = relativePath });
-                }
-                //if we don't have reference to this image in the json, or the image doesn't exist on disc, process it
-                else if (image == null || File.Exists(imagePath) == false)
-                {
-                    //store the backdrop in the list of backdrops (to maintain sort order). This record will be updated
-                    //with a filename later in the process
-                    metadata.Backdrops.Add(new Image { SourceUrl = imageUrl });
-                    backdropUrlsToProcess.Add(imageUrl);
-                }
-                else
-                {
-                    //keep the existing image
-                    metadata.Backdrops.Add(image);
-                }
-            }
+            //         metadata.Backdrops.Add(new Image { Path = relativePath });
+            //     }
+            //     //if we don't have reference to this image in the json, or the image doesn't exist on disc, process it
+            //     else if (image == null || File.Exists(imagePath) == false)
+            //     {
+            //         //store the backdrop in the list of backdrops (to maintain sort order). This record will be updated
+            //         //with a filename later in the process
+            //         metadata.Backdrops.Add(new Image { SourceUrl = imageUrl });
+            //         backdropUrlsToProcess.Add(imageUrl);
+            //     }
+            //     else
+            //     {
+            //         //keep the existing image
+            //         metadata.Backdrops.Add(image);
+            //     }
+            // }
 
-            //download the new posters
-            foreach (var imageUrl in backdropUrlsToProcess)
-            {
-                var ext = Path.GetExtension(imageUrl);
-                var filename = $"{Guid.NewGuid().ToString()}{ Path.GetExtension(imageUrl)}";
-                var tempImagePath = $"{AppSettings.TempPath}/{filename}";
-                var client = new WebClient();
-                Directory.CreateDirectory(AppSettings.TempPath);
-                client.DownloadFile(imageUrl, tempImagePath);
-                tempPaths.Add(tempImagePath);
+            // //download the new posters
+            // foreach (var imageUrl in backdropUrlsToProcess)
+            // {
+            //     var ext = Path.GetExtension(imageUrl);
+            //     var filename = $"{Guid.NewGuid().ToString()}{ Path.GetExtension(imageUrl)}";
+            //     var tempImagePath = $"{AppSettings.TempPath}/{filename}";
+            //     var client = new WebClient();
+            //     Directory.CreateDirectory(AppSettings.TempPath);
+            //     client.DownloadFile(imageUrl, tempImagePath);
+            //     tempPaths.Add(tempImagePath);
 
-                //update metadata with backdrop filename
-                var imageFromJson = metadata.Backdrops.Where(x => x.SourceUrl == imageUrl).FirstOrDefault();
-                imageFromJson.Path = Utility.NormalizePath($"backdrops/{filename}", true);
-            }
-            //make the backdrop folder in the movie folder
-            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
+            //     //update metadata with backdrop filename
+            //     var imageFromJson = metadata.Backdrops.Where(x => x.SourceUrl == imageUrl).FirstOrDefault();
+            //     imageFromJson.Path = Utility.NormalizePath($"backdrops/{filename}", true);
+            // }
+            // //make the backdrop folder in the movie folder
+            // Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
 
-            var imagePaths = new List<string>();
-            //copy all of the temp posters into the backdrops folder
-            foreach (var tempImagePath in tempPaths)
-            {
-                var filename = Path.GetFileName(tempImagePath);
-                var imagePath = $"{destinationPath}{filename}";
-                //copy the image to the destination
-                File.Copy(tempImagePath, imagePath);
-                //delete the temp image
-                File.Delete(tempImagePath);
-                imagePaths.Add(imagePath);
-            }
-            return imagePaths;
+            // var imagePaths = new List<string>();
+            // //copy all of the temp posters into the backdrops folder
+            // foreach (var tempImagePath in tempPaths)
+            // {
+            //     var filename = Path.GetFileName(tempImagePath);
+            //     var imagePath = $"{destinationPath}{filename}";
+            //     //copy the image to the destination
+            //     File.Copy(tempImagePath, imagePath);
+            //     //delete the temp image
+            //     File.Delete(tempImagePath);
+            //     imagePaths.Add(imagePath);
+            // }
+            // return imagePaths;
         }
     }
 
@@ -381,63 +381,6 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         public MovieMetadata Incoming;
         public MovieMetadata Current;
     }
-    public class MovieMetadata : MovieDotJson
-    {
-        public MovieMetadata()
-        {
-
-        }
-        public MovieMetadata(MovieDotJson metadata)
-        {
-            if (metadata == null)
-            {
-                return;
-            }
-            var t = metadata.GetType();
-            var myType = this.GetType();
-            var properties = t.GetProperties();
-            //set all of the metadata properties to this
-            foreach (var prop in properties)
-            {
-                var value = prop.GetValue(metadata);
-                myType.GetProperty(prop.Name).SetValue(this, value);
-            }
-        }
-        public List<string> PosterUrls { get; set; } = new List<string>();
-        public List<string> BackdropUrls { get; set; } = new List<string>();
-        public void AddCast(List<Cast> cast)
-        {
-            if (cast == null)
-            {
-                return;
-            }
-            foreach (var member in cast)
-            {
-                this.Cast.Add(new CastMember
-                {
-                    Character = member.Character,
-                    Name = member.Name,
-                    TmdbId = member.Id
-                });
-            }
-        }
-        public void AddCrew(List<Crew> crew)
-        {
-            if (crew == null)
-            {
-                return;
-            }
-            foreach (var member in crew)
-            {
-                this.Crew.Add(new CrewMember
-                {
-                    Job = member.Job,
-                    Name = member.Name,
-                    TmdbId = member.Id
-                });
-            }
-        }
-    }
 
     public class MovieMetadataSearchResult
     {
@@ -445,6 +388,6 @@ namespace PlumMediaCenter.Business.MetadataProcessing
         public string PosterUrl;
         public int TmdbId;
         public string Overview;
-        public DateTime? ReleaseDate;
+        public int? ReleaseYear;
     }
 }

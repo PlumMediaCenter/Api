@@ -17,12 +17,15 @@ namespace PlumMediaCenter.Business.Repositories
         public MovieRepository(
             LibGenMovieRepository libGenMovieRepository,
             MediaItemRepository mediaItemRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            Utility utility
         ) : base()
         {
             this.LibGenMovieRepository = libGenMovieRepository;
+            this.Utility = utility;
             this.TableName = "Movies";
             this.AllColumnNames = new[]{
+                //actual columns
                 "id",
                 "folderPath",
                 "videoPath",
@@ -31,20 +34,26 @@ namespace PlumMediaCenter.Business.Repositories
                 "summary",
                 "description",
                 "rating",
-                "releaseDate",
+                "releaseYear",
                 "runtimeSeconds",
-                "sourceId",
                 "tmdbId",
-                "backdropGuids",
+                "sourceId",
                 "completionSeconds",
+                "posterCount",
+                "backdropCount",
+
+                //derived columns
                 "resumeSeconds",
-                "progressPercentage"
+                "progressPercentage",
+                "posterUrls",
+                "backdropUrls"
             };
             this.AlwaysIncludedColumnNames = new[] {
                 "id",
                 "videoPath"
             };
-            this.Aliases.Add("backdropUrls", "backdropGuids");
+            this.Aliases.Add("posterUrls", "posterCount");
+            this.Aliases.Add("backdropUrls", "backdropCount");
 
             this.PostQueryProcessors.Add(new PostQueryProcessor<Movie>(new[] { "resumeSeconds", "progressPercentage" }, new[] { "runtimeSeconds" }, async (models) =>
               {
@@ -55,6 +64,7 @@ namespace PlumMediaCenter.Business.Repositories
 
         }
         LibGenMovieRepository LibGenMovieRepository;
+        Utility Utility;
 
         public async Task<IEnumerable<Movie>> Query(
                MovieFilters filters,
@@ -86,7 +96,7 @@ namespace PlumMediaCenter.Business.Repositories
 
         public async Task<IEnumerable<Movie>> GetSearchResults(string text, List<string> columnNames = null)
         {
-            text = LibGenMovie.NormalizeTitle(text);
+            text = Utility.NormalizeTitle(text);
             //split the text by spaces
             var parts = text.Split(" ");
             var i = 0;

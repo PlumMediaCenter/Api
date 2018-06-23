@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using Microsoft.AspNetCore.Http;
 using PlumMediaCenter.Business;
 
@@ -20,38 +21,51 @@ namespace PlumMediaCenter
         public string DbUsername { get; set; }
         public string DbPassword { get; set; }
 
+        /// <summary>
+        /// The full path to the search indexes directory, excluding trailing slash
+        /// </summary>
+        /// <returns></returns>
         public string SearchIndexesDirectoryPath
         {
             get
             {
-                return $"{Directory.GetCurrentDirectory()}/search-indexes/";
+                return $"{Directory.GetCurrentDirectory()}/search-indexes";
             }
         }
+
+        /// <summary>
+        /// Full path to the tmdb cache directory, excluding trailing slash
+        /// </summary>
+        /// <returns></returns>
         public string TmdbCacheDirectoryPath
         {
             get
             {
-                return $"{Directory.GetCurrentDirectory()}/temp/tmdb-cache/";
-            }
-        }
-        /// <summary>
-        /// The path to the path to the folder where the posters should live. Includes trailing slash
-        /// </summary>
-        /// <returns></returns>
-        public string PosterFolderPath
-        {
-            get
-            {
-                return $"{Directory.GetCurrentDirectory()}/wwwroot/posters/";
+                return $"{Directory.GetCurrentDirectory()}/temp/tmdb-cache";
             }
         }
 
-        public string BackdropFolderPath
+        /// <summary>
+        /// The path to the path to the folder where all media item images should live. Includes trailing slash.
+        /// </summary>
+        /// <returns></returns>
+        public string ImageFolderPath
         {
             get
             {
-                return $"{Directory.GetCurrentDirectory()}/wwwroot/backdrops/";
+                return $"{Directory.GetCurrentDirectory()}/wwwroot/img";
             }
+        }
+
+        public string GetImageFolderUrl()
+        {
+            return GetImageFolderUrlStatic();
+        }
+
+
+        public static string GetImageFolderUrlStatic()
+        {
+            return $"{GetBaseUrlStatic()}/img";
         }
 
         public static string TempPath
@@ -98,6 +112,15 @@ namespace PlumMediaCenter
             return GetBaseUrlStatic();
         }
 
+        private static ThreadLocal<string> OverriddenBaseUrl = new ThreadLocal<string>(() =>
+        {
+            return null;
+        });
+        public static void SetBaseUrlStatic(string baseUrl)
+        {
+            OverriddenBaseUrl.Value = baseUrl;
+        }
+
         /// <summary>
         /// Get the base url statically. This will still derive the value from an instance of AppSettings and HttpContext,
         /// so only call
@@ -105,6 +128,11 @@ namespace PlumMediaCenter
         /// <returns></returns>
         public static string GetBaseUrlStatic()
         {
+            if (OverriddenBaseUrl.Value != null)
+            {
+                return OverriddenBaseUrl.Value;
+            }
+
             if (HttpContextAccessor.HttpContext == null)
             {
                 throw new Exception("Unable to determine base url because current thread does not have an associated HttpContext");

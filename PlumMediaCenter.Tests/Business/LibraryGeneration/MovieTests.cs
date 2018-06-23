@@ -55,15 +55,5 @@ namespace PlumMediaCenter.Tests.Business.LibraryGeneration
             Directory.CreateDirectory(path);
             return path;
         }
-
-        [Fact]
-        public void Process_CreatesMovieDotJsonForNoMetadata()
-        {
-            //notice dalmatians is spelled wrong (with an o)
-            var path = CreateTestMovie("101 Dalmations (1234)");
-            var movie = new Movie(Manager, path, 1);
-            var metadata = movie.GetGenericMetadata();
-            Assert.Equal("101 Dalmations", metadata.Title);
-        }
     }
 }

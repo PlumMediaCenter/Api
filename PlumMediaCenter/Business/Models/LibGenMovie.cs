@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using PlumMediaCenter.Business.DotJson;
+using Dapper;
+using PlumMediaCenter.Business.Metadata;
 using PlumMediaCenter.Business.MetadataProcessing;
 using PlumMediaCenter.Business.Repositories;
 using PlumMediaCenter.Data;
@@ -15,20 +17,21 @@ namespace PlumMediaCenter.Business.Models
     public class LibGenMovie : IProcessable
     {
         public LibGenMovie(
+            string moviePath,
+            int sourceId,
             LibGenMovieRepository LibGenMovieRepository,
             MovieMetadataProcessor MovieMetadataProcessor,
             AppSettings AppSettings,
-            Utility Utility,
-            string moviePath,
-            int sourceId
+            Utility Utility
          )
         {
+            this.FolderPath = moviePath;
+            this.SourceId = sourceId;
+
             this.LibGenMovieRepository = LibGenMovieRepository;
             this.MovieMetadataProcessor = MovieMetadataProcessor;
             this.AppSettings = AppSettings;
             this.Utility = Utility;
-            this.FolderPath = moviePath;
-            this.SourceId = sourceId;
         }
         LibGenMovieRepository LibGenMovieRepository;
         MovieMetadataProcessor MovieMetadataProcessor;
@@ -39,15 +42,11 @@ namespace PlumMediaCenter.Business.Models
         /// The id for this video. This is only set during Process(), so don't depend on it unless you are calling a function from Process()
         /// </summary>
         public int? Id { get; set; }
-        public int? GetId()
-        {
-            return this.Id;
-        }
 
         /// <summary>
-        /// The id for the video source
+        /// The source id id for the video's source
         /// </summary>
-        public int SourceId;
+        public int SourceId { get; set; }
 
         /// <summary>
         /// A full path to the movie folder (including trailing slash)
@@ -69,165 +68,6 @@ namespace PlumMediaCenter.Business.Models
         }
         private string _FolderPath;
 
-        /// <summary>
-        /// An MD5 hash of the first chunk of the video file. This helps us detect moved videos
-        /// </summary>
-        /// <returns></returns>
-        public string Md5
-        {
-            get
-            {
-                if (_Md5 == null)
-                {
-                    // //read in the first chunk of the file
-                    // var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-                }
-                return _Md5;
-            }
-        }
-        private string _Md5 { get; set; }
-
-        public int? CompletionSeconds
-        {
-            get
-            {
-                return this.MovieDotJson?.CompletionSeconds;
-            }
-        }
-
-        public string Title
-        {
-            get
-            {
-                if (_Title == null)
-                {
-                    if (string.IsNullOrEmpty(this.MovieDotJson?.Title) == false)
-                    {
-                        _Title = this.MovieDotJson.Title;
-                    }
-                    //use the directory name
-                    else
-                    {
-                        var year = GetYearFromFolderName(this.FolderName);
-                        if (year != null)
-                        {
-                            var idx = this.FolderName.LastIndexOf($"({year})");
-                            if (idx > -1)
-                            {
-                                _Title = this.FolderName.Substring(0, idx).Trim();
-                            }
-                        }
-                        else
-                        {
-                            _Title = this.FolderName;
-                        }
-                    }
-                }
-                return _Title;
-            }
-        }
-        private string _Title;
-
-        public string SortTitle
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(this.MovieDotJson?.SortTitle) == false)
-                {
-                    return this.MovieDotJson.SortTitle;
-                }
-                else
-                {
-                    return this.Title;
-                }
-            }
-        }
-
-        public string Summary
-        {
-            get
-            {
-                return this.MovieDotJson?.Summary;
-            }
-        }
-
-        public string Description
-        {
-            get
-            {
-                return this.MovieDotJson?.Description;
-            }
-        }
-
-        public string Rating
-        {
-            get
-            {
-                return this.MovieDotJson?.Rating;
-            }
-        }
-
-        public DateTime? ReleaseDate
-        {
-            get
-            {
-                return this.MovieDotJson?.ReleaseDate;
-            }
-        }
-
-        public int? RuntimeSeconds
-        {
-            get
-            {
-                if (_Runtime == null)
-                {
-                    var runtimeFromJson = this.MovieDotJson?.RuntimeSeconds;
-                    if (runtimeFromJson != null)
-                    {
-                        _Runtime = runtimeFromJson;
-                    }
-                    else
-                    {
-                        try
-                        {
-                            //get runtime from video file 
-                            var file = TagLib.File.Create(this.VideoPath);
-                            _Runtime = (int?)Math.Ceiling(file.Properties.Duration.TotalSeconds);
-                        }
-                        catch (System.Exception)
-                        {
-                            _Runtime = -1;
-                        }
-                    }
-                }
-                if (_Runtime == -1)
-                {
-                    return null;
-                }
-                else
-                {
-                    return _Runtime;
-                }
-            }
-        }
-        private int? _Runtime;
-
-        public int? TmdbId
-        {
-            get
-            {
-                return this.MovieDotJson?.TmdbId;
-            }
-        }
-
-        public string BackdropFolderPath
-        {
-            get
-            {
-                return Utility.NormalizePath($"{this.FolderPath}backdrops/", false);
-            }
-        }
-
         public string VideoPath
         {
             get
@@ -247,97 +87,79 @@ namespace PlumMediaCenter.Business.Models
         }
         private string _VideoPath;
 
-        /// <summary>
-        /// 
-        /// </summary>
-        public async Task Process()
+        public string Title
         {
-            Console.WriteLine($"{this.FolderPath}: Process movie");
-            //if the movie was deleted, remove it from the system
-            if (Directory.Exists(this.FolderPath) == false)
+            get
             {
-                Console.WriteLine($"{this.FolderPath}: Delete");
-                await this.Delete();
-                return;
-            }
-            await this.DownloadMetadataIfPossible();
-            //movie needs updated
-            if (await this.LibGenMovieRepository.Exists(this.FolderPath))
-            {
-                Console.WriteLine($"{this.FolderPath}: Update");
-                this.Id = await this.Update();
-            }
-            //new movie
-            else
-            {
-                Console.WriteLine($"{this.FolderPath}: Create");
-                this.Id = await this.Create();
-            }
-            await this.CopyImages();
-        }
-
-        static Regex YearRegex = new Regex(@"\((\d\d\d\d)\)");
-        public static int? GetYearFromFolderName(string folderName)
-        {
-            try
-            {
-                var match = YearRegex.Match(folderName);
-                var yearString = match.Groups[1]?.Value;
-                if (yearString != null)
+                if (_Title == null)
                 {
-                    return int.Parse(yearString);
+                    var year = this.Utility.GetYearFromFolderName(this.FolderName);
+                    if (year != null)
+                    {
+                        var idx = this.FolderName.LastIndexOf($"({year})");
+                        if (idx > -1)
+                        {
+                            _Title = this.FolderName.Substring(0, idx).Trim();
+                        }
+                    }
+                    else
+                    {
+                        _Title = this.FolderName;
+                    }
+                }
+                return _Title;
+            }
+        }
+        private string _Title;
+
+        public string SortTitle
+        {
+            get
+            {
+                var title = this.Title;
+                //remove the word "the" so it sorts better
+                if (title.ToLower().StartsWith("the "))
+                {
+                    return title.Substring(3);
+                }
+                else
+                {
+                    return title;
                 }
             }
-            catch (System.Exception)
-            {
-            }
-            return null;
-        }
-
-        public static string NormalizeTitle(string title)
-        {
-            var replacementChars = new string[] { "{", "}", "#", "@", "-", "(", ")", ":", ".", ",", "'", "?", "!", "+", "$", "’", "…", "/", "_", "[", "]", "–", "*", "=" };
-            //force to lower case
-            title.ToLowerInvariant()
-            //remove starting or trailing spaces
-            .Trim();
-
-            //replace lots of special characters with spaces
-            foreach (var replacementChar in replacementChars)
-            {
-                title = title.Replace(replacementChar, " ");
-            }
-
-            //replace all instance of double spaces with single spaces
-            while (title.Contains("  "))
-            {
-                title = title.Replace("  ", " ");
-            }
-            title = title.Replace("&", "and");
-            return title;
         }
 
         /// <summary>
-        /// Compare two titles, but remove some special characters and compare case insensitive.
+        /// Determine the runtime of the video, in seconds, from the MP4 metadata
         /// </summary>
-        /// <param name="title1"></param>
-        /// <param name="title2"></param>
         /// <returns></returns>
-        public static bool TitlesAreEquivalent(string title1, string title2)
+        public int? GetRuntimeSeconds()
         {
-
-            title1 = NormalizeTitle(title1);
-            title2 = NormalizeTitle(title2);
-            if (title1 == title2)
+            if (_RuntimeSeconds == null)
             {
-                return true;
+                try
+                {
+                    //get runtime from video file 
+                    var file = TagLib.File.Create(this.VideoPath);
+                    _RuntimeSeconds = (int?)Math.Ceiling(file.Properties.Duration.TotalSeconds);
+                }
+                catch (System.Exception)
+                {
+                    _RuntimeSeconds = -1;
+                }
+
+            }
+            if (_RuntimeSeconds == -1)
+            {
+                return null;
             }
             else
             {
-                return false;
+                return _RuntimeSeconds;
             }
-
         }
+        private int? _RuntimeSeconds;
+
         private string FolderName
         {
             get
@@ -347,127 +169,144 @@ namespace PlumMediaCenter.Business.Models
             }
         }
 
-        public async Task DownloadMetadataIfPossible()
+        private int? GetYearFromFolderName()
         {
-            Console.WriteLine($"{this.FolderPath}: Download metadata if possible");
-            var movieDotJson = this.MovieDotJson;
-            var folderName = this.FolderName;
-            //the movie doesn't have any metadata. Download some
-            if (movieDotJson == null)
+            return this.Utility.GetYearFromFolderName(this.FolderName);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public async Task Process()
+        {
+            Console.WriteLine($"Process movie: {this.FolderPath}");
+            //if the movie was deleted from the filesystem, remove it from the database
+            if (Directory.Exists(this.FolderPath) == false)
             {
-                Console.WriteLine($"{FolderPath}: No movie.json exists");
-                var year = GetYearFromFolderName(this.FolderName);
-                string title = this.Title;
-                Console.WriteLine($"{FolderPath}: Searching for results");
-                //get search results
-                var results = await this.MovieMetadataProcessor.GetSearchResultsAsync(title);
-                Console.WriteLine($"{FolderPath}: Found {results.Count} results");
-                var matches = results.Where(x => TitlesAreEquivalent(x.Title, title)).ToList();
-                Console.WriteLine($"{FolderPath}: Found {matches.Count()} where the title matches");
-                if (year != null)
+                Console.WriteLine($"Delete movie from DB: {this.FolderPath}");
+                await this.Delete();
+                return;
+            }
+
+            MovieMetadata metadata = null;
+            var record = new DynamicParameters();
+
+            //if this is a new movie
+            if (await this.LibGenMovieRepository.ExistsInDb(this.FolderPath) == false)
+            {
+                Console.WriteLine($"Insert movie into db: {this.FolderPath}");
+                this.Id = await this.LibGenMovieRepository.Insert(this.FolderPath, this.VideoPath, this.SourceId);
+                metadata = await this.GetMetadataFromTmdb();
+                if (metadata != null)
                 {
-                    Console.WriteLine($"{FolderPath}: Filtering matches by year");
-                    matches = matches.Where((x) =>
-                    {
-                        return x.ReleaseDate != null &&
-                                year != null &&
-                                x.ReleaseDate.Value.Year == year.Value;
-                    }).ToList();
-                    Console.WriteLine($"{FolderPath}: Found {matches.Count()} matches with the same year");
-                }
-                //if we have any matches left, use the first one
-                var match = matches.FirstOrDefault();
-                MovieMetadata metadata;
-                if (match == null)
-                {
-                    Console.WriteLine($"{FolderPath}: No matches found: using generic metadata");
-                    metadata = GetGenericMetadata();
+                    record.Add("title", this.Title);
+                    record.Add("sortTitle", metadata.SortTitle);
+                    record.Add("rating", metadata.Rating);
+                    record.Add("releaseYear", metadata.ReleaseYear);
+                    record.Add("summary", metadata.Summary);
+                    record.Add("tmdbId", metadata.TmdbId);
                 }
                 else
                 {
-                    Console.WriteLine($"{FolderPath}: Downloading TMDB metadata");
-                    metadata = await this.MovieMetadataProcessor.GetTmdbMetadataAsync(match.TmdbId);
+                    record.Add("title", this.Title);
+                    record.Add("sortTitle", this.SortTitle);
+                    var year = this.GetYearFromFolderName();
+                    if (year != null)
+                    {
+                        record.Add("year", year);
+                    }
                 }
-                Console.WriteLine($"{FolderPath}: Saving metadata to disc");
-                await this.MovieMetadataProcessor.DownloadMetadataAsync(
-                    this.FolderPath,
-                    Movie.CalculateFolderUrl(this.SourceId, this.FolderName, this.AppSettings.GetBaseUrl()),
-                    metadata
-                );
-                Console.WriteLine($"{FolderPath}: Clearing MovieDotJson");
-                //clear _MovieDotJson so the next access will load the new one from disk
-                this._MovieDotJson = null;
+                var posterCount = await CopyImages(metadata?.PosterUrls, this.PosterFolderPath, ImageType.Poster);
+                var backdropCount = await CopyImages(metadata?.BackdropUrls, this.BackdropFolderPath, ImageType.Backdrop);
+                record.Add("posterCount", posterCount);
+                record.Add("backdropCount", backdropCount);
             }
             else
             {
-                //the movie already has metadata, so don't download anything 
-                Console.WriteLine($"{FolderPath}: Already has metadata. Skipping metadata retrieval");
-                return;
+                //this is an existing movie. Fetch its id
+                await this.LoadId();
             }
+
+            record.Add("id", this.Id);
+            record.Add("folderPath", this.FolderPath);
+            record.Add("videoPath", this.VideoPath);
+            record.Add("runtimeSeconds", this.GetRuntimeSeconds());
+            record.Add("sourceId", this.SourceId);
+
+
+            //update the db with all of the fields we collected
+            Console.WriteLine($"Update db record: {this.FolderPath}");
+            await this.LibGenMovieRepository.Update(record);
         }
 
-        public MovieMetadata GetGenericMetadata()
+        public async Task<MovieMetadata> GetMetadataFromTmdb()
         {
-            var movieMetadata = new MovieMetadata();
-            movieMetadata.Description = null;
-            movieMetadata.Rating = null;
+            var year = this.Utility.GetYearFromFolderName(this.FolderName);
+            var title = this.Title;
+            //get search results
+            var allSearchResults = await this.MovieMetadataProcessor.GetSearchResultsAsync(title);
+            var filteredSearchResults = allSearchResults.Where(x => this.Utility.TitlesAreEquivalent(x.Title, title)).ToList();
 
-            //get the year from the folder name
-            var year = GetYearFromFolderName(this.FolderPath);
-            DateTime? releaseDate;
+            //filter the search results by year (if possible)
             if (year != null)
             {
-                releaseDate = new DateTime(year.Value, 1, 1);
-                movieMetadata.ReleaseDate = releaseDate;
+                filteredSearchResults = filteredSearchResults.Where((x) =>
+                {
+                    return x.ReleaseYear != null &&
+                            year != null &&
+                            x.ReleaseYear == year.Value;
+                }).ToList();
             }
-            //the runtime should be calculated from the video file's length
-            movieMetadata.RuntimeSeconds = null;
-            movieMetadata.Summary = null;
-            movieMetadata.Title = this.Title;
-            movieMetadata.SortTitle = this.SortTitle;
-            return movieMetadata;
+            //if we have any search results left, use the first one
+            var firstFilteredSearchResult = filteredSearchResults.FirstOrDefault();
+            if (firstFilteredSearchResult == null)
+            {
+                return null;
+            }
+            //download TMDB metadata
+            var metadata = await this.MovieMetadataProcessor.GetTmdbMetadataAsync(firstFilteredSearchResult.TmdbId);
+            return metadata;
         }
 
-        public async Task<int> Update()
-        {
-            return await this.LibGenMovieRepository.Update(this);
-        }
-
-        public async Task<int> Create()
-        {
-            return await this.LibGenMovieRepository.Insert(this);
-        }
-
-        public MovieDotJson MovieDotJson
+        public string CachePath
         {
             get
             {
-                if (_MovieDotJsonWasRetrieved == false)
-                {
-                    _MovieDotJsonWasRetrieved = true;
-                    var movieDotJsonPath = $"{this.FolderPath}movie.json";
-                    if (File.Exists(movieDotJsonPath))
-                    {
-                        var contents = File.ReadAllText(movieDotJsonPath);
-                        _MovieDotJson = Newtonsoft.Json.JsonConvert.DeserializeObject<MovieDotJson>(contents);
-                    }
-                }
-                return _MovieDotJson;
+                return $"{AppSettings.ImageFolderPath}/{this.Id}";
             }
         }
-        private MovieDotJson _MovieDotJson;
-        private bool _MovieDotJsonWasRetrieved = false;
 
         /// <summary>
-        /// Get a list of video paths for this video
+        /// The path to the posters folder. Excludes the trailing slash.
         /// </summary>
         /// <returns></returns>
-        private List<string> PhysicalVideoPaths
+        public string PosterFolderPath
         {
             get
             {
-                return new List<string>();
+                return $"{this.CachePath}/posters";
             }
+        }
+
+        /// <summary>
+        /// The path to the backdrops folder. Excludes the trailing slash.
+        /// </summary>
+        /// <returns></returns>
+        public string BackdropFolderPath
+        {
+            get
+            {
+                return $"{this.CachePath}/backdrops";
+            }
+        }
+
+        private async Task LoadId()
+        {
+            if (this.Id == null)
+            {
+                this.Id = await this.LibGenMovieRepository.GetId(this.FolderPath);
+            }
+
         }
 
         /// <summary>
@@ -476,108 +315,78 @@ namespace PlumMediaCenter.Business.Models
         /// <returns></returns>
         public async Task Delete()
         {
-            this.Id = await this.LibGenMovieRepository.GetId(this.FolderPath);
+            await this.LoadId();
+
             //delete from the database
             await this.LibGenMovieRepository.Delete(this.FolderPath);
 
             var imagePaths = new List<string>();
+
             //delete images from cache
-            {
-                //poster
-                imagePaths.Add($"{this.AppSettings.PosterFolderPath}{this.Id}.jpg");
-
-                //backdrops
-                var guids = this.GetBackdropGuidsFromFilesystem();
-                foreach (var guid in guids)
-                {
-                    imagePaths.Add($"{this.AppSettings.BackdropFolderPath}{guid}.jpg");
-                }
-
-                //delete them
-                foreach (var imagePath in imagePaths)
-                {
-                    if (File.Exists(imagePath))
-                    {
-                        File.Delete(imagePath);
-                    }
-                }
-            }
+            Directory.Delete(this.CachePath, true);
         }
 
-        private List<string> GetBackdropGuidsFromFilesystem()
+        private enum ImageType
         {
-            if (Directory.Exists(this.BackdropFolderPath))
+            Poster = 1,
+            Backdrop = 2
+        };
+
+        private async Task<int> CopyImages(List<string> imageUrls, string destinationFolderPath, ImageType imageType)
+        {
+            imageUrls = imageUrls ?? new List<string>();
+            var webClient = new WebClient();
+            var imageCount = 0;
+            var tempPath = $"{this.CachePath}/tmp/{Guid.NewGuid()}";
+
+            //download all of the posters 
+            if (imageUrls.Count > 0)
             {
-                var files = Directory.GetFiles(this.BackdropFolderPath);
-                return files.ToList()
-                    .Select(x => Path.GetFileNameWithoutExtension(x))
-                    .ToList();
+                imageCount = imageUrls.Count();
+                for (var i = 0; i < imageCount; i++)
+                {
+                    var imageUrl = imageUrls[i];
+                    var posterDestinationPath = $"{tempPath}/{i}.jpg";
+                    await webClient.DownloadFileTaskAsync(imageUrl, posterDestinationPath);
+                }
             }
+            //generate a text image
             else
             {
-                return new List<string>();
+                imageCount = 1;
+                var posterDestinationPath = $"{tempPath}/0.jpg";
+                if (imageType == ImageType.Poster)
+                {
+                    this.Utility.CreateTextPoster(this.Title, posterDestinationPath);
+                }
+                else if (imageType == ImageType.Backdrop)
+                {
+                    this.Utility.CreateTextBackdrop(this.Title, posterDestinationPath);
+                }
             }
-        }
 
-        private async Task CopyImages()
-        {
-            //poster
-            var sourcePosterPath = $"{this.FolderPath}poster.jpg";
-            var destinationPosterPath = $"{this.AppSettings.PosterFolderPath}{this.Id}.jpg";
-            var resizedPosterWidths = new int[] { 100, 200 };
-            //the video doesn't have a poster. Create a text-based poster
-            if (File.Exists(sourcePosterPath) == false)
+            //delete the files in the poster folder path
+            if (Directory.Exists(destinationFolderPath))
             {
-                this.Utility.CreateTextPoster(this.Title, sourcePosterPath);
+                Directory.Delete(destinationFolderPath, true);
             }
 
-            //copy the poster
-            Directory.CreateDirectory(Path.GetDirectoryName(destinationPosterPath));
-            File.Copy(sourcePosterPath, destinationPosterPath, true);
+            //move the tmp files into the poster folder path
+            Directory.Move($"{tempPath}", destinationFolderPath);
+
+            //make resized versions of the poster for various devices
+            var resizedPosterWidths = new int[] { 100, 200 };
 
             foreach (var posterWidth in resizedPosterWidths)
             {
-                var path = $"{this.AppSettings.PosterFolderPath}{this.Id}w{posterWidth}.jpg";
-                this.Utility.ResizeImage(sourcePosterPath, path, posterWidth);
-            }
-
-            //backdrop
-            var sourceBackdropPath = $"{this.FolderPath}backdrop.jpg";
-            var guidsFromDb = await this.LibGenMovieRepository.GetBackdropGuids(this.Id.Value);
-            var guidsFromFilesystem = this.GetBackdropGuidsFromFilesystem();
-
-            var backdropPaths = new List<string>();
-            foreach (var guid in guidsFromFilesystem)
-            {
-                //throw out any backdrops that are already in the cache
-                var backdropPath = $"{this.BackdropFolderPath}{guid}.jpg";
-                var destinationPath = $"{this.AppSettings.BackdropFolderPath}{guid}.jpg";
-                if (File.Exists(destinationPath) == false)
+                for (var i = 0; i < imageCount; i++)
                 {
-                    backdropPaths.Add(backdropPath);
+                    var destinationPath = $"{destinationFolderPath}/{i}w{posterWidth}.jpg";
+                    var sourcePosterPath = $"{destinationFolderPath}/{i}.jpg";
+                    this.Utility.ResizeImage(sourcePosterPath, destinationPath, posterWidth);
                 }
             }
-
-            //if the movie already has at least one backdrop, we don't need to generate the text-based image
-            if (guidsFromFilesystem.Count == 0)
-            {
-                var textBackdropGuid = Guid.NewGuid().ToString();
-                var backdropPath = $"{this.BackdropFolderPath}{textBackdropGuid}.jpg";
-                //the video doesn't have a backdrop. Create a text-based image
-                this.Utility.CreateTextBackdrop(this.Title, backdropPath);
-                backdropPaths.Add(backdropPath);
-                guidsFromFilesystem.Add(textBackdropGuid);
-            }
-            //copy all of the not-yet-cached backdrops to the cached backdrops folder
-            foreach (var path in backdropPaths)
-            {
-                var filename = Path.GetFileName(path);
-                var destinationPath = $"{this.AppSettings.BackdropFolderPath}{filename}";
-                Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
-                File.Copy(path, destinationPath);
-            }
-            await this.LibGenMovieRepository.SetBackdropGuids(this.Id.Value, guidsFromFilesystem);
-
+            return imageCount;
         }
     }
 }

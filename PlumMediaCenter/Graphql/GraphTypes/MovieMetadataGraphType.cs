@@ -2,6 +2,7 @@
 using GraphQL.DataLoader;
 using GraphQL.Types;
 using PlumMediaCenter.Business;
+using PlumMediaCenter.Business.Metadata;
 using PlumMediaCenter.Business.MetadataProcessing;
 using PlumMediaCenter.Business.Models;
 using PlumMediaCenter.Business.Repositories;
@@ -32,7 +33,7 @@ namespace PlumMediaCenter.Graphql.GraphTypes
                 .Description("A list of urls of all of the available posters for this movie")
                 .Resolve(x => x.Source.PosterUrls);
             Field(x => x.Rating, nullable: true).Description("The MPAA rating of this video (G, PG, PG-13, R, etc...");
-            Field(x => x.ReleaseDate, nullable: true).Description("The date this movie was first released.");
+            Field(x => x.ReleaseYear, nullable: true).Description("The year this movie was first released.");
             Field(x => x.RuntimeSeconds, nullable: true).Description("The runtime of the movie in seconds");
             Field(x => x.SortTitle).Description("The title to use to sort the movie with. If omitted, the movie will be sorted by Title");
             Field(x => x.Summary, nullable: true).Description("A short summary of the movie");

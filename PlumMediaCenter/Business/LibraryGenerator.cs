@@ -26,7 +26,7 @@ namespace PlumMediaCenter.Business
             LibGenFactory LibGenFactory,
             SourceRepository SourceRepository,
             LibGenMovieRepository LibGenMovieRepository,
-            LibGenTvSerieRepository LibGenTvSerieRepository,
+            LibGenTvShowRepository LibGenTvShowRepository,
             SearchCatalog searchCatalog
         )
         {
@@ -34,7 +34,7 @@ namespace PlumMediaCenter.Business
             this.LibGenFactory = LibGenFactory;
             this.SourceRepository = SourceRepository;
             this.LibGenMovieRepository = LibGenMovieRepository;
-            this.LibGenTvSerieRepository = LibGenTvSerieRepository;
+            this.LibGenTvShowRepository = LibGenTvShowRepository;
             this.SearchCatalog = searchCatalog;
             try
             {
@@ -53,7 +53,7 @@ namespace PlumMediaCenter.Business
         LibGenFactory LibGenFactory;
         SourceRepository SourceRepository;
         LibGenMovieRepository LibGenMovieRepository;
-        LibGenTvSerieRepository LibGenTvSerieRepository;
+        LibGenTvShowRepository LibGenTvShowRepository;
         SearchCatalog SearchCatalog;
 
         private static string StatusFilePath
@@ -71,7 +71,8 @@ namespace PlumMediaCenter.Business
         {
             if (this.Status == null)
             {
-                return new LibraryGeneratorStatus();
+                var status = new LibraryGeneratorStatus();
+                return status;
             }
             else
             {
@@ -116,6 +117,12 @@ namespace PlumMediaCenter.Business
         }
 
         private bool IsGenerating = false;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="baseUrl">We need the baseUrl to handle metadata fetching for certain media items</param>
+        /// <returns></returns>
         public async Task Generate(string baseUrl)
         {
             try
@@ -151,7 +158,7 @@ namespace PlumMediaCenter.Business
                     e = e.InnerException;
                 }
                 this.Status.State = "failed";
-                this.Status.Error = e;
+                this.Status.Exception = e;
             }
             finally
             {
@@ -170,7 +177,7 @@ namespace PlumMediaCenter.Business
 
         private async Task ProcessMovies()
         {
-            var moviePaths = new List<MoviePath>();
+            var sourceItems = new List<SourceItem>();
 
             var movieSources = await this.SourceRepository.GetByType(MediaType.MOVIE);
 
@@ -183,7 +190,7 @@ namespace PlumMediaCenter.Business
                     foreach (var dir in directories)
                     {
                         var normalizedPath = Utility.NormalizePath(dir, false);
-                        moviePaths.Add(new MoviePath { Path = normalizedPath, Source = source });
+                        sourceItems.Add(new SourceItem { Path = normalizedPath, Source = source });
                     }
                 }
             }
@@ -196,31 +203,32 @@ namespace PlumMediaCenter.Business
                 foreach (var path in kvp.Value)
                 {
                     var normalizedPath = Utility.NormalizePath(path, false);
-                    moviePaths.Add(new MoviePath { Path = normalizedPath, Source = source });
+                    sourceItems.Add(new SourceItem { Path = normalizedPath, Source = source });
                 }
             }
 
             var pathLookup = new Dictionary<string, bool>();
-            var distinctList = new List<MoviePath>();
+            var distinctList = new List<SourceItem>();
             //remove any duplicates or bogus entries
-            foreach (var item in moviePaths)
+            foreach (var sourceItem in sourceItems)
             {
                 //if (pathLookup.ContainsKey(item.Path) == false && item.Path != null)
-                if (pathLookup.ContainsKey(item.Path) == false)
+                if (pathLookup.ContainsKey(sourceItem.Path) == false)
                 {
-                    pathLookup.Add(item.Path, true);
-                    distinctList.Add(item);
+                    pathLookup.Add(sourceItem.Path, true);
+                    distinctList.Add(sourceItem);
                 }
             }
-            moviePaths = distinctList;
+            sourceItems = distinctList;
 
             //update Status
-            this.Status.SetMediaTypeCountTotal(MediaType.MOVIE, moviePaths.Count);
+            this.Status.SetMediaTypeCountTotal(MediaType.MOVIE, sourceItems.Count);
             var random = new Random();
+
 
             //process each movie. movie.Process will handle adding, updating, and deleting
             var pool = new SmartThreadPool();
-            foreach (var loopMoviePath in moviePaths)
+            foreach (var loopMoviePath in sourceItems)
             {
                 this.Status.Log.Add($"Adding {loopMoviePath.Path} to pool");
                 var workItemResult = pool.QueueWorkItem((moviePath) =>
@@ -239,20 +247,19 @@ namespace PlumMediaCenter.Business
                     try
                     {
                         this.Status.Log.Add($"Waiting for movie to process: {moviePath.Path}");
-                        try
-                        {
-                            movie.Process().Wait();
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine($"Error processing movie {moviePath.Path}");
-                            Console.WriteLine(e);
-                            throw e;
-                        }
+                        movie.Process().Wait();
                     }
                     catch (Exception e)
                     {
-                        this.Status.FailedItems.Add(JsonConvert.SerializeObject(movie) + " " + JsonConvert.SerializeObject(e));
+                        Console.WriteLine($"Error processing movie {moviePath.Path}");
+                        Console.WriteLine(e);
+                        this.Status.FailedItems.Add(new FailedItem()
+                        {
+                            Id = movie.Id,
+                            MediaType = MediaType.MOVIE,
+                            Path = movie.FolderPath,
+                            Exception = e
+                        });
                     }
                     Thread.Sleep(5000);
                     this.Status.IncrementMediaTypeCount(MediaType.MOVIE);
@@ -280,7 +287,7 @@ namespace PlumMediaCenter.Business
             }
 
             //find all shows from the db
-            seriePaths.AddRange(await this.LibGenTvSerieRepository.GetDirectories());
+            seriePaths.AddRange(await this.LibGenTvShowRepository.GetDirectories());
 
             //remove any duplicates
             seriePaths = seriePaths.Distinct().ToList();
@@ -288,16 +295,16 @@ namespace PlumMediaCenter.Business
             var pool = new SmartThreadPool();
             foreach (var loopSeriePath in seriePaths)
             {
-                //process each show. movie.Process will handle adding, updating, and deleting
+                //process each show. show.Process will handle adding, updating, and deleting itself
                 pool.QueueWorkItem((seriePath) =>
-               {
-                   var show = this.LibGenFactory.BuildTvSerie(seriePath, 0);
-                   show.Process();
-               }, loopSeriePath);
+                {
+                    var serie = this.LibGenFactory.BuildTvShow(seriePath, 0);
+                    serie.Process().Wait();
+                }, loopSeriePath);
             }
         }
     }
-    class MoviePath
+    class SourceItem
     {
         public string Path;
         public Source Source;
@@ -313,10 +320,28 @@ namespace PlumMediaCenter.Business
         /// <summary>
         /// The current state ("generating", "generated")
         /// </summary>
-        public string State { get; set; }
+        public string State
+        {
+            get
+            {
+                if (_State == null)
+                {
+                    return "never generated";
+                }
+                else
+                {
+                    return _State;
+                }
+            }
+            set
+            {
+                _State = value;
+            }
+        }
+        private string _State;
         public List<string> Log { get; set; } = new List<string>();
         public bool IsProcessing { get; set; }
-        public Exception Error { get; set; }
+        public Exception Exception { get; set; }
         /// <summary>
         /// The end time of the last time the library was generated. This is not updated until a generation has completed.
         /// </summary>
@@ -392,7 +417,7 @@ namespace PlumMediaCenter.Business
                 }
             }
         }
-        public List<string> FailedItems { get; set; } = new List<string>();
+        public List<FailedItem> FailedItems { get; set; } = new List<FailedItem>();
         /// <summary>
         /// The list of movies currently being processed
         /// </summary>
@@ -420,4 +445,14 @@ namespace PlumMediaCenter.Business
             }
         }
     }
+
+
+    public class FailedItem
+    {
+        public int? Id;
+        public string Path;
+        public MediaType MediaType;
+        public Exception Exception;
+    }
+
 }
