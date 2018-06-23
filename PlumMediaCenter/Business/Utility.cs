@@ -265,7 +265,7 @@ namespace PlumMediaCenter.Business
         {
             var replacementChars = new string[] { "{", "}", "#", "@", "-", "(", ")", ":", ".", ",", "'", "?", "!", "+", "$", "’", "…", "/", "_", "[", "]", "–", "*", "=" };
             //force to lower case
-            title.ToLowerInvariant()
+            title = title.ToLowerInvariant()
             //remove starting or trailing spaces
             .Trim();
 

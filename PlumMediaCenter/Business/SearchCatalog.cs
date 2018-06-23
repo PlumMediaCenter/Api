@@ -56,9 +56,15 @@ namespace PlumMediaCenter.Business
                 {
                     var document = new Document();
                     document.Add(new Int32Field("id", movie.Id, Field.Store.YES));
-                    if (movie.Description != null)
+                    if (movie.Summary != null)
                     {
-                        var field = new TextField("description", movie.Description.ToLower(), Field.Store.YES);
+                        var field = new TextField("summary", movie.Summary.ToLower(), Field.Store.YES);
+
+                        document.Add(field);
+                    }
+                    if (movie.ShortSummary != null)
+                    {
+                        var field = new TextField("shortSummary", movie.Summary.ToLower(), Field.Store.YES);
 
                         document.Add(field);
                     }
@@ -72,7 +78,7 @@ namespace PlumMediaCenter.Business
                         document.Add(new TextField("title", movie.Title.ToLower(), Field.Store.YES));
                     }
                     //add a field that contains ALL of the search properties
-                    document.Add(new TextField("text", $"{movie.Title} {movie.SortTitle} {movie.Rating} {movie.Description}".ToLower(), Field.Store.YES));
+                    document.Add(new TextField("text", $"{movie.Title} {movie.SortTitle} {movie.Rating} {movie.Summary}".ToLower(), Field.Store.YES));
                     indexWriter.AddDocument(document);
                 }
             }

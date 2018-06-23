@@ -335,9 +335,14 @@ namespace PlumMediaCenter.Business.Models
         private async Task<int> CopyImages(List<string> imageUrls, string destinationFolderPath, ImageType imageType)
         {
             imageUrls = imageUrls ?? new List<string>();
+            //TODO - temporarily just download the first image in the list
+            imageUrls = imageUrls.Take(1).ToList();
             var webClient = new WebClient();
             var imageCount = 0;
             var tempPath = $"{this.CachePath}/tmp/{Guid.NewGuid()}";
+
+            //create the temp directory
+            Directory.CreateDirectory(tempPath);
 
             //download all of the posters 
             if (imageUrls.Count > 0)

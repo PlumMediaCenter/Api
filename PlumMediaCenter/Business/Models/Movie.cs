@@ -14,8 +14,26 @@ namespace PlumMediaCenter.Business.Models
         public string Title { get; set; }
         public string SortTitle { get; set; }
         public int SourceId { get; set; }
+        public string ShortSummary
+        {
+            get
+            {
+                if (this._ShortSummary == null)
+                {
+                    return this.Summary;
+                }
+                else
+                {
+                    return _ShortSummary;
+                }
+            }
+            set
+            {
+                this._ShortSummary = value;
+            }
+        }
+        private string _ShortSummary;
         public string Summary { get; set; }
-        public string Description { get; set; }
         public IEnumerable<string> PosterUrls
         {
             get

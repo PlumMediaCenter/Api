@@ -21,8 +21,8 @@ namespace PlumMediaCenter.Graphql.GraphTypes
             Field(x => x.Id).Description("The ID of the video.");
             Field(x => x.Title).Description("The formal title of the movie. This is also known as the movie's name.");
             Field(x => x.SortTitle).Description("The title used to sort this movie.");
-            Field(x => x.Summary, nullable: true).Description("The summary of the movie. This is shorter than the description.");
-            Field(x => x.Description, nullable: true).Description("The description of the video.");
+            Field(x => x.ShortSummary, nullable: true).Description("A short summary of the movie. This is shorter than the standard summary field.");
+            Field(x => x.Summary, nullable: true).Description("The summary of the movie.");
             Field(x => x.Rating, nullable: true).Description("This is the MPAA rating for the video (i.e. 'PG', 'R', etc...");
             Field(x => x.ReleaseYear, nullable: true).Description("The year this movie was first released.");
             Field(x => x.RuntimeSeconds, nullable: true).Description("How long the movie is, in seconds.");
