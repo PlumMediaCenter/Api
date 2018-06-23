@@ -136,7 +136,7 @@ namespace PlumMediaCenter.Business.MetadataProcessing
             metadata.AddCast(movie.Credits?.Cast);
             metadata.AddCrew(movie.Credits?.Crew);
             metadata.Collection = movie.BelongsToCollection?.Name;
-            metadata.Description = movie.Overview;
+            metadata.Summary = movie.Overview;
             metadata.Genres = movie.Genres?.Select(x => x.Name).ToList();
             metadata.Keywords = movie.Keywords?.Keywords?.Select(x => x.Name).ToList();
             var release = movie.Releases?.Countries

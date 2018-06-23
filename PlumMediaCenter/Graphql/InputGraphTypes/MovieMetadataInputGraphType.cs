@@ -17,7 +17,7 @@ namespace PlumMediaCenter.Graphql.InputGraphTypes
             Field(x => x.CollectionOrder, nullable: true);
             Field(x => x.CompletionSeconds, nullable: true);
             // Field(x => x.Crew);
-            Field(x => x.Description);
+            Field(x => x.Summary);
             Field(x => x.ExtraSearchText);
             Field(x => x.Genres);
             Field(x => x.Keywords);
@@ -26,7 +26,7 @@ namespace PlumMediaCenter.Graphql.InputGraphTypes
             Field(x => x.ReleaseYear, nullable: true);
             Field(x => x.RuntimeSeconds, nullable: true);
             Field(x => x.SortTitle);
-            Field(x => x.Summary);
+            Field(x => x.ShortSummary);
             Field(x => x.Title);
             Field(x => x.TmdbId, nullable: true);
         }

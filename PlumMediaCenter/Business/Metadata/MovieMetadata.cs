@@ -42,11 +42,11 @@ namespace PlumMediaCenter.Business.Metadata
         /// <summary>
         /// A short summary of the movie
         /// </summary>
-        public string Summary { get; set; }
+        public string ShortSummary { get; set; }
         /// <summary>
         /// A lengthier description of the movie
         /// </summary>
-        public string Description { get; set; }
+        public string Summary { get; set; }
 
         /// <summary>
         /// The name of the collection that this video belongs to (i.e. 'Star Trek', 'Die Hard').
