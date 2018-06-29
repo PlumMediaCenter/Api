@@ -17,6 +17,8 @@ using SixLabors.ImageSharp.Processing.Drawing;
 using SixLabors.ImageSharp.Processing.Drawing.Brushes;
 using SixLabors.ImageSharp.Processing.Drawing.Pens;
 using SixLabors.ImageSharp.Processing.Text;
+using PlumMediaCenter.Models;
+using PlumMediaCenter.Business.Models;
 
 namespace PlumMediaCenter.Business
 {
@@ -263,26 +265,176 @@ namespace PlumMediaCenter.Business
 
         public string NormalizeTitle(string title)
         {
-            var replacementChars = new string[] { "{", "}", "#", "@", "-", "(", ")", ":", ".", ",", "'", "?", "!", "+", "$", "’", "…", "/", "_", "[", "]", "–", "*", "=" };
             //force to lower case
-            title = title.ToLowerInvariant()
-            //remove starting or trailing spaces
-            .Trim();
+            title = title.ToLowerInvariant();
 
-            //replace lots of special characters with spaces
-            foreach (var replacementChar in replacementChars)
-            {
-                title = title.Replace(replacementChar, " ");
-            }
-
-            //replace all instance of double spaces with single spaces
-            while (title.Contains("  "))
-            {
-                title = title.Replace("  ", " ");
-            }
+            //replace ampersand with "and"
             title = title.Replace("&", "and");
+
+            /*
+             * only keep numbers and letters. This should be good enough for a comparison, since we want to avoid special characters
+             * if possible since many of them aren't allowed in filesystem paths.
+             */
+            title = new String(
+                title.Where(x => char.IsLetterOrDigit(x)).ToArray()
+            );
+
             return title;
         }
 
+        /// <summary>
+        /// Get a list of all image files in the given file's directory.
+        /// This will search for all supported image formats
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        public IEnumerable<string> GetImagesInFileDirectory(string filePath)
+        {
+            var fileDirectoryPath = Path.GetDirectoryName(filePath);
+            //find all images in the same folder as this video
+            var d = new DirectoryInfo(fileDirectoryPath);
+
+            var files = new List<FileInfo>();
+            files.AddRange(d.GetFiles("*.jpg"));
+            files.AddRange(d.GetFiles("*.jpeg"));
+            files.AddRange(d.GetFiles("*.png"));
+            var imagePaths = files.Select(x => x.FullName);
+            return imagePaths;
+        }
+
+        /// <summary>
+        /// Posters start with the EXACT same name as the video file, 
+        /// except with a .jpg extension and optional number (i.e. "Avatar.jpg", "Avatar-1.jpg").
+        /// They also live alongside the video
+        /// </summary>
+        /// <returns></returns>
+        /// 
+        public IEnumerable<string> GetPosterPathsForVideo(string videoFilePath)
+        {
+            var imagePaths = GetImagesInFileDirectory(videoFilePath);
+            var fileName = Path.GetFileNameWithoutExtension(videoFilePath);
+            return FilterAndSortImagePaths(fileName, imagePaths, ImageType.Poster);
+        }
+
+
+        /// <summary>
+        /// Posters start with the EXACT same name as the video file, 
+        /// except with a .jpg extension and optional number (i.e. "Avatar.jpg", "Avatar-1.jpg").
+        /// They also live alongside the video
+        /// </summary>
+        /// <returns></returns>
+        /// 
+        public IEnumerable<string> GetBackdropPathsForVideo(string videoFilePath)
+        {
+            var imagePaths = GetImagesInFileDirectory(videoFilePath);
+            var fileName = Path.GetFileNameWithoutExtension(videoFilePath);
+            return FilterAndSortImagePaths(fileName, imagePaths, ImageType.Backdrop);
+        }
+
+        /// <summary>
+        /// Given a video file name and a list of image paths, get the list of posters associated with the video
+        /// in the order they should appear
+        /// </summary>
+        /// <param name="videoFileName"></param>
+        /// <param name="imagePaths"></param>
+        /// <returns></returns>
+        public IEnumerable<string> FilterAndSortImagePaths(string videoFileName, IEnumerable<string> imagePaths, ImageType imageType)
+        {
+            var results = new List<(string Path, int Order)>();
+            var options = FileSystemIsCaseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
+            string regexFilterString;
+            if (imageType == ImageType.Poster)
+            {
+                regexFilterString = $"^(?:{videoFileName}|cover|default|folder|movie|poster)(?:-(\\d+))?.(?:jpg|jpeg|png)$"; ;
+            }
+            else if (imageType == ImageType.Backdrop)
+            {
+                regexFilterString = $"^(?:(?:{videoFileName}-)?(?:art|backdrop|background|fanart))(?:-(\\d+))?.(?:jpg|jpeg|png)$";
+            }
+            else
+            {
+                throw new Exception("Unknown image type");
+            }
+            var myRegex = new Regex(regexFilterString, options);
+            foreach (var imagePath in imagePaths)
+            {
+                var imageName = Path.GetFileName(imagePath);
+                var match = myRegex.Match(imageName);
+                if (match.Success)
+                {
+                    var order = 0;
+                    var orderText = match.Groups[1].Value;
+                    if (string.IsNullOrWhiteSpace(orderText) == false)
+                    {
+                        order = int.Parse(orderText);
+                    }
+                    results.Add((imagePath, order));
+                }
+            }
+            return results.OrderBy(x => x.Order).Select(x => x.Path);
+        }
+
+
+        /// <summary>
+        /// Determine if the file system is case sensitive
+        /// </summary>
+        /// <returns></returns>
+        public bool FileSystemIsCaseSensitive
+        {
+            get
+            {
+                if (_FileSystemIsCaseSensitive == null)
+                {
+                    string file = Path.GetTempPath() + Guid.NewGuid().ToString().ToLower();
+                    File.CreateText(file).Close();
+                    _FileSystemIsCaseSensitive = File.Exists(file.ToUpper()) == false;
+                    File.Delete(file);
+                }
+                return _FileSystemIsCaseSensitive.Value;
+            }
+        }
+        public static bool? _FileSystemIsCaseSensitive = null;
+
+        /// <summary>
+        /// Convert a list of file paths into a list of urls
+        /// </summary>
+        /// <param name="sources"></param>
+        /// <param name="filePaths"></param>
+        /// <returns></returns>
+        public IEnumerable<string> ConvertPathsIntoUrls(IEnumerable<Source> sources, IEnumerable<string> filePaths)
+        {
+            var results = new List<string>();
+            foreach (var filePath in filePaths)
+            {
+                //find the source for this file
+                var source = sources.Where(x => IsContainedByDirectory(filePath, x.FolderPath)).FirstOrDefault();
+                if (source == null)
+                {
+                    throw new Exception($"Unable to determine source for \"{filePath}\"");
+                }
+                var relativePath = filePath.Replace(source.FolderPath, "");
+                var url = $"{source.Url}/{relativePath}";
+                results.Add(url);
+            }
+            return results;
+        }
+
+        public bool IsContainedByDirectory(string childPath, string parentPathCandidate)
+        {
+            DirectoryInfo parentCandidate = new DirectoryInfo(parentPathCandidate);
+            DirectoryInfo child = new DirectoryInfo(childPath);
+            while (child.Parent != null)
+            {
+                if (child.Parent.FullName == parentCandidate.FullName)
+                {
+                    return true;
+                }
+                else
+                {
+                    child = child.Parent;
+                }
+            }
+            return false;
+        }
     }
 }

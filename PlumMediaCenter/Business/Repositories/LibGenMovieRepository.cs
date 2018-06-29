@@ -9,6 +9,7 @@ using PlumMediaCenter.Business.Enums;
 using PlumMediaCenter.Business.Data;
 using PlumMediaCenter.Business.Factories;
 using PlumMediaCenter.Business.Models;
+using PlumMediaCenter.Business.Metadata;
 
 namespace PlumMediaCenter.Business.Repositories
 {
@@ -197,7 +198,7 @@ namespace PlumMediaCenter.Business.Repositories
         /// </summary>
         /// <param name="moviePath"></param>
         /// <returns></returns>
-        public async Task Process(string moviePath)
+        public async Task Process(string moviePath, MovieMetadata metadata = null)
         {
             moviePath = Utility.NormalizePath(moviePath, false);
             var sources = await this.SourceRepository.GetAll();
@@ -205,7 +206,7 @@ namespace PlumMediaCenter.Business.Repositories
             var parentPath = Utility.NormalizePath(Path.GetDirectoryName(Path.GetDirectoryName(moviePath)).ToLowerInvariant(), false);
             var source = sources.Where(x => Utility.NormalizePath(x.FolderPath.ToLowerInvariant(), false) == parentPath).FirstOrDefault();
             var movie = this.LibGenFactory.BuildMovie(moviePath, source.Id);
-            await movie.Process();
+            await movie.ProcessExistingMovie(metadata);
         }
 
         public async Task DeleteForSource(int sourceId)

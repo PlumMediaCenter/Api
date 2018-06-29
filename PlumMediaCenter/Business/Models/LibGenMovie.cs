@@ -22,8 +22,9 @@ namespace PlumMediaCenter.Business.Models
             LibGenMovieRepository LibGenMovieRepository,
             MovieMetadataProcessor MovieMetadataProcessor,
             AppSettings AppSettings,
-            Utility Utility
-         )
+            Utility Utility,
+            SourceRepository SourceRepository
+        )
         {
             this.FolderPath = moviePath;
             this.SourceId = sourceId;
@@ -32,11 +33,13 @@ namespace PlumMediaCenter.Business.Models
             this.MovieMetadataProcessor = MovieMetadataProcessor;
             this.AppSettings = AppSettings;
             this.Utility = Utility;
+            this.SourceRepository = SourceRepository;
         }
         LibGenMovieRepository LibGenMovieRepository;
         MovieMetadataProcessor MovieMetadataProcessor;
         AppSettings AppSettings;
         Utility Utility;
+        SourceRepository SourceRepository;
 
         /// <summary>
         /// The id for this video. This is only set during Process(), so don't depend on it unless you are calling a function from Process()
@@ -49,7 +52,7 @@ namespace PlumMediaCenter.Business.Models
         public int SourceId { get; set; }
 
         /// <summary>
-        /// A full path to the movie folder (including trailing slash)
+        /// A full path to the movie folder (excluding the trailing slash)
         /// </summary>
         public string FolderPath
         {
@@ -59,14 +62,23 @@ namespace PlumMediaCenter.Business.Models
             }
             set
             {
-                if (value.EndsWith(Path.DirectorySeparatorChar) == false)
+                if (value.EndsWith(Path.DirectorySeparatorChar) == true)
                 {
-                    value = value + Path.DirectorySeparatorChar;
+                    //remove the trailing slash
+                    value = value.Substring(0, value.Length - 1);
                 }
                 this._FolderPath = value;
             }
         }
         private string _FolderPath;
+
+        public string VideoFileName
+        {
+            get
+            {
+                return Path.GetFileNameWithoutExtension(this.VideoPath);
+            }
+        }
 
         public string VideoPath
         {
@@ -79,7 +91,7 @@ namespace PlumMediaCenter.Business.Models
                     foreach (var file in d.GetFiles("*.mp4"))
                     {
                         //keep the first one
-                        _VideoPath = $"{this.FolderPath}{file.Name}";
+                        _VideoPath = $"{this.FolderPath}{Path.DirectorySeparatorChar}{file.Name}";
                     }
                 }
                 return _VideoPath;
@@ -169,7 +181,34 @@ namespace PlumMediaCenter.Business.Models
             }
         }
 
-        private int? GetYearFromFolderName()
+        public IEnumerable<string> PosterPathsFromFileSystem
+        {
+            get
+            {
+                if (_PosterPathsFromFileSystem == null)
+                {
+                    _PosterPathsFromFileSystem = this.Utility.GetPosterPathsForVideo(this.VideoPath);
+                }
+                return _PosterPathsFromFileSystem;
+            }
+        }
+        private IEnumerable<string> _PosterPathsFromFileSystem;
+
+        public IEnumerable<string> BackdropPathsFromFileSystem
+        {
+            get
+            {
+                if (_BackdropPathsFromFileSystem == null)
+                {
+                    _BackdropPathsFromFileSystem = this.Utility.GetBackdropPathsForVideo(this.VideoPath);
+
+                }
+                return _BackdropPathsFromFileSystem;
+            }
+        }
+        private IEnumerable<string> _BackdropPathsFromFileSystem;
+
+        public int? GetYearFromFolderName()
         {
             return this.Utility.GetYearFromFolderName(this.FolderName);
         }
@@ -188,15 +227,29 @@ namespace PlumMediaCenter.Business.Models
                 return;
             }
 
-            MovieMetadata metadata = null;
-            var record = new DynamicParameters();
-
-            //if this is a new movie
-            if (await this.LibGenMovieRepository.ExistsInDb(this.FolderPath) == false)
+            var isNewMovie = await this.LibGenMovieRepository.ExistsInDb(this.FolderPath) == false;
+            if (isNewMovie)
             {
-                Console.WriteLine($"Insert movie into db: {this.FolderPath}");
-                this.Id = await this.LibGenMovieRepository.Insert(this.FolderPath, this.VideoPath, this.SourceId);
-                metadata = await this.GetMetadataFromTmdb();
+                await this.ProcessNewMovie();
+            }
+            else
+            {
+                await this.ProcessExistingMovie();
+            }
+        }
+
+        public async Task ProcessNewMovie()
+        {
+            var record = new DynamicParameters();
+            Console.WriteLine($"Insert movie into db: {this.FolderPath}");
+            this.Id = await this.LibGenMovieRepository.Insert(this.FolderPath, this.VideoPath, this.SourceId);
+
+            try
+            {
+                //fetch metadata for this movie once, only if it's a new movie, and only keep an exact match for title and release year
+                MovieMetadata metadata = await this.GetMetadataFromTmdb();
+
+                //if we have metadata, use that info 
                 if (metadata != null)
                 {
                     record.Add("title", this.Title);
@@ -206,6 +259,7 @@ namespace PlumMediaCenter.Business.Models
                     record.Add("summary", metadata.Summary);
                     record.Add("tmdbId", metadata.TmdbId);
                 }
+                //we don't have metadata...set some defaults
                 else
                 {
                     record.Add("title", this.Title);
@@ -213,26 +267,67 @@ namespace PlumMediaCenter.Business.Models
                     var year = this.GetYearFromFolderName();
                     if (year != null)
                     {
-                        record.Add("year", year);
+                        record.Add("releaseYear", year);
                     }
                 }
-                var posterCount = await CopyImages(metadata?.PosterUrls, this.PosterFolderPath, ImageType.Poster);
-                var backdropCount = await CopyImages(metadata?.BackdropUrls, this.BackdropFolderPath, ImageType.Backdrop);
+                //use posters from video folder if possible, fallback to downloading them from metadata
+                var posterUrls = PosterPathsFromFileSystem.Count() > 0 ? PosterPathsFromFileSystem.ToList() : metadata?.PosterUrls;
+                var posterCount = await CopyImages(posterUrls, this.PosterFolderPath, ImageType.Poster);
+
+                //use backdrops from video folder if possible, fallback to downloading them from metadata
+                var backdropUrls = this.BackdropPathsFromFileSystem.Count() > 0 ? this.BackdropPathsFromFileSystem.ToList() : metadata?.BackdropUrls;
+                var backdropCount = await CopyImages(backdropUrls, this.BackdropFolderPath, ImageType.Backdrop);
+
                 record.Add("posterCount", posterCount);
                 record.Add("backdropCount", backdropCount);
+                record.Add("id", this.Id);
+                record.Add("folderPath", this.FolderPath);
+                record.Add("videoPath", this.VideoPath);
+                record.Add("runtimeSeconds", this.GetRuntimeSeconds());
+                record.Add("sourceId", this.SourceId);
+
+                //update the db with all of the fields we collected
+                Console.WriteLine($"Save new movie info: {this.FolderPath}");
+                await this.LibGenMovieRepository.Update(record);
             }
-            else
+            catch
             {
-                //this is an existing movie. Fetch its id
-                await this.LoadId();
+                //delete the video record...it's just easier to reprocess from scratch once the video has been fixed
+                await this.Delete();
+                throw;
+            }
+        }
+
+        public async Task ProcessExistingMovie(MovieMetadata metadata = null)
+        {
+            var record = new DynamicParameters();
+            //this is an existing movie. Fetch its id
+            await this.LoadId();
+
+            //if we have metadata, use that info 
+            if (metadata != null)
+            {
+                record.Add("title", this.Title);
+                record.Add("sortTitle", metadata.SortTitle);
+                record.Add("rating", metadata.Rating);
+                record.Add("releaseYear", metadata.ReleaseYear);
+                record.Add("summary", metadata.Summary);
+                record.Add("tmdbId", metadata.TmdbId);
             }
 
+            var posterUrls = metadata != null && metadata.PosterUrls.Count() > 0 ? metadata.PosterUrls : PosterPathsFromFileSystem.ToList();
+            var posterCount = await CopyImages(posterUrls, this.PosterFolderPath, ImageType.Poster);
+
+            var backdropUrls = metadata != null && metadata.BackdropUrls.Count() > 0 ? metadata.BackdropUrls : BackdropPathsFromFileSystem.ToList();
+            var backdropCount = await CopyImages(backdropUrls, this.BackdropFolderPath, ImageType.Backdrop);
+
+            record.Add("posterCount", posterCount);
+            record.Add("backdropCount", backdropCount);
             record.Add("id", this.Id);
             record.Add("folderPath", this.FolderPath);
             record.Add("videoPath", this.VideoPath);
             record.Add("runtimeSeconds", this.GetRuntimeSeconds());
             record.Add("sourceId", this.SourceId);
-
 
             //update the db with all of the fields we collected
             Console.WriteLine($"Update db record: {this.FolderPath}");
@@ -326,17 +421,11 @@ namespace PlumMediaCenter.Business.Models
             Directory.Delete(this.CachePath, true);
         }
 
-        private enum ImageType
-        {
-            Poster = 1,
-            Backdrop = 2
-        };
-
         private async Task<int> CopyImages(List<string> imageUrls, string destinationFolderPath, ImageType imageType)
         {
             imageUrls = imageUrls ?? new List<string>();
             //TODO - temporarily just download the first image in the list
-            imageUrls = imageUrls.Take(1).ToList();
+            imageUrls = imageUrls.Take(3).ToList();
             var webClient = new WebClient();
             var imageCount = 0;
             var tempPath = $"{this.CachePath}/tmp/{Guid.NewGuid()}";
@@ -370,16 +459,73 @@ namespace PlumMediaCenter.Business.Models
                 }
             }
 
-            //delete the files in the poster folder path
-            if (Directory.Exists(destinationFolderPath))
+            //delete all of the images from the video's folder (we will be replacing of these shortly)
+            if (imageType == ImageType.Poster)
             {
-                Directory.Delete(destinationFolderPath, true);
+                foreach (var imagePath in this.PosterPathsFromFileSystem)
+                {
+                    File.Delete(imagePath);
+                }
+                this._PosterPathsFromFileSystem = null;
+            }
+            else
+            {
+                foreach (var imagePath in this.BackdropPathsFromFileSystem)
+                {
+                    File.Delete(imagePath);
+                }
+                this._BackdropPathsFromFileSystem = null;
             }
 
-            //move the tmp files into the poster folder path
-            Directory.Move($"{tempPath}", destinationFolderPath);
+            var maxRetries = 3;
+            //try several times to move the files from temp to the web cache directory
+            for (var i = 0; i < maxRetries; i++)
+            {
+                if (i > 0)
+                {
+                    Console.WriteLine("Retrying moving files from \"{tempPath}\" to \"{destinationFolderPath}\"");
+                }
+                //delete the files in the poster folder path
+                try { Directory.Delete(destinationFolderPath, true); } catch { }
+                //move the tmp files into the poster folder path
+                try
+                {
+                    Directory.Move($"{tempPath}", destinationFolderPath);
+                    //escape the for loop if the file moving worked
+                    break;
+                }
+                catch
+                {
+                    Console.WriteLine($"Encountered exception when moving files from \"{tempPath}\" to \"{destinationFolderPath}\"");
+                    //delay for a small amount of time
+                    await Task.Delay(1000);
+                    //if we failed enough times while trying to copy the images, hard-fail
+                    if (i == maxRetries - 1)
+                    {
+                        throw;
+                    }
+                }
+            }
+            var suffix = "";
+            if (imageType == ImageType.Poster)
+            {
+                suffix = "";
+            }
+            else if (imageType == ImageType.Backdrop)
+            {
+                suffix = "-fanart";
+            }
 
-            //make resized versions of the poster for various devices
+            //copy all of the images to the video's source folder (in a standard naming convention)
+            for (var i = 0; i < imageCount; i++)
+            {
+
+                var sourceImagePath = $"{destinationFolderPath}/{i}.jpg";
+                var destPath = $"{this.FolderPath}/{this.VideoFileName}{suffix}-{i + 1}.jpeg";
+                await webClient.DownloadFileTaskAsync(sourceImagePath, destPath);
+            }
+
+            //make resized versions of the poster for various devices and put them in the web cache directory
             var resizedPosterWidths = new int[] { 100, 200 };
 
             foreach (var posterWidth in resizedPosterWidths)
@@ -394,4 +540,11 @@ namespace PlumMediaCenter.Business.Models
             return imageCount;
         }
     }
+
+    public enum ImageType
+    {
+        Poster = 1,
+        Backdrop = 2
+    };
+
 }

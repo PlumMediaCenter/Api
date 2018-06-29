@@ -13,7 +13,7 @@ namespace PlumMediaCenter.Graphql.InputGraphTypes
             this.Name = "MovieMetadataInput";
             Field(x => x.BackdropUrls);
             // Field(x => x.Cast);
-            Field(x => x.Collection);
+            Field(x => x.Collection, nullable: true);
             Field(x => x.CollectionOrder, nullable: true);
             Field(x => x.CompletionSeconds, nullable: true);
             // Field(x => x.Crew);
@@ -26,7 +26,7 @@ namespace PlumMediaCenter.Graphql.InputGraphTypes
             Field(x => x.ReleaseYear, nullable: true);
             Field(x => x.RuntimeSeconds, nullable: true);
             Field(x => x.SortTitle);
-            Field(x => x.ShortSummary);
+            Field(x => x.ShortSummary, nullable: true);
             Field(x => x.Title);
             Field(x => x.TmdbId, nullable: true);
         }

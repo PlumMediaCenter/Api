@@ -48,6 +48,10 @@ namespace PlumMediaCenter.Business.MetadataProcessing
 
         public async Task<List<MovieMetadataSearchResult>> GetSearchResultsAsync(string searchText)
         {
+            if (string.IsNullOrWhiteSpace(searchText))
+            {
+                throw new Exception("Search text cannot be empty");
+            }
             SearchContainer<TMDbLib.Objects.Search.SearchMovie> r;
             try
             {
@@ -195,184 +199,30 @@ namespace PlumMediaCenter.Business.MetadataProcessing
 
         private async Task<MovieMetadata> GetCurrentMetadataAsync(int movieId)
         {
-            var movieModel = await this.MovieRepository.GetById(movieId, this.MovieRepository.AllColumnNames);
-            var movie = this.LibGenFactory.BuildMovie(movieModel.GetFolderPath(), movieModel.SourceId);
-            var metadata = await movie.GetMetadataFromTmdb();
+            var model = await this.MovieRepository.GetById(movieId, this.MovieRepository.AllColumnNames);
 
-            //if the movie has a poster, add its local url
-            var posterPath = $"{movie.FolderPath}/poster.jpg";
-            if (File.Exists(posterPath))
-            {
-                var name = Path.GetFileName(posterPath);
-                metadata.PosterUrls.Add($"{movieModel.GetFolderUrl()}{name}");
-            }
+            var metadata = new MovieMetadata();
 
-            //get all backdrops listed in movie.json
-            // var backdrops = metadata?.Backdrops ?? new List<Image>();
+            metadata.BackdropUrls = model.BackdropUrls.ToList();
+            metadata.CompletionSeconds = model.CompletionSeconds;
+            metadata.PosterUrls = model.PosterUrls.ToList();
+            metadata.Rating = model.Rating;
+            metadata.ReleaseYear = model.ReleaseYear;
+            metadata.RuntimeSeconds = model.RuntimeSeconds;
+            metadata.ShortSummary = model.ShortSummary;
+            metadata.SortTitle = model.SortTitle;
+            metadata.Summary = model.Summary;
+            metadata.Title = model.Title;
+            metadata.TmdbId = model.TmdbId;
 
-            // //get all backdrops from filesystem, and include only those not already listed in the movie.json
-            // var backdropsFromFs = Directory.Exists(movie.BackdropFolderPath) ? Directory.GetFiles(movie.BackdropFolderPath) : new string[0];
-            // foreach (var backdropPath in backdropsFromFs)
-            // {
-            //     var backdropFilename = Path.GetFileName(backdropPath);
-            //     var backdropAlreadyListed = backdrops.Where(x =>
-            //     {
-            //         return Path.GetFileName(x.Path) == backdropFilename;
-            //     }).Count() > 0;
-
-            //     if (backdropAlreadyListed == false)
-            //     {
-            //         var relativeBackdropPath = $"backdrops/{backdropFilename}";
-            //         backdrops.Add(new Image { Path = relativeBackdropPath });
-            //     }
-            // }
-
-            // foreach (var backdrop in backdrops)
-            // {
-            //     //add the source url as is
-            //     if (backdrop.SourceUrl != null)
-            //     {
-            //         metadata.BackdropUrls.Add(backdrop.SourceUrl);
-            //     }
-            //     else
-            //     {
-            //         //the backdrop doesn't have a source url...so assume it's a locally added image. add the local url
-            //         var path = $"{movie.FolderPath}/{backdrop.Path}";
-            //         if (File.Exists(path))
-            //         {
-            //             var name = Path.GetFileName(path);
-            //             metadata.BackdropUrls.Add($"{movieModel.GetFolderUrl()}{backdrop.Path}");
-            //         }
-            //     }
-            // }
             return metadata;
         }
 
         public async Task SaveAsync(int movieId, MovieMetadata metadata)
         {
             var movie = await this.MovieRepository.GetById(movieId, this.MovieRepository.AllColumnNames);
-            await DownloadMetadataAsync(movie.GetFolderPath(), movie.GetFolderUrl(), metadata);
             //reprocess this movie so the library is updated with its info
-            await this.LibGenMovieRepository.Process(movie.GetFolderPath());
-        }
-
-        public async Task DownloadMetadataAsync(string movieFolderPath, string movieFolderUrl, MovieMetadata metadata)
-        {
-            //process the poster
-            {
-                var posterPath = $"{movieFolderPath}poster.jpg";
-
-                if (metadata.PosterUrls.Count == 0)
-                {
-                    if (File.Exists(posterPath))
-                    {
-                        File.Delete(posterPath);
-                    }
-                }
-                else
-                {
-                    //only keep the first poster, since we only store a single poster
-                    new WebClient().DownloadFile(metadata.PosterUrls.First(), posterPath);
-                }
-            }
-
-            //copy the backdrops
-            CopyBackdrops(metadata, movieFolderUrl, movieFolderPath);
-
-            var movieDotJsonPath = $"{movieFolderPath}movie.json";
-            var movieDotJson = new MovieMetadata(metadata);
-
-            var camelCaseFormatter = new JsonSerializerSettings();
-            camelCaseFormatter.ContractResolver = new CamelCasePropertyNamesContractResolver();
-            camelCaseFormatter.Formatting = Formatting.Indented;
-
-            var json = Newtonsoft.Json.JsonConvert.SerializeObject(movieDotJson, camelCaseFormatter);
-            await File.WriteAllTextAsync(movieDotJsonPath, json);
-
-        }
-        public List<string> CopyBackdrops(MovieMetadata metadata, Models.Movie movie, string moviePath)
-        {
-            return this.CopyBackdrops(metadata, movie.GetFolderUrl(), moviePath);
-        }
-
-        /// <summary>
-        /// Copy/download a set of images to the destination path, removing any images from destination that are not in the list.
-        /// Returns a list of image paths for the newly copied files
-        /// </summary>
-        /// <param name="imageUrls"></param>
-        /// <param name="destinationPath"></param>
-        /// <returns></returns>
-        public List<string> CopyBackdrops(MovieMetadata metadata, string movieFolderUrl, string moviePath)
-        {
-            return new List<string>();
-            // var destinationPath = Utility.NormalizePath($"{moviePath}backdrops/", false);
-            // var tempPaths = new List<string>();
-            // Directory.CreateDirectory(AppSettings.TempPath);
-            // var backdropUrlsToProcess = new List<string>();
-
-            // var originalBackdropUrls = metadata.BackdropUrls;
-            // metadata.BackdropUrls = new List<string>();
-
-            // //exclude any backdrops that we already have
-            // foreach (var imageUrl in metadata.BackdropUrls)
-            // {
-            //     var image = originalBackdropUrls.Where(x => x.SourceUrl == imageUrl).FirstOrDefault();
-            //     var imagePath = image?.Path == null ? null : Utility.NormalizePath($"{moviePath}{image.Path}", true);
-            //     //if this image originated from this url, store a basic image record in the json
-            //     if (string.IsNullOrWhiteSpace(this.AppSettings.GetBaseUrl()) == false &&
-            //         imageUrl.ToLowerInvariant().Contains(this.AppSettings.GetBaseUrl().ToLowerInvariant()))
-            //     {
-            //         var len = imageUrl.Length - imageUrl.ToLowerInvariant().Replace(movieFolderUrl.ToLowerInvariant(), "").Length;
-            //         var relativePath = imageUrl.Substring(len);
-
-            //         metadata.Backdrops.Add(new Image { Path = relativePath });
-            //     }
-            //     //if we don't have reference to this image in the json, or the image doesn't exist on disc, process it
-            //     else if (image == null || File.Exists(imagePath) == false)
-            //     {
-            //         //store the backdrop in the list of backdrops (to maintain sort order). This record will be updated
-            //         //with a filename later in the process
-            //         metadata.Backdrops.Add(new Image { SourceUrl = imageUrl });
-            //         backdropUrlsToProcess.Add(imageUrl);
-            //     }
-            //     else
-            //     {
-            //         //keep the existing image
-            //         metadata.Backdrops.Add(image);
-            //     }
-            // }
-
-            // //download the new posters
-            // foreach (var imageUrl in backdropUrlsToProcess)
-            // {
-            //     var ext = Path.GetExtension(imageUrl);
-            //     var filename = $"{Guid.NewGuid().ToString()}{ Path.GetExtension(imageUrl)}";
-            //     var tempImagePath = $"{AppSettings.TempPath}/{filename}";
-            //     var client = new WebClient();
-            //     Directory.CreateDirectory(AppSettings.TempPath);
-            //     client.DownloadFile(imageUrl, tempImagePath);
-            //     tempPaths.Add(tempImagePath);
-
-            //     //update metadata with backdrop filename
-            //     var imageFromJson = metadata.Backdrops.Where(x => x.SourceUrl == imageUrl).FirstOrDefault();
-            //     imageFromJson.Path = Utility.NormalizePath($"backdrops/{filename}", true);
-            // }
-            // //make the backdrop folder in the movie folder
-            // Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
-
-            // var imagePaths = new List<string>();
-            // //copy all of the temp posters into the backdrops folder
-            // foreach (var tempImagePath in tempPaths)
-            // {
-            //     var filename = Path.GetFileName(tempImagePath);
-            //     var imagePath = $"{destinationPath}{filename}";
-            //     //copy the image to the destination
-            //     File.Copy(tempImagePath, imagePath);
-            //     //delete the temp image
-            //     File.Delete(tempImagePath);
-            //     imagePaths.Add(imagePath);
-            // }
-            // return imagePaths;
+            await this.LibGenMovieRepository.Process(movie.GetFolderPath(), metadata);
         }
     }
 

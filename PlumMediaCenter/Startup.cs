@@ -171,7 +171,6 @@ namespace PlumMediaCenter
             {
                 var sourceRepository = builder.ApplicationServices.GetService<SourceRepository>();
 
-                //since we are only using this to do a db request, we can pass null for the base url (since we don't have it right now anyway)
                 var sources = sourceRepository.GetAll().Result;
                 foreach (var source in sources)
                 {

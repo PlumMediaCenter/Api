@@ -225,7 +225,6 @@ namespace PlumMediaCenter.Business
             this.Status.SetMediaTypeCountTotal(MediaType.MOVIE, sourceItems.Count);
             var random = new Random();
 
-
             //process each movie. movie.Process will handle adding, updating, and deleting
             var pool = new SmartThreadPool();
             foreach (var loopMoviePath in sourceItems)

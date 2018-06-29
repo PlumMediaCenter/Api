@@ -90,6 +90,7 @@ namespace PlumMediaCenter.Business.Repositories
             }
 
             // sql = ApplyOrderToQuery(sql, filters.SortField, filters.SortDirection);
+            sql += " order by sortTitle asc";
             sql = ApplyLimitersToQuery(sql, filters.Top, filters.Skip);
             return await this.Query(sql, parameters, columnNames);
         }

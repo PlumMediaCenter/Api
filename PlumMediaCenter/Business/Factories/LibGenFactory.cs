@@ -8,22 +8,27 @@ namespace PlumMediaCenter.Business.Factories
     public class LibGenFactory
     {
         public LibGenFactory(
-            Lazy<LibGenMovieRepository> LazyLibGenMovieRepository,
-            Lazy<MovieMetadataProcessor> LazyMovieMetadataProcessor,
-            AppSettings AppSettings,
-            Utility Utility,
+            Lazy<LibGenMovieRepository> lazyLibGenMovieRepository,
+            Lazy<MovieMetadataProcessor> lazyMovieMetadataProcessor,
+            AppSettings appSettings,
+            Utility utility,
             Lazy<LibGenTvShowRepository> lazyLibGenTvShowRepository,
-            Lazy<TvShowMetadataProcessor> LazyTvShowMetadataProcessor
+            Lazy<TvShowMetadataProcessor> lazyTvShowMetadataProcessor,
+            SourceRepository sourceRepository
         )
         {
-            this.LazyLibGenMovieRepository = LazyLibGenMovieRepository;
-            this.LazyMovieMetadataProcessor = LazyMovieMetadataProcessor;
-            this.AppSettings = AppSettings;
-            this.Utility = Utility;
+            this.LazyLibGenMovieRepository = lazyLibGenMovieRepository;
+            this.LazyMovieMetadataProcessor = lazyMovieMetadataProcessor;
+            this.AppSettings = appSettings;
+            this.Utility = utility;
             this.LazyLibGenTvShowRepository = lazyLibGenTvShowRepository;
-            this.LazyTvShowMetadataProcessor = LazyTvShowMetadataProcessor;
+            this.LazyTvShowMetadataProcessor = lazyTvShowMetadataProcessor;
+            this.SourceRepository = sourceRepository;
+
         }
         Lazy<LibGenMovieRepository> LazyLibGenMovieRepository;
+        SourceRepository SourceRepository;
+
 
         Lazy<TvShowMetadataProcessor> LazyTvShowMetadataProcessor;
 
@@ -71,7 +76,8 @@ namespace PlumMediaCenter.Business.Factories
                 LibGenMovieRepository,
                 MovieMetadataProcessor,
                 AppSettings,
-                Utility
+                Utility,
+                SourceRepository
             );
         }
 

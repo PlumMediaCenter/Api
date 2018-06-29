@@ -8,6 +8,13 @@ namespace PlumMediaCenter.Models
         public string FolderPath { get; set; }
         //setter for mutations
         public MediaType MediaType { get; set; }
+        public string Url
+        {
+            get
+            {
+                return $"{AppSettings.GetBaseUrlStatic()}/source{this.Id}";
+            }
+        }
     }
 
 }

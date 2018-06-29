@@ -50,7 +50,6 @@ namespace PlumMediaCenter.Business.Repositories
 
         public async Task<IEnumerable<Source>> GetAll()
         {
-
             var result = await ConnectionManager.QueryAsync<Source>(@"
                 select  
                     id,
