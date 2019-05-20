@@ -1,7 +1,8 @@
 {
     "version": "2.0.0",
     "args": [],
-    "tasks": [{
+    "tasks": [
+        {
             "command": "dotnet",
             "label": "build",
             "type": "shell",
@@ -68,7 +69,8 @@
                 "echo": true,
                 "reveal": "always",
                 "focus": true,
-                "panel": "shared"
+                "panel": "shared",
+                "group": "watch"
             },
             "problemMatcher": []
         },

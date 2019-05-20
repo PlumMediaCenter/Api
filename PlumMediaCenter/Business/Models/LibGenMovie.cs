@@ -105,18 +105,18 @@ namespace PlumMediaCenter.Business.Models
             {
                 if (_Title == null)
                 {
-                    var year = this.Utility.GetYearFromFolderName(this.FolderName);
+                    var year = this.Utility.GetYearFromFolderName(this.VideoFileName);
                     if (year != null)
                     {
-                        var idx = this.FolderName.LastIndexOf($"({year})");
+                        var idx = this.VideoFileName.LastIndexOf($"({year})");
                         if (idx > -1)
                         {
-                            _Title = this.FolderName.Substring(0, idx).Trim();
+                            _Title = this.VideoFileName.Substring(0, idx).Trim();
                         }
                     }
                     else
                     {
-                        _Title = this.FolderName;
+                        _Title = this.VideoFileName;
                     }
                 }
                 return _Title;
@@ -172,15 +172,6 @@ namespace PlumMediaCenter.Business.Models
         }
         private int? _RuntimeSeconds;
 
-        private string FolderName
-        {
-            get
-            {
-                var folderName = new DirectoryInfo(this.FolderPath).Name;
-                return folderName;
-            }
-        }
-
         public IEnumerable<string> PosterPathsFromFileSystem
         {
             get
@@ -210,7 +201,7 @@ namespace PlumMediaCenter.Business.Models
 
         public int? GetYearFromFolderName()
         {
-            return this.Utility.GetYearFromFolderName(this.FolderName);
+            return this.Utility.GetYearFromFolderName(this.VideoFileName);
         }
 
         /// <summary>
@@ -307,7 +298,7 @@ namespace PlumMediaCenter.Business.Models
             //if we have metadata, use that info 
             if (metadata != null)
             {
-                record.Add("title", this.Title);
+                record.Add("title", metadata.Title);
                 record.Add("sortTitle", metadata.SortTitle);
                 record.Add("rating", metadata.Rating);
                 record.Add("releaseYear", metadata.ReleaseYear);
@@ -315,14 +306,48 @@ namespace PlumMediaCenter.Business.Models
                 record.Add("tmdbId", metadata.TmdbId);
             }
 
-            var posterUrls = metadata != null && metadata.PosterUrls.Count() > 0 ? metadata.PosterUrls : PosterPathsFromFileSystem.ToList();
-            var posterCount = await CopyImages(posterUrls, this.PosterFolderPath, ImageType.Poster);
+            List<string> posterUrls = null;
+            if (metadata != null && metadata.PosterUrls.Count() > 0)
+            {
+                posterUrls = metadata.PosterUrls;
+            }
+            else if (PosterPathsFromFileSystem.Count() > 0)
+            {
+                posterUrls = PosterPathsFromFileSystem.ToList();
+            }
+            else
+            {
+                // leave posters the way they are.
+            }
 
-            var backdropUrls = metadata != null && metadata.BackdropUrls.Count() > 0 ? metadata.BackdropUrls : BackdropPathsFromFileSystem.ToList();
-            var backdropCount = await CopyImages(backdropUrls, this.BackdropFolderPath, ImageType.Backdrop);
+            //only copy posters if we have a list of urls to copy
+            if (posterUrls != null)
+            {
+                var posterCount = await CopyImages(posterUrls, this.PosterFolderPath, ImageType.Poster);
+                record.Add("posterCount", posterCount);
+            }
 
-            record.Add("posterCount", posterCount);
-            record.Add("backdropCount", backdropCount);
+            List<string> backdropUrls = null;
+            if (metadata != null && metadata.BackdropUrls.Count() > 0)
+            {
+                backdropUrls = metadata.BackdropUrls;
+            }
+            else if (PosterPathsFromFileSystem.Count() > 0)
+            {
+                backdropUrls = BackdropPathsFromFileSystem.ToList();
+            }
+            else
+            {
+                // leave backdrops the way they are.
+            }
+
+            //only copy backdrops if we have a list of backdrops to copy
+            if (backdropUrls != null)
+            {
+                var backdropCount = await CopyImages(backdropUrls, this.BackdropFolderPath, ImageType.Backdrop);
+                record.Add("backdropCount", backdropCount);
+            }
+
             record.Add("id", this.Id);
             record.Add("folderPath", this.FolderPath);
             record.Add("videoPath", this.VideoPath);
@@ -336,7 +361,7 @@ namespace PlumMediaCenter.Business.Models
 
         public async Task<MovieMetadata> GetMetadataFromTmdb()
         {
-            var year = this.Utility.GetYearFromFolderName(this.FolderName);
+            var year = this.Utility.GetYearFromFolderName(this.VideoFileName);
             var title = this.Title;
             //get search results
             var allSearchResults = await this.MovieMetadataProcessor.GetSearchResultsAsync(title);
@@ -459,23 +484,6 @@ namespace PlumMediaCenter.Business.Models
                 }
             }
 
-            //delete all of the images from the video's folder (we will be replacing of these shortly)
-            if (imageType == ImageType.Poster)
-            {
-                foreach (var imagePath in this.PosterPathsFromFileSystem)
-                {
-                    File.Delete(imagePath);
-                }
-                this._PosterPathsFromFileSystem = null;
-            }
-            else
-            {
-                foreach (var imagePath in this.BackdropPathsFromFileSystem)
-                {
-                    File.Delete(imagePath);
-                }
-                this._BackdropPathsFromFileSystem = null;
-            }
 
             var maxRetries = 3;
             //try several times to move the files from temp to the web cache directory
@@ -514,15 +522,6 @@ namespace PlumMediaCenter.Business.Models
             else if (imageType == ImageType.Backdrop)
             {
                 suffix = "-fanart";
-            }
-
-            //copy all of the images to the video's source folder (in a standard naming convention)
-            for (var i = 0; i < imageCount; i++)
-            {
-
-                var sourceImagePath = $"{destinationFolderPath}/{i}.jpg";
-                var destPath = $"{this.FolderPath}/{this.VideoFileName}{suffix}-{i + 1}.jpeg";
-                await webClient.DownloadFileTaskAsync(sourceImagePath, destPath);
             }
 
             //make resized versions of the poster for various devices and put them in the web cache directory

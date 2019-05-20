@@ -157,8 +157,17 @@ namespace PlumMediaCenter.Business
                 //if the context has this argument defined and available, get it
                 if (argumentName != null && context.Arguments.ContainsKey(argumentName) && context.Arguments[argumentName] != null)
                 {
-                    var value = context.Arguments[argumentName];
-                    argumentsProperty.SetValue(result, value);
+                    //IEnumerable objects need some explicit typing 
+                    if (argumentsProperty.PropertyType == typeof(IEnumerable<int>))
+                    {
+                        var value = context.GetArgument<List<int>>(argumentName);
+                        argumentsProperty.SetValue(result, value);
+                    }
+                    else
+                    {
+                        var value = context.GetArgument(argumentName, argumentsProperty.PropertyType);
+                        argumentsProperty.SetValue(result, value);
+                    }
                 }
             }
             return result;

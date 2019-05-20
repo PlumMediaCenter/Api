@@ -156,6 +156,8 @@ namespace PlumMediaCenter
 
                 //remove anything after and including /graphql
                 var baseUrl = url.Substring(0, url.ToLowerInvariant().IndexOf("/graphql") + 1);
+                baseUrl = string.IsNullOrWhiteSpace(baseUrl) ? url.Substring(0, url.ToLowerInvariant().IndexOf("/api") + 1) : baseUrl;
+
                 if (string.IsNullOrWhiteSpace(baseUrl))
                 {
                     throw new Exception("Unable to calculate base url");
