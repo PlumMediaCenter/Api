@@ -11,7 +11,7 @@
             "requireExactSource": true,
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceRoot}/PlumMediaCenter/bin/Debug/netcoreapp2.0/PlumMediaCenter.dll",
+            "program": "${workspaceRoot}/PlumMediaCenter/bin/Debug/netcoreapp3.0/PlumMediaCenter.dll",
             "args": [
                 "--urls",
                 "http://*:7586"
@@ -47,7 +47,7 @@
             "requireExactSource": false,
             "preLaunchTask": "build-tests",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceRoot}/PlumMediaCenter.Tests/bin/Debug/netcoreapp2.0/PlumMediaCenter.Tests.dll",
+            "program": "${workspaceRoot}/PlumMediaCenter.Tests/bin/Debug/netcoreapp3.0/PlumMediaCenter.Tests.dll",
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,
             "internalConsoleOptions": "openOnSessionStart",

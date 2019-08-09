@@ -20,9 +20,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.PlatformAbstractions;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using PlumMediaCenter;
 using PlumMediaCenter.Business;
 using PlumMediaCenter.Business.Data;
@@ -55,20 +52,13 @@ namespace PlumMediaCenter
             //register a singleton AppSettings
             services.AddSingleton(appSettings);
 
-            services.AddCors(options =>
-            {
-                options.AddPolicy("CorsPolicy",
-                    builder => builder.AllowAnyOrigin()
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .AllowCredentials());
-            });
-
             services.AddSingleton<MiddlewareInjectorOptions>();
-            services.AddMvc().AddJsonOptions(options =>
-            {
-                options.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
-            });
+            services.AddMvc().AddMvcOptions(x => x.EnableEndpointRouting = false);
+
+            // services.AddMvc().AddJsonOptions(options =>
+            // {
+            //     options.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
+            // });
 
 
             //business services
@@ -120,8 +110,8 @@ namespace PlumMediaCenter
             {
                 builder.AllowAnyOrigin()
                         .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .AllowCredentials();
+                        // .AllowCredentials()
+                        .AllowAnyHeader();
             }));
             services.AddMvc(options => options.OutputFormatters.RemoveType<StringOutputFormatter>());
 
@@ -146,9 +136,9 @@ namespace PlumMediaCenter
 
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory)
         {
-            app.UseCors("CorsPolicy");
+            app.UseCors("AnyOriginPolicy");
             //allow default files (index.html) to be served by default
             app.UseDefaultFiles();
             //serve the wwwroot folder (from the root web url)
@@ -157,7 +147,12 @@ namespace PlumMediaCenter
 
             var injectorOptions = app.ApplicationServices.GetService<MiddlewareInjectorOptions>();
             app.UseMiddlewareInjector(injectorOptions);
-            app.UseMvc();
+
+            app.UseRouting();
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
 
         }
 
