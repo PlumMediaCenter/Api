@@ -84,9 +84,11 @@ namespace PlumMediaCenter.Graphql
 
             Field<ListGraphType<MediaHistoryRecordGraphType>>().Name("mediaHistory")
                 .Description("A list of media items consumed and their current progress and duration of viewing")
+                .Argument<ListGraphType<IntGraphType>>("mediaItemIds", "A list of mediaItem IDs")
                 .ResolveAsync(async (ctx) =>
                 {
-                    var results = await mediaItemRepository.GetHistory(userRepository.CurrentProfileId);
+                    var arguments = ctx.GetArguments(new MediaHistoryArguments());
+                    var results = await mediaItemRepository.GetHistory(userRepository.CurrentProfileId, null, null, arguments.MediaItemIds);
                     return results;
                 });
 

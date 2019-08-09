@@ -514,15 +514,16 @@ namespace PlumMediaCenter.Business.Models
                     }
                 }
             }
-            var suffix = "";
-            if (imageType == ImageType.Poster)
-            {
-                suffix = "";
-            }
-            else if (imageType == ImageType.Backdrop)
-            {
-                suffix = "-fanart";
-            }
+            //TODO - figure out why this is here
+            // var suffix = "";
+            // if (imageType == ImageType.Poster)
+            // {
+            //     suffix = "";
+            // }
+            // else if (imageType == ImageType.Backdrop)
+            // {
+            //     suffix = "-fanart";
+            // }
 
             //make resized versions of the poster for various devices and put them in the web cache directory
             var resizedPosterWidths = new int[] { 100, 200 };

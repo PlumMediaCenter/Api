@@ -189,9 +189,10 @@ namespace PlumMediaCenter.Business.Repositories
             return await this.GetHistoryByIds(ids);
         }
 
-        public async Task<IEnumerable<MediaHistoryRecord>> GetHistory(int profileId, int limit = 50, int index = 0)
+        public async Task<IEnumerable<MediaHistoryRecord>> GetHistory(int profileId, int? limit = 50, int? index = 0, IEnumerable<int> mediaItemIds = null)
         {
-            var ids = (await ConnectionManager.QueryAsync<int>(@"
+            //TODO - filter by media id
+            var ids = (await ConnectionManager.QueryAsync<int>($@"
                 select id from MediaItemProgress
                 where profileId = @profileId
                 order by dateEnd desc
@@ -325,5 +326,10 @@ namespace PlumMediaCenter.Business.Repositories
     {
         public IEnumerable<int> MediaItemIds { get; set; }
         public string SearchText { get; set; }
+    }
+
+    public class MediaHistoryArguments
+    {
+        public IEnumerable<int> MediaItemIds { get; set; }
     }
 }

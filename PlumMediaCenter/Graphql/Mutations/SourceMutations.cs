@@ -30,7 +30,7 @@ namespace PlumMediaCenter.Graphql.Mutations
                 {
                     var sources = ctx.GetArgument<IEnumerable<Source>>("sources");
                     await SourceRepository.SetAll(sources);
-                    return SourceRepository.GetAll();
+                    return await SourceRepository.GetAll();
                 }
             );
         }
