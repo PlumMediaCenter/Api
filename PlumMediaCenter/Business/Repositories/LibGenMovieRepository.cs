@@ -10,6 +10,7 @@ using PlumMediaCenter.Business.Data;
 using PlumMediaCenter.Business.Factories;
 using PlumMediaCenter.Business.Models;
 using PlumMediaCenter.Business.Metadata;
+using System.Text.Json;
 
 namespace PlumMediaCenter.Business.Repositories
 {
@@ -106,7 +107,7 @@ namespace PlumMediaCenter.Business.Repositories
         {
             Console.WriteLine("Movie.Insert -> Movie VideoPath: " + movie.VideoPath);
             var mediaItemId = await this.MediaItemRepository.GetNewMediaId(MediaType.MOVIE);
-            await ConnectionManager.ExecuteAsync(@"
+            var sql = @"
                 insert into Movies(
                     id,
                     folderPath, 
@@ -123,7 +124,8 @@ namespace PlumMediaCenter.Business.Repositories
                     @title,
                     @sortTitle
                 )
-            ", new
+            ";
+            var insertObj = new
             {
                 id = mediaItemId,
                 folderPath = movie.FolderPath,
@@ -131,7 +133,13 @@ namespace PlumMediaCenter.Business.Repositories
                 sourceId = movie.SourceId,
                 title = movie.Title,
                 sortTitle = movie.SortTitle
-            });
+            };
+            Console.WriteLine($@"
+                Inserting new movie
+                {sql}
+                {JsonSerializer.Serialize(insertObj)}
+            ");
+            await ConnectionManager.ExecuteAsync(sql, insertObj);
             return mediaItemId;
         }
 

@@ -232,11 +232,13 @@ namespace PlumMediaCenter.Business.Models
         public async Task ProcessNewMovie()
         {
             var record = new DynamicParameters();
-            Console.WriteLine($"Insert movie into db: {this.FolderPath}");
+            Console.WriteLine($"Inserting basic movie record into db: {this.VideoPath}");
             //insert a basic record so we can get an ID
             this.Id = await this.LibGenMovieRepository.InsertBasic(this);
             try
             {
+                Console.WriteLine($"Fetching TMDB metadata for {this.VideoPath}");
+
                 //fetch metadata for this movie once, only if it's a new movie, and only keep an exact match for title and release year
                 MovieMetadata metadata = await this.GetMetadataFromTmdb();
 
@@ -261,10 +263,12 @@ namespace PlumMediaCenter.Business.Models
                         record.Add("releaseYear", year);
                     }
                 }
+                Console.WriteLine($"Copying posters for {this.VideoPath}");
                 //use posters from video folder if possible, fallback to downloading them from metadata
                 var posterUrls = PosterPathsFromFileSystem.Count() > 0 ? PosterPathsFromFileSystem.ToList() : metadata?.PosterUrls;
                 var posterCount = await CopyImages(posterUrls, this.PosterFolderPath, ImageType.Poster);
 
+                Console.WriteLine($"Copying backdrops for {this.VideoPath}");
                 //use backdrops from video folder if possible, fallback to downloading them from metadata
                 var backdropUrls = this.BackdropPathsFromFileSystem.Count() > 0 ? this.BackdropPathsFromFileSystem.ToList() : metadata?.BackdropUrls;
                 var backdropCount = await CopyImages(backdropUrls, this.BackdropFolderPath, ImageType.Backdrop);
@@ -278,7 +282,7 @@ namespace PlumMediaCenter.Business.Models
                 record.Add("sourceId", this.SourceId);
 
                 //update the db with all of the fields we collected
-                Console.WriteLine($"Save new movie info: {this.FolderPath}");
+                Console.WriteLine($"Saving enhanced movie info for {this.VideoPath}");
                 await this.LibGenMovieRepository.Update(record);
             }
             catch
