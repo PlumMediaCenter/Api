@@ -232,42 +232,43 @@ namespace PlumMediaCenter.Business
                 this.Status.Log.Add($"Adding {loopMoviePath.Path} to pool");
                 var workItemResult = pool.QueueWorkItem((moviePath) =>
                 {
-                    //temp lock to process movies one by one
-                    // lock (this)
-                    // {
-                    this.Status.Log.Add($"Processing pool movie: {moviePath.Path}");
-                    var path = moviePath.Path;
-                    //add this move to the list of currently processing movies
-                    lock (this.Status.ActiveFiles)
+                    //if true, movies will be processed one-at-a-time
+                    var singleThreaded = false;
+                    lock (singleThreaded ? this : new Object())
                     {
-                        this.Status.ActiveFiles.Add(path);
-                    }
-                    var movie = this.LibGenFactory.BuildMovie(moviePath.Path, moviePath.Source.Id);
-                    try
-                    {
-                        this.Status.Log.Add($"Waiting for movie to process: {moviePath.Path}");
-                        movie.Process().Wait();
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine($"Error processing movie {moviePath.Path}");
-                        Console.WriteLine(e);
-                        this.Status.FailedItems.Add(new FailedItem()
+                        this.Status.Log.Add($"Processing pool movie: {moviePath.Path}");
+                        var path = moviePath.Path;
+                        //add this move to the list of currently processing movies
+                        lock (this.Status.ActiveFiles)
                         {
-                            Id = movie.Id,
-                            MediaType = MediaType.MOVIE,
-                            Path = movie.FolderPath,
-                            Exception = e
-                        });
+                            this.Status.ActiveFiles.Add(path);
+                        }
+                        var movie = this.LibGenFactory.BuildMovie(moviePath.Path, moviePath.Source.Id);
+                        try
+                        {
+                            this.Status.Log.Add($"Waiting for movie to process: {moviePath.Path}");
+                            movie.Process().Wait();
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine($"Error processing movie {moviePath.Path}");
+                            Console.WriteLine(e);
+                            this.Status.FailedItems.Add(new FailedItem()
+                            {
+                                Id = movie.Id,
+                                MediaType = MediaType.MOVIE,
+                                Path = movie.FolderPath,
+                                Exception = e
+                            });
+                        }
+                        Thread.Sleep(5000);
+                        this.Status.IncrementMediaTypeCount(MediaType.MOVIE);
+                        //remove the movie from the list of currently processing movies
+                        lock (this.Status.ActiveFiles)
+                        {
+                            this.Status.ActiveFiles.Remove(path);
+                        }
                     }
-                    Thread.Sleep(5000);
-                    this.Status.IncrementMediaTypeCount(MediaType.MOVIE);
-                    //remove the movie from the list of currently processing movies
-                    lock (this.Status.ActiveFiles)
-                    {
-                        this.Status.ActiveFiles.Remove(path);
-                    }
-                    // }
                 }, loopMoviePath);
 
             }
