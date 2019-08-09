@@ -102,29 +102,35 @@ namespace PlumMediaCenter.Business.Repositories
         /// Create a basic movie record. The rest of the info will be set in the update proc
         /// </summary>
         /// <returns></returns>
-        public async Task<int> Insert(string folderPath, string videoPath, int sourceId)
+        public async Task<int> InsertBasic(LibGenMovie movie)
         {
-            Console.WriteLine("Movie.Insert -> Movie VideoPath: " + videoPath);
+            Console.WriteLine("Movie.Insert -> Movie VideoPath: " + movie.VideoPath);
             var mediaItemId = await this.MediaItemRepository.GetNewMediaId(MediaType.MOVIE);
             await ConnectionManager.ExecuteAsync(@"
                 insert into Movies(
                     id,
                     folderPath, 
                     videoPath, 
-                    sourceId
+                    sourceId,
+                    title,
+                    sortTitle
                 )
                 values(
                     @id,
                     @folderPath,
                     @videoPath, 
-                    @sourceId
+                    @sourceId,
+                    @title,
+                    @sortTitle
                 )
             ", new
             {
                 id = mediaItemId,
-                folderPath = folderPath,
-                videoPath = videoPath,
-                sourceId = sourceId
+                folderPath = movie.FolderPath,
+                videoPath = movie.VideoPath,
+                sourceId = movie.SourceId,
+                title = movie.Title,
+                sortTitle = movie.SortTitle
             });
             return mediaItemId;
         }

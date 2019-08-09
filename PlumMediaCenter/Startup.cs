@@ -141,6 +141,7 @@ namespace PlumMediaCenter
             app.UseCors("AnyOriginPolicy");
             //allow default files (index.html) to be served by default
             app.UseDefaultFiles();
+
             //serve the wwwroot folder (from the root web url)
             app.UseStaticFiles();
             //app.UseDeveloperExceptionPage();
@@ -152,7 +153,9 @@ namespace PlumMediaCenter
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapControllerRoute("Spa", "{*url}", defaults: new { controller = "Index", action = "Index" });
             });
+
 
         }
 

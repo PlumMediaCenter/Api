@@ -233,8 +233,8 @@ namespace PlumMediaCenter.Business.Models
         {
             var record = new DynamicParameters();
             Console.WriteLine($"Insert movie into db: {this.FolderPath}");
-            this.Id = await this.LibGenMovieRepository.Insert(this.FolderPath, this.VideoPath, this.SourceId);
-
+            //insert a basic record so we can get an ID
+            this.Id = await this.LibGenMovieRepository.InsertBasic(this);
             try
             {
                 //fetch metadata for this movie once, only if it's a new movie, and only keep an exact match for title and release year
@@ -243,7 +243,7 @@ namespace PlumMediaCenter.Business.Models
                 //if we have metadata, use that info 
                 if (metadata != null)
                 {
-                    record.Add("title", this.Title);
+                    record.Add("title", metadata.Title);
                     record.Add("sortTitle", metadata.SortTitle);
                     record.Add("rating", metadata.Rating);
                     record.Add("releaseYear", metadata.ReleaseYear);
