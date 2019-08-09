@@ -90,7 +90,7 @@
                 "-r",
                 "linux-arm",
                 "-o",
-                "\\\\pi3.lan\\dotnet\\pmc"
+                "\\\\pi-server\\www\\pmc"
             ],
             "problemMatcher": []
         }
