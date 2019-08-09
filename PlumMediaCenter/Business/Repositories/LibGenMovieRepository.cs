@@ -138,7 +138,7 @@ namespace PlumMediaCenter.Business.Repositories
         public async Task Update(DynamicParameters record)
         {
             var sql = $@"
-                update movies 
+                update Movies 
                 set {string.Join(",", record.ParameterNames.Select(x => $"{x}=@{x}"))}
                 where id = @id";
             await ConnectionManager.ExecuteAsync(sql, record);
