@@ -145,3 +145,24 @@ namespace PlumMediaCenter.Controllers
 
     }
 }
+
+
+class ScriptController
+{
+    [HttpGet]
+    [Route("script")]
+    public HttpResponse GetScript()
+    {
+        var fileContents = File.ReadAllText("dist/app.min.js");
+        var edrsSettings = new
+        {
+            someSetting = AppSettings["someSetting"],
+            someOtherSetting = AppSettings["someOtherSetting"]
+        };
+        fileContents += ";window.edrsSettings = " + Newtonsoft.Json.JsonConvert.SerializeObject(edrsSettings);
+
+        var response = Request.CreateResponse(System.Net.HttpStatusCode.OK, fileContents, new TextPlainFormatter());
+        response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/x-javascript");
+        return response;
+    }
+}
