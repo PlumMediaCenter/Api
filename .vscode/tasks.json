@@ -6,6 +6,7 @@
             "command": "dotnet",
             "label": "build",
             "type": "shell",
+            "dependsOn": "clean",
             "args": [
                 "build",
                 "${workspaceRoot}/PlumMediaCenter/PlumMediaCenter.csproj"
@@ -19,6 +20,7 @@
         {
             "label": "test",
             "command": "dotnet",
+            "dependsOn": "clean",
             "type": "shell",
             "group": {
                 "kind": "test",
@@ -54,6 +56,7 @@
         },
         {
             "command": "dotnet",
+            "dependsOn": "clean",
             "label": "watch",
             "args": [
                 "watch",
@@ -76,6 +79,7 @@
         },
         {
             "command": "dotnet",
+            "dependsOn": "clean",
             "label": "publish",
             "presentation": {
                 "echo": true,

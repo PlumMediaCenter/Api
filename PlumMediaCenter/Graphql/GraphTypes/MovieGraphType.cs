@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using GraphQL.DataLoader;
 using GraphQL.Types;
 using PlumMediaCenter.Business;
 using PlumMediaCenter.Business.Models;
 using PlumMediaCenter.Business.Repositories;
-using PlumMediaCenter.Models;
 
 namespace PlumMediaCenter.Graphql.GraphTypes
 {
@@ -33,10 +35,27 @@ namespace PlumMediaCenter.Graphql.GraphTypes
                 .Description("The media type for this movie. Will always be the same value since all movies have the same media type")
                 .Resolve(x => x.Source.MediaType);
 
-            Field<ListGraphType<StringGraphType>>("posterUrls", resolve: (context) =>
-            {
-                return context.Source.PosterUrls;
-            });
+            Field<ListGraphType<StringGraphType>>()
+                .Name("posterUrls")
+                .Description("Poster urls for the movie")
+                .Argument<IntGraphType>("width", "The width of the poster. Can be 100 or 200")
+                .Resolve((ctx) =>
+                {
+                    var widthWhitelist = new List<int?> { 100, 200 };
+                    var width = ctx.GetArgumentOrDefault("width", (int?)null);
+
+                    if (width != null && widthWhitelist.Contains(width) == false)
+                    {
+                        throw new Exception("Invalid width. Must be one of " + JsonSerializer.Serialize(widthWhitelist));
+                    }
+
+                    var urls = ctx.Source.PosterUrls;
+                    if (width != null)
+                    {
+                        urls = urls.Select(x => x.Replace(".jpg", $"w{width}.jpg"));
+                    };
+                    return urls;
+                });
 
             Field<ListGraphType<StringGraphType>>("backdropUrls", resolve: (context) =>
             {
